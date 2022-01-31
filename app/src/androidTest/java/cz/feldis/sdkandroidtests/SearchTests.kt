@@ -1,0 +1,68 @@
+package cz.feldis.sdkandroidtests
+
+import com.nhaarman.mockitokotlin2.any
+import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.verify
+import com.sygic.sdk.places.PlaceCategories
+import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.search.*
+import org.junit.Ignore
+import org.junit.Test
+import org.mockito.Mockito
+
+class SearchTests : BaseTest() {
+
+    private lateinit var searchHelper: SearchHelper
+
+    override fun setUp() {
+        super.setUp()
+        searchHelper = SearchHelper()
+    }
+
+    @Ignore("wtf toto nefunguje")
+    @Test
+    fun searchPlacesInvalidCategory() {
+        val listener: PlacesListener = mock(verboseLogging = true)
+        val searchManager = SearchManagerProvider.getInstance().get()
+        val categories = listOf("tu_nemame_kategoriu")
+        val request = PlaceRequest(GeoCoordinates(48.145718, 17.118669), categories, -33)
+        val session = SearchManagerProvider.getInstance().get().newOnlineSession()
+
+        session.searchPlaces(request, listener)
+        searchManager.closeSession(session)
+
+        verify(listener, Mockito.timeout(10_000L))
+            .onPlacesError(eq(ResultStatus.UNSPECIFIED_ERROR))
+        verify(listener, Mockito.never()).onPlacesLoaded(any(), any())
+    }
+
+    @Test
+    fun searchPetrolStationInArea() {
+        val position = GeoCoordinates(48.100806, 17.234972)
+        val categories = listOf(PlaceCategories.PetrolStation)
+        val placeRequest = PlaceRequest(position, categories, 4000)
+
+        val results = searchHelper.onlineSearchPlaces(placeRequest)
+        results.forEach {
+            assert(it.link.category == PlaceCategories.PetrolStation)
+        }
+    }
+
+//    @Test
+//    fun onlineAutocompleteBratislava() {
+//        val request = SearchRequest(
+//            "bratislava",
+//            GeoCoordinates(48.145718, 17.118669),
+//            6
+//        )
+//        val results = searchHelper.onlineAutocomplete(request)
+//        results.forEach {
+//            if (it.subtitle == "Bratislava") {
+//                pass
+//            }
+//        }
+//    }
+
+
+}
