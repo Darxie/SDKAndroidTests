@@ -4,11 +4,12 @@ import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.navigation.explorer.RouteExplorer
 import com.sygic.sdk.navigation.traffic.TrafficManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
+import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Test
 import org.mockito.Mockito
 
-class RouteExploreTests {
+class RouteExploreTests : BaseTest() {
 
     @Test
     fun exploreTrafficOnRoute() {
