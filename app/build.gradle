@@ -70,8 +70,16 @@ dependencies {
     androidTestImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.0'
 
-    implementation("com.sygic.sdk:maps-android:${getSdkVersion()}@aar") {
-        transitive true
+    if (!gradle.wantsToBuildSdkFromSource()) {
+        // use aar from maven
+        api ("com.sygic.sdk:maps-android:${getSdkVersion()}@aar") {
+            exclude group: 'com.google.android.gms'
+            exclude group: 'androidx.core', module: 'core-ktx'
+            transitive true
+        }
+    } else {
+        // compile sdk yourself (with correctly included sdk module of course)
+        api project(':sdk')
     }
 
     implementation 'com.google.android.material:material:1.5.0'

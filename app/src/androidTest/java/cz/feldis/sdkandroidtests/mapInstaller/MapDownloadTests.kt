@@ -1,4 +1,4 @@
-package cz.feldis.sdkandroidtests
+package cz.feldis.sdkandroidtests.mapInstaller
 
 import androidx.test.filters.RequiresDevice
 import com.nhaarman.mockitokotlin2.*
@@ -6,6 +6,7 @@ import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
 import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
+import cz.feldis.sdkandroidtests.BaseTest
 import org.junit.Test
 import java.util.*
 import kotlin.concurrent.schedule

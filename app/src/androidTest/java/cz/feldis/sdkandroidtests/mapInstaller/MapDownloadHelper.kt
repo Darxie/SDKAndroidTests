@@ -1,10 +1,11 @@
-package cz.feldis.sdkandroidtests
+package cz.feldis.sdkandroidtests.mapInstaller
 
 import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.MapStatusListener
+import cz.feldis.sdkandroidtests.BaseTest
 
 class MapDownloadHelper : BaseTest() {
 

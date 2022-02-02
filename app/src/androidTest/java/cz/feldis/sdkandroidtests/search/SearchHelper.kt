@@ -1,8 +1,9 @@
-package cz.feldis.sdkandroidtests
+package cz.feldis.sdkandroidtests.search
 
 import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.places.Place
 import com.sygic.sdk.search.*
+import cz.feldis.sdkandroidtests.BaseTest
 
 class SearchHelper : BaseTest() {
 

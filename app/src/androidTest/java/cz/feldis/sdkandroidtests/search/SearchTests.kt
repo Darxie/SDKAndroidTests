@@ -1,4 +1,4 @@
-package cz.feldis.sdkandroidtests
+package cz.feldis.sdkandroidtests.search
 
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.eq
@@ -7,6 +7,7 @@ import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.places.PlaceCategories
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.*
+import cz.feldis.sdkandroidtests.BaseTest
 import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
@@ -22,18 +23,18 @@ class SearchTests : BaseTest() {
 
     @Ignore("wtf toto nefunguje")
     @Test
-    fun searchPlacesInvalidCategory() {
+    fun searchPlacesInvalidCategoryOnline() {
         val listener: PlacesListener = mock(verboseLogging = true)
         val searchManager = SearchManagerProvider.getInstance().get()
         val categories = listOf("tu_nemame_kategoriu")
-        val request = PlaceRequest(GeoCoordinates(48.145718, 17.118669), categories, -33)
+        val request = PlaceRequest(GeoCoordinates(48.145718, 17.118669), categories, 100)
         val session = SearchManagerProvider.getInstance().get().newOnlineSession()
 
         session.searchPlaces(request, listener)
         searchManager.closeSession(session)
 
         verify(listener, Mockito.timeout(10_000L))
-            .onPlacesError(eq(ResultStatus.UNSPECIFIED_ERROR))
+            .onPlacesError(eq(ResultStatus.INVALID_CATEGORY_TAG))
         verify(listener, Mockito.never()).onPlacesLoaded(any(), any())
     }
 

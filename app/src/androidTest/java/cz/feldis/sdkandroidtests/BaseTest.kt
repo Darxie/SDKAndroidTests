@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit
 import androidx.test.core.app.ActivityScenario
 import com.sygic.sdk.navigation.RouteEventNotificationsSettings
 import com.sygic.sdk.navigation.traffic.TrafficManagerProvider
+import com.sygic.sdk.position.PositionManagerProvider
 
 
 abstract class BaseTest {
@@ -100,7 +101,6 @@ abstract class BaseTest {
             val settings = RouteEventNotificationsSettings()
             settings.resetToDefault()
         }
-        TrafficManagerProvider.getInstance().get().disableTrafficService()
         this@BaseTest.sygicContext.destroy()
     }
 

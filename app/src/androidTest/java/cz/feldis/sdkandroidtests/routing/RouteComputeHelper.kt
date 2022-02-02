@@ -1,4 +1,4 @@
-package cz.feldis.sdkandroidtests
+package cz.feldis.sdkandroidtests.routing
 
 import com.nhaarman.mockitokotlin2.argThat
 import com.nhaarman.mockitokotlin2.mock
@@ -8,6 +8,7 @@ import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.*
 import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
 import com.sygic.sdk.route.listeners.RouteComputeListener
+import cz.feldis.sdkandroidtests.BaseTest
 import org.mockito.ArgumentCaptor
 
 class RouteComputeHelper : BaseTest() {
@@ -71,6 +72,8 @@ class RouteComputeHelper : BaseTest() {
         verify(listener, timeout(10_000L)).onComputeFinished(
             captor.capture(), argThat { this == Router.RouteComputeStatus.Success }
         )
+
+        val json = captor.value.serializeToBriefJSON()
 
         return captor.value
     }

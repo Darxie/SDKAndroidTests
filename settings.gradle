@@ -1,3 +1,5 @@
+apply from: 'buildSdk.gradle'
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -9,3 +11,10 @@ dependencyResolutionManagement {
 }
 rootProject.name = "SDK Android Tests"
 include ':app'
+
+if (gradle.wantsToBuildSdkFromSource()) {
+    include ':sdk'
+    project(':sdk').projectDir = gradle.getSdkDir()
+    include ':annotation-processor'
+    project(':annotation-processor').projectDir = new File(gradle.getSdkDir(), "../annotation-processor")
+}
