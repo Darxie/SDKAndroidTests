@@ -105,7 +105,7 @@ abstract class BaseTest {
     }
 
     private fun buildDefaultConfig(): String {
-        this@BaseTest.mDefaultConfig.authentication("sdk-test")
+        this@BaseTest.mDefaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
         val path = appContext.getExternalFilesDir(null).toString()
         this@BaseTest.mDefaultConfig.storageFolders().rootPath(path)
         this@BaseTest.mDefaultConfig.online().routingUrl("https://directions-testing.api.sygic.com")
