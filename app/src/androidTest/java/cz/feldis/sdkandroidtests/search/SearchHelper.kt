@@ -14,9 +14,9 @@ class SearchHelper : BaseTest() {
         searchManager.closeSession(session)
     }
 
-    fun onlineAutocomplete(autocompleteRequest: SearchRequest) : List<AutocompleteResult> {
+    fun onlineAutocomplete(autocompleteRequest: SearchRequest): List<AutocompleteResult> {
         val session = searchManager.newOnlineSession()
-        val listener : AutocompleteResultListener = mock(verboseLogging = true)
+        val listener: AutocompleteResultListener = mock(verboseLogging = true)
         val argumentCaptor = argumentCaptor<List<AutocompleteResult>>()
         session.autocomplete(autocompleteRequest, listener)
         verify(listener, timeout(10_000L)).onAutocomplete(
@@ -46,10 +46,9 @@ class SearchHelper : BaseTest() {
 
     }
 
-    fun offlineSearchPlaces () {
+    fun offlineSearchPlaces() {
 
     }
-
 
 
     fun onlineSearchPlaces(placeRequest: PlaceRequest): List<Place> {

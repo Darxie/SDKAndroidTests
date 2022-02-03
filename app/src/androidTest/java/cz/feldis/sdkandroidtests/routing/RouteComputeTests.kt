@@ -223,8 +223,8 @@ class RouteComputeTests : BaseTest() {
         mapDownloadHelper.installAndLoadMap("at")
         mapDownloadHelper.installAndLoadMap("sk")
 
-        val listener : RouteComputeListener = mock(verboseLogging = true)
-        val routeComputeFinishedListener : RouteComputeFinishedListener = mock(verboseLogging = true)
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
 
         val options = RoutingOptions()
         options.apply {

@@ -3,18 +3,20 @@ package cz.feldis.sdkandroidtests.navigation
 import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
-import com.sygic.sdk.navigation.routeeventnotifications.SharpCurveInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import junit.framework.Assert.assertNotNull
+import org.hamcrest.CoreMatchers.not
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
+import org.mockito.ArgumentMatchers.anyList
 import org.mockito.InOrder
 import org.mockito.Mockito
+import timber.log.Timber
 
 class OnlineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -47,7 +49,7 @@ class OnlineNavigationTests : BaseTest() {
     @Test
     fun onSignpostChangedTest() {
         val navigation = NavigationManagerProvider.getInstance().get()
-        val listener : NavigationManager.OnSignpostListener = mock(verboseLogging = true)
+        val listener: NavigationManager.OnSignpostListener = mock(verboseLogging = true)
         val route =
             routeCompute.onlineComputeRoute(
                 GeoCoordinates(48.143133, 17.175447),
@@ -60,7 +62,14 @@ class OnlineNavigationTests : BaseTest() {
         navigation.addOnSignpostListener(listener)
 
         Mockito.verify(listener, Mockito.timeout(STATUS_TIMEOUT))
-            .onSignpostChanged(any())
+            .onSignpostChanged(argThat {
+                forEach {
+                    if (it.signElements.isNotEmpty()) {
+                        return@argThat true
+                    }
+                }
+                false
+            })
 
         navigation.removeOnSignpostListener(listener)
         navigation.stopNavigation()
@@ -84,8 +93,8 @@ class OnlineNavigationTests : BaseTest() {
         )
         val route =
             routeCompute.onlineComputeRoute(
-                GeoCoordinates(48.152466, 17.125885),
-                GeoCoordinates(48.154026, 17.127838)
+                GeoCoordinates(48.132310, 17.114100),
+                GeoCoordinates(48.131733, 17.109952)
             )
         Assert.assertNotNull(route)
 
@@ -95,7 +104,13 @@ class OnlineNavigationTests : BaseTest() {
         navigation.addOnDirectionListener(listener)
 
         Mockito.verify(listener, Mockito.timeout(STATUS_TIMEOUT))
-            .onDirectionInfoChanged(any())
+            .onDirectionInfoChanged(argThat {
+                if (this.primary.nextRoadName != "Einsteinova") {
+                    Timber.e("Primary road name is not equal to Einsteinova.")
+                    return@argThat false
+                }
+                true
+            })
 
         navigation.removeOnDirectionListener(listener)
         navigation.stopNavigation()
@@ -108,7 +123,7 @@ class OnlineNavigationTests : BaseTest() {
      *
      * In this test we compute route and set it for navigation.
      * Via simulator provider we set this route and start demonstrate navigation.
-     * We verify that onSpeedLimitInfoChanged was invoked.
+     * We verify that onSpeedLimitInfoChanged was invoked with a non-null object.
      *
      */
     @Test
@@ -143,7 +158,8 @@ class OnlineNavigationTests : BaseTest() {
      *
      * In this test we compute route and set it for navigation.
      * Via simulator provider we set this route and start demonstrate navigation.
-     * We verify that onRailwayCrossingInfoChanged was invoked.
+     * We verify that onRailwayCrossingInfoChanged was invoked with a RailwayCrossingInfo
+     * that has a valid position.
      */
     @Test
     fun onRailwayCrossingTest() {
@@ -164,7 +180,12 @@ class OnlineNavigationTests : BaseTest() {
             listener,
             Mockito.timeout(STATUS_TIMEOUT)
         )
-            .onRailwayCrossingInfoChanged(any())
+            .onRailwayCrossingInfoChanged(argThat {
+                if (this.position.isValid) {
+                    return@argThat true
+                }
+                false
+            })
 
         simulator.stop()
         simulator.destroy()
@@ -177,7 +198,7 @@ class OnlineNavigationTests : BaseTest() {
      *
      * In this test we compute route and set it for navigation.
      * Via simulator provider we set this route and start demonstrate navigation.
-     * We verify that onHighwayExitInfoChanged was invoked.
+     * We verify that onHighwayExitInfoChanged was invoked with a non-null list.
      */
     @Test
     fun onHighwayExitTest() {
@@ -198,7 +219,7 @@ class OnlineNavigationTests : BaseTest() {
             listener,
             Mockito.timeout(STATUS_TIMEOUT)
         )
-            .onHighwayExitInfoChanged(any())
+            .onHighwayExitInfoChanged(anyList())
 
         simulator.stop()
         simulator.destroy()
@@ -227,13 +248,18 @@ class OnlineNavigationTests : BaseTest() {
         val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
         logSimulator.start()
         navigation.addOnRouteChangedListener(listener)
-        logSimulator.setSpeedMultiplier(4F)
+        logSimulator.setSpeedMultiplier(2F)
 
         Mockito.verify(
             listener,
             Mockito.timeout(STATUS_TIMEOUT)
         )
-            .onRouteChanged(any(), any())
+            .onRouteChanged(argThat {
+                if (this != route)  {
+                    return@argThat true
+                }
+                else false
+            }, eq(NavigationManager.RouteUpdateStatus.Success))
 
         logSimulator.stop()
         logSimulator.destroy()
@@ -269,7 +295,12 @@ class OnlineNavigationTests : BaseTest() {
             listener,
             Mockito.timeout(STATUS_TIMEOUT)
         )
-            .onLaneInfoChanged(any())
+            .onLaneInfoChanged(argThat {
+                if (this.complexLanesInfo.isEmpty()) {
+                    return@argThat false
+                }
+                true
+            })
 
         simulator.stop()
         simulator.destroy()
@@ -306,9 +337,8 @@ class OnlineNavigationTests : BaseTest() {
             Mockito.timeout(STATUS_TIMEOUT)
         )
             .onSharpCurveInfoChanged(argThat {
-                println("sharpCurve: "+this.angle+" "+this.distance)
                 if (this.angle != 0.0) {
-                    return@argThat false
+                    return@argThat true
                 }
                 false
             })
@@ -399,7 +429,8 @@ class OnlineNavigationTests : BaseTest() {
     @Test
     fun onRouteRecomputeProgress() {
         val navigation = NavigationManagerProvider.getInstance().get()
-        val listener: NavigationManager.OnRouteRecomputeProgressListener = mock(verboseLogging = true)
+        val listener: NavigationManager.OnRouteRecomputeProgressListener =
+            mock(verboseLogging = true)
 
         val route = routeCompute.onlineComputeRoute(
             GeoCoordinates(48.143397, 17.130936),
@@ -445,10 +476,10 @@ class OnlineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
 
         val route = routeCompute.onlineComputeRoute(
-                GeoCoordinates(48.296103, 17.304851),
-                GeoCoordinates(48.297194, 17.313073),
-                GeoCoordinates(48.296446, 17.306706)
-            )
+            GeoCoordinates(48.296103, 17.304851),
+            GeoCoordinates(48.297194, 17.313073),
+            GeoCoordinates(48.296446, 17.306706)
+        )
 
         navigation.setRouteForNavigation(route)
         navigation.addOnWaypointPassListener(listener)
@@ -491,7 +522,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.start()
         simulator.setSpeedMultiplier(2F)
 
-        var myList: MutableList<Int> = mutableListOf()
+        val myList: MutableList<Int> = mutableListOf()
 
         navigation.addOnPlaceListener { listPlaceInfo ->
             if (listPlaceInfo.isNotEmpty()) {

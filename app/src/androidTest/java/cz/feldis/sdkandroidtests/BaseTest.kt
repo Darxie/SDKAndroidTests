@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.util.Log
 import androidx.annotation.CallSuper
+import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.rule.GrantPermissionRule
 import com.sygic.sdk.SygicEngine
 import com.sygic.sdk.SygicEngine.initialize
@@ -20,11 +21,6 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import androidx.test.rule.ActivityTestRule
-import com.sygic.sdk.LoggingSettings
-import com.sygic.sdk.navigation.RouteEventNotificationsSettings
-import com.sygic.sdk.online.OnlineManager
-import com.sygic.sdk.online.OnlineManagerProvider
 
 
 abstract class BaseTest {
@@ -34,8 +30,8 @@ abstract class BaseTest {
     lateinit var sygicContext: SygicContext
 
     @get:Rule
-    var mActivityRule: ActivityTestRule<SygicActivity> =
-        ActivityTestRule(SygicActivity::class.java)
+    var mActivityRule: ActivityScenarioRule<SygicActivity> =
+        ActivityScenarioRule(SygicActivity::class.java)
 
     @get:Rule
     var mGrantPermissionRule: GrantPermissionRule = GrantPermissionRule.grant(
@@ -69,7 +65,7 @@ abstract class BaseTest {
         this.isEngineInitialized = false
         val jsonConfig = buildDefaultConfig()
 
-        val logConnector = object: LogConnector() {
+        val logConnector = object : LogConnector() {
             override fun onLogReceived(message: String, logLevel: LogLevel) {
                 super.onLogReceived(message, logLevel)
                 println(message)
@@ -81,8 +77,8 @@ abstract class BaseTest {
             this@BaseTest.appContext,
             tracking = null,
             logConnector = logConnector,
-            loadMaps = false,
-            clearOnlineCache = false
+            loadMaps = true,
+            clearOnlineCache = true
         )
         initialize(contextInitRequest, object : SygicEngine.OnInitCallback {
             override fun onError(error: CoreInitException) {
@@ -93,16 +89,7 @@ abstract class BaseTest {
             override fun onInstance(instance: SygicContext) {
                 this@BaseTest.isEngineInitialized = true
                 this@BaseTest.sygicContext = instance
-                SygicEngine.openGpsConnection()
-                OnlineManagerProvider.getInstance().get().enableOnlineMapStreaming(object: OnlineManager.MapStreamingListener{
-                    override fun onSuccess() {
-                        latch.countDown()
-                    }
-
-                    override fun onError(p0: OnlineManager.MapStreamingError?) {
-                    }
-                })
-
+                latch.countDown()
             }
         })
         latch.await(30, TimeUnit.SECONDS)
@@ -114,25 +101,10 @@ abstract class BaseTest {
     }
 
     private fun buildDefaultConfig(): String {
-        val consoleAppenderBuilder = LoggingSettings.LoggingItem.AppenderItem.ConsoleAppender.Builder()
-            .format("%levshort %datetime %msg\\n")
-            .level(LoggingSettings.LoggingItem.AppenderItem.LogLevel.TRACE)
-            .time("%y/%m/%d %H:%M:%S")
-
-        val diagnosticsAppenderBuilder = LoggingSettings.LoggingItem.AppenderItem.DiagnosticsAppender.Builder()
-            .format("%levshort %datetime %msg\\n")
-            .level(LoggingSettings.LoggingItem.AppenderItem.LogLevel.TRACE)
-            .time("%y/%m/%d %H:%M:%S")
-
-        val loggingItemBuilder = LoggingSettings.LoggingItem.Builder()
-            .name("logger")
-            .addAppender(consoleAppenderBuilder)
-            .addAppender(diagnosticsAppenderBuilder)
-
-        this@BaseTest.defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
+        this@BaseTest.defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(true)
         val path = appContext.getExternalFilesDir(null).toString()
         this@BaseTest.defaultConfig.storageFolders().rootPath(path)
-        this@BaseTest.defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(true)
+        this@BaseTest.defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
         this@BaseTest.defaultConfig.online().routingUrl("https://directions-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().sSOServerUrl("https://auth-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().productServer()
@@ -144,11 +116,10 @@ abstract class BaseTest {
         this@BaseTest.defaultConfig.online().searchUrl("https://search-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().incidents()
             .url("https://incidents-testing.api.sygic.com")
-        this@BaseTest.defaultConfig.online().trafficUrl("https://traffic-testing.sygic.com")
+        this@BaseTest.defaultConfig.online().trafficUrl("https://traffic-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online()
             .offlineMapsApiUrl("https://licensing-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().voicesUrl("https://nonttsvoices-testing.api.sygic.com")
-        this@BaseTest.defaultConfig.addLoggingItem(loggingItemBuilder)
         return this@BaseTest.defaultConfig.build()
     }
 }

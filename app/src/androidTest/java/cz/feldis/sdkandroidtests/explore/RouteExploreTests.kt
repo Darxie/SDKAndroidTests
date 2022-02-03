@@ -7,6 +7,7 @@ import com.sygic.sdk.position.GeoCoordinates
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Test
+import org.mockito.ArgumentMatchers.anyList
 import org.mockito.Mockito
 
 class RouteExploreTests : BaseTest() {
@@ -56,9 +57,31 @@ class RouteExploreTests : BaseTest() {
             listener,
             Mockito.timeout(15_000L)
         )
-            .onExplorePlacesLoaded(any(), eq(100))
+            .onExplorePlacesLoaded(anyList(), eq(100))
 
         verify(listener, never())
             .onExplorePlacesError(any())
     }
+
+    @Test
+    fun exploreIncidentsOnRoute() {
+        val routeCompute = RouteComputeHelper()
+        val listener: RouteExplorer.OnExploreIncidentsOnRouteListener = mock(verboseLogging = true)
+
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.167749, 17.184778),
+            GeoCoordinates(48.586029, 17.824360)
+        )
+        RouteExplorer.exploreIncidentsOnRoute(route, emptyList(), listener)
+
+        verify(
+            listener,
+            Mockito.timeout(30_000L)
+        )
+            .onExploreIncidentsLoaded(anyList(), eq(100))
+
+        verify(listener, never())
+            .onExploreIncidentsError(any())
+    }
+
 }
