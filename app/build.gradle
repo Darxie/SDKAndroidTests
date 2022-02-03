@@ -17,6 +17,10 @@ android {
 
         // use your own SDK client ID
         buildConfigField "String", "SYGIC_SDK_CLIENT_ID", getSdkClientId()
+
+        if (gradle.wantsToBuildSdkFromSource) {
+            missingDimensionStrategy 'build', 'development'
+        }
     }
 
     buildTypes {
