@@ -3,11 +3,11 @@ package cz.feldis.sdkandroidtests.navigation
 import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
+import com.sygic.sdk.navigation.routeeventnotifications.SharpCurveInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
-import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import junit.framework.Assert.assertNotNull
 import org.junit.Assert
@@ -18,13 +18,11 @@ import org.mockito.Mockito
 
 class OnlineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
-    private lateinit var mapDownload: MapDownloadHelper
 
     @Before
     override fun setUp() {
         super.setUp()
         routeCompute = RouteComputeHelper()
-        mapDownload = MapDownloadHelper()
     }
 
     @Test
@@ -226,10 +224,10 @@ class OnlineNavigationTests : BaseTest() {
         )
 
         navigation.setRouteForNavigation(route)
-        val mLogSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
-        mLogSimulator.start()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
+        logSimulator.start()
         navigation.addOnRouteChangedListener(listener)
-        mLogSimulator.setSpeedMultiplier(4F)
+        logSimulator.setSpeedMultiplier(4F)
 
         Mockito.verify(
             listener,
@@ -237,8 +235,8 @@ class OnlineNavigationTests : BaseTest() {
         )
             .onRouteChanged(any(), any())
 
-        mLogSimulator.stop()
-        mLogSimulator.destroy()
+        logSimulator.stop()
+        logSimulator.destroy()
         navigation.removeOnRouteChangedListener(listener)
         navigation.stopNavigation()
     }
@@ -301,13 +299,19 @@ class OnlineNavigationTests : BaseTest() {
         navigation.addOnSharpCurveListener(listener)
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
         simulator.start()
-        simulator.setSpeedMultiplier(2F)
+        simulator.setSpeedMultiplier(4F)
 
         Mockito.verify(
             listener,
             Mockito.timeout(STATUS_TIMEOUT)
         )
-            .onSharpCurveInfoChanged(any())
+            .onSharpCurveInfoChanged(argThat {
+                println("sharpCurve: "+this.angle+" "+this.distance)
+                if (this.angle != 0.0) {
+                    return@argThat false
+                }
+                false
+            })
 
         simulator.stop()
         simulator.destroy()

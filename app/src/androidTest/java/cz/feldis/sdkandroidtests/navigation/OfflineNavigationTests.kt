@@ -15,7 +15,7 @@ import org.junit.Test
 import org.mockito.Mockito
 import timber.log.Timber
 
-class NavigationTests : BaseTest() {
+class OfflineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
     private lateinit var mapDownload: MapDownloadHelper
 
@@ -24,6 +24,41 @@ class NavigationTests : BaseTest() {
         super.setUp()
         routeCompute = RouteComputeHelper()
         mapDownload = MapDownloadHelper()
+    }
+
+    @Test
+    fun onSharpCurveListenerTest() {
+        mapDownload.ensureMapNotInstalled("sk")
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnSharpCurveListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.1384, 17.3184),
+            GeoCoordinates(48.132, 17.3009)
+        )
+
+        navigation.setRouteForNavigation(route)
+        navigation.addOnSharpCurveListener(listener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        simulator.start()
+        simulator.setSpeedMultiplier(4F)
+
+        Mockito.verify(
+            listener,
+            Mockito.timeout(10_000L)
+        )
+            .onSharpCurveInfoChanged(argThat {
+                if (this.angle != 0.0) {
+                    return@argThat true
+                }
+                false
+            })
+
+        simulator.stop()
+        simulator.destroy()
+        navigation.removeOnSharpCurveListener(listener)
+        navigation.stopNavigation()
     }
 
     /**
