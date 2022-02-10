@@ -5,6 +5,7 @@ import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.MapStatusListener
+import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
 
 class MapDownloadHelper : BaseTest() {
@@ -14,7 +15,7 @@ class MapDownloadHelper : BaseTest() {
     fun ensureMapNotInstalled(iso: String) {
         val uninstallListener: MapResultListener = mock(verboseLogging = true)
         installer.uninstallMap(iso, uninstallListener)
-        verify(uninstallListener, timeout(5_000L)).onMapResult(eq(iso), eq(MapInstaller.LoadResult.Success))
+        verify(uninstallListener, timeout(5_000L)).onMapResult(eq(iso), any())
 
         val statusListener: MapStatusListener = mock(verboseLogging = true)
         installer.getMapStatus(iso, statusListener)
@@ -40,7 +41,13 @@ class MapDownloadHelper : BaseTest() {
     fun uninstallMap(iso: String) {
         val uninstallListener: MapResultListener = mock(verboseLogging = true)
         installer.uninstallMap(iso, uninstallListener)
-        verify(uninstallListener, timeout(15000)).onMapResult(eq(iso), eq(MapInstaller.LoadResult.Success))
+        verify(uninstallListener, timeout(15000)).onMapResult(eq(iso), any())
+    }
+
+    fun resetMapLocale() {
+        val listener: ResultListener = mock(verboseLogging = true)
+        installer.setLocale("en-en", listener)
+        verify(listener, timeout(5_000L)).onResult(eq(MapInstaller.LoadResult.Success))
     }
 
 }
