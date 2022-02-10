@@ -14,7 +14,7 @@ class MapDownloadHelper : BaseTest() {
     fun ensureMapNotInstalled(iso: String) {
         val uninstallListener: MapResultListener = mock(verboseLogging = true)
         installer.uninstallMap(iso, uninstallListener)
-        verify(uninstallListener, timeout(5_000L)).onMapResult(eq(iso), any())
+        verify(uninstallListener, timeout(5_000L)).onMapResult(eq(iso), eq(MapInstaller.LoadResult.Success))
 
         val statusListener: MapStatusListener = mock(verboseLogging = true)
         installer.getMapStatus(iso, statusListener)
@@ -40,7 +40,7 @@ class MapDownloadHelper : BaseTest() {
     fun uninstallMap(iso: String) {
         val uninstallListener: MapResultListener = mock(verboseLogging = true)
         installer.uninstallMap(iso, uninstallListener)
-        verify(uninstallListener, timeout(15000)).onMapResult(eq(iso), any())
+        verify(uninstallListener, timeout(15000)).onMapResult(eq(iso), eq(MapInstaller.LoadResult.Success))
     }
 
 }

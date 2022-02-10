@@ -1,6 +1,7 @@
 package cz.feldis.sdkandroidtests.routing
 
 import com.nhaarman.mockitokotlin2.*
+import com.sygic.sdk.navigation.routeeventnotifications.TruckAidInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.*
 import com.sygic.sdk.route.listeners.*
@@ -79,7 +80,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun getRouteElementsIcelandOffline() {
-        mapDownloadHelper.ensureMapNotInstalled("is")
         mapDownloadHelper.installAndLoadMap("is")
 
         val elementsListener: RouteElementsListener = mock(verboseLogging = true)
@@ -139,7 +139,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun computeReykjavikToVikOffline() {
-        mapDownloadHelper.ensureMapNotInstalled("is")
         mapDownloadHelper.installAndLoadMap("is")
         val start = GeoCoordinates(64.114341, -21.871153)
         val destination = GeoCoordinates(63.417836, -19.002209)
@@ -175,14 +174,13 @@ class RouteComputeTests : BaseTest() {
         )
     }
 
-    @Ignore("Setting of total weight does not work")
     @Test
     fun unreachableTargetTruckWeightTestOnline() {
         val start = GeoCoordinates(50.062084, 14.432741)
         val destination = GeoCoordinates(48.144826, 17.100258)
 
-        val listener = Mockito.mock(RouteComputeListener::class.java)
-        val routeComputeFinishedListener = Mockito.mock(RouteComputeFinishedListener::class.java)
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
 
         val options = RoutingOptions()
         options.apply {
@@ -201,12 +199,11 @@ class RouteComputeTests : BaseTest() {
         }
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-
         val router = RouterProvider.getInstance().get()
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
 
-        verify(listener, Mockito.timeout(5000)).onComputeFinished(
+        verify(listener, timeout(20_000L)).onComputeFinished(
             isNull(),
             argThat { this == Router.RouteComputeStatus.UnreachableTarget }
         )

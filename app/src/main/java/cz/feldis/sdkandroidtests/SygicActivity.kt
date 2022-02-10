@@ -3,7 +3,6 @@ package cz.feldis.sdkandroidtests
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
-import cz.feldis.sdkandroidtests.R
 import timber.log.Timber
 import timber.log.Timber.DebugTree
 

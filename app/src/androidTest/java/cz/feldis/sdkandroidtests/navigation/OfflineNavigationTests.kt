@@ -3,6 +3,7 @@ package cz.feldis.sdkandroidtests.navigation
 import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
+import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.*
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
@@ -142,6 +143,29 @@ class OfflineNavigationTests : BaseTest() {
         navigation.removeOnRouteChangedListener(listener)
         navigation.stopNavigation()
         mapDownload.uninstallMap("sk")
+    }
+
+    @Test
+    fun onJunctionPassedStandaloneListenerInvocationWithoutRoute() {
+        mapDownload.installAndLoadMap("sk")
+        val listener: NavigationManager.JunctionPassedListener = mock(verboseLogging = true)
+        val navigation = NavigationManagerProvider.getInstance().get()
+
+        val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
+        navigation.addJunctionPassedListener(listener)
+        logSimulator.start()
+        logSimulator.setSpeedMultiplier(2F)
+
+        Mockito.verify(
+            listener,
+            atMost(5)
+        )
+            .onJunctionPassed(StreetDetail.JunctionType.Junction)
+
+        logSimulator.stop()
+        logSimulator.destroy()
+        navigation.removeJunctionPassedListener(listener)
+        navigation.stopNavigation()
     }
 
 }

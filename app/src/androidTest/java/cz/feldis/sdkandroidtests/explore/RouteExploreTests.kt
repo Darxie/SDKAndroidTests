@@ -31,6 +31,8 @@ class RouteExploreTests : BaseTest() {
 
         verify(listener, never())
             .onExploreTrafficError(any())
+
+        TrafficManagerProvider.getInstance().get().disableTrafficService()
     }
 
     /**

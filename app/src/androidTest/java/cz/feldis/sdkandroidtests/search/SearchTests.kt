@@ -1,9 +1,6 @@
 package cz.feldis.sdkandroidtests.search
 
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.eq
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.verify
+import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.places.PlaceCategories
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.*
@@ -63,6 +60,25 @@ class SearchTests : BaseTest() {
 //                pass
 //            }
 //        }
+//    }
+
+//    @Test
+//    fun geocode() {
+//        val position = GeoCoordinates(48.100806, 17.234972)
+//        val listener: GeocodingResultsListener = mock(verboseLogging = true)
+//        val searchManager = SearchManagerProvider.getInstance().get()
+//
+//        val request = SearchRequest("Lukoil pálenisko", position)
+//        val session = SearchManagerProvider.getInstance().get().newOnlineSession()
+//
+//        session.geocode(request, listener)
+//
+//        verify(listener, timeout(10_000L)).onGeocodingResults(
+//            argThat {
+//                print(this[0].)
+//            }
+//        )
+//        searchManager.closeSession(session)
 //    }
 
 

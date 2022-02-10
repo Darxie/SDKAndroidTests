@@ -1,9 +1,11 @@
 package cz.feldis.sdkandroidtests.navigation
 
 import com.nhaarman.mockitokotlin2.*
+import com.sygic.sdk.map.RouteRestrictionSettings
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.route.RouteViolatedAvoidOptions
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
