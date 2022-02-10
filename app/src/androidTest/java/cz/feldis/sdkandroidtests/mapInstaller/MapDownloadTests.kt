@@ -118,12 +118,9 @@ class MapDownloadTests : BaseTest() {
         val installer = MapInstallerProvider.getInstance().get()
         val listener: MapListResultListener = mock(verboseLogging = true)
         installer.getAvailableCountries(false, listener)
-        verify(listener, timeout(15000)).onMapListResult(
+        verify(listener, timeout(15000).only()).onMapListResult(
             argThat { isNotEmpty() },
             argThat { this == MapInstaller.LoadResult.Success })
-        verify(listener, never()).onMapListResult(
-            argThat { isEmpty() },
-            argThat { this != MapInstaller.LoadResult.Success })
     }
 
     @Test
@@ -131,10 +128,16 @@ class MapDownloadTests : BaseTest() {
         val installer = MapInstallerProvider.getInstance().get()
         val listener: MapResultListener = mock(verboseLogging = true)
         installer.detectCurrentCountry("sk", listener)
-        verify(listener, timeout(15000)).onMapResult(eq("sk"), eq(MapInstaller.LoadResult.Success))
-        verify(listener, never()).onMapResult(
-            any(),
-            argThat { this != MapInstaller.LoadResult.Success })
+        verify(listener, timeout(15_000L).only()).onMapResult(eq("sk"), eq(MapInstaller.LoadResult.Success))
+
+    }
+
+    @Test
+    fun detectWrongCountryTest() {
+        val installer = MapInstallerProvider.getInstance().get()
+        val listener: MapResultListener = mock(verboseLogging = true)
+        installer.detectCurrentCountry("invalidIso", listener)
+        verify(listener, timeout(70_000L)).onMapResult(eq("invalidIso"), eq(MapInstaller.LoadResult.InvalidIsoError))
     }
 
     @Test
@@ -190,5 +193,15 @@ class MapDownloadTests : BaseTest() {
         installer.setLocale("invalid", listener)
         verify(listener, timeout(20_000L).times(1))
             .onResult(eq(MapInstaller.LoadResult.UnsupportedLocale))
+    }
+
+    @Test
+    fun setLocaleTest() {
+        val installer = MapInstallerProvider.getInstance().get()
+        val listener: ResultListener = mock(verboseLogging = true)
+        mapDownloadHelper.installAndLoadMap("sk")
+        installer.setLocale("sk-def", listener)
+        verify(listener, timeout(20_000L).times(1))
+            .onResult(eq(MapInstaller.LoadResult.Success))
     }
 }
