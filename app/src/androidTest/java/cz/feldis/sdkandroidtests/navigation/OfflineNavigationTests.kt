@@ -161,14 +161,14 @@ class OfflineNavigationTests : BaseTest() {
         PositionManagerProvider.getInstance().get().startPositionUpdating()
 
         val logSimulator = NmeaLogSimulatorProvider.getInstance("rovinka.nmea").get()
-        Thread.sleep(1000)
+        Thread.sleep(3000)
         logSimulator.start()
 
         navigation.addJunctionPassedListener(listener)
 
         verify(
             listener,
-            timeout(30_000L).atLeast(2)
+            timeout(60_000L).atLeast(2)
         )
             .onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
         verify(
@@ -177,7 +177,7 @@ class OfflineNavigationTests : BaseTest() {
         )
             .onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
         verify(
-            listener, timeout(30_000L).times(1)).onJunctionPassed(
+            listener, timeout(60_000L).times(1)).onJunctionPassed(
             eq(StreetDetail.JunctionType.EnteringUrbanArea)
             )
 
