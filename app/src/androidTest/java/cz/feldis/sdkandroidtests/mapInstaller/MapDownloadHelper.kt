@@ -28,7 +28,7 @@ class MapDownloadHelper : BaseTest() {
     fun installAndLoadMap(iso: String) {
         val listener: MapResultListener = mock(verboseLogging = true)
         installer.installMap(iso, listener)
-        verify(listener, timeout(60_000L)).onMapResult(eq(iso), eq(MapInstaller.LoadResult.Success))
+        verify(listener, timeout(120_000L)).onMapResult(eq(iso), eq(MapInstaller.LoadResult.Success))
 
         val loadListener: MapResultListener = mock(verboseLogging = true)
         installer.loadMap(iso, loadListener)

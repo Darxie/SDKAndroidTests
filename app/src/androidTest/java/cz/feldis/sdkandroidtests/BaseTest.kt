@@ -63,7 +63,7 @@ abstract class BaseTest {
             androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
         val latch = CountDownLatch(1)
         this.isEngineInitialized = false
-        val jsonConfig = buildDefaultConfig()
+        val jsonConfig = buildTestingConfig()
 
         val logConnector = object : LogConnector() {
             override fun onLogReceived(message: String, logLevel: LogLevel) {
@@ -100,7 +100,7 @@ abstract class BaseTest {
         this@BaseTest.sygicContext.destroy()
     }
 
-    private fun buildDefaultConfig(): String {
+    private fun buildTestingConfig(): String {
         this@BaseTest.defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(true)
         val path = appContext.getExternalFilesDir(null).toString()
         this@BaseTest.defaultConfig.storageFolders().rootPath(path)
@@ -120,6 +120,14 @@ abstract class BaseTest {
         this@BaseTest.defaultConfig.online()
             .offlineMapsApiUrl("https://licensing-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().voicesUrl("https://nonttsvoices-testing.api.sygic.com")
+        return this@BaseTest.defaultConfig.build()
+    }
+
+    private fun buildProductionConfig(): String {
+        this@BaseTest.defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(true)
+        val path = appContext.getExternalFilesDir(null).toString()
+        this@BaseTest.defaultConfig.storageFolders().rootPath(path)
+        this@BaseTest.defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
         return this@BaseTest.defaultConfig.build()
     }
 }

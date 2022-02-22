@@ -255,4 +255,37 @@ class RouteComputeTests : BaseTest() {
             argThat { this == Router.RouteComputeStatus.UnreachableTarget }
         )
     }
+
+    @Test
+    fun computeChangeOnlineRoutingUrlInRuntime() {
+        val start = GeoCoordinates(48.101713, 17.234017)
+        val destination = GeoCoordinates(48.145644, 17.127011)
+        val listener =
+            Mockito.mock(RouteComputeListener::class.java, withSettings().verboseLogging())
+        val routeComputeFinishedListener = Mockito.mock(RouteComputeFinishedListener::class.java)
+        val options = RoutingOptions()
+        options.apply {
+            transportMode = RoutingOptions.TransportMode.Car
+            routingService = RoutingOptions.RoutingService.Online
+            napStrategy = RoutingOptions.NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
+//            urlOverride = "https://ptv-routing-testing.api.sygic.com"
+        }
+        val routeRequest = RouteRequest()
+        routeRequest.apply {
+            setStart(start)
+            setDestination(destination)
+            routingOptions = options
+        }
+
+        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
+
+        val router = RouterProvider.getInstance().get()
+
+        router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
+
+        verify(listener, Mockito.timeout(10_000L)).onComputeFinished(
+            isNotNull(),
+            argThat { this == Router.RouteComputeStatus.Success }
+        )
+    }
 }

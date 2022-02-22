@@ -4,6 +4,8 @@ import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.places.Place
 import com.sygic.sdk.search.*
 import cz.feldis.sdkandroidtests.BaseTest
+import java.nio.ByteBuffer
+import java.util.*
 
 class SearchHelper : BaseTest() {
 
@@ -43,11 +45,20 @@ class SearchHelper : BaseTest() {
     }
 
     fun onlineReverseGeocode() {
-
     }
 
-    fun offlineSearchPlaces() {
+    fun offlineSearchPlaces(placeRequest: PlaceRequest): List<Place> {
+        val session = searchManager.newOfflineSession()
+        val listener: PlacesListener = mock(verboseLogging = true)
+        val argumentCaptor = argumentCaptor<List<Place>>()
+        session.searchPlaces(placeRequest, listener)
 
+        verify(listener, timeout(10_000L)).onPlacesLoaded(
+            argumentCaptor.capture(),
+            isNull()
+        )
+        searchManager.closeSession(session)
+        return argumentCaptor.firstValue
     }
 
 
@@ -63,5 +74,11 @@ class SearchHelper : BaseTest() {
         )
         searchManager.closeSession(session)
         return argumentCaptor.firstValue
+    }
+
+    fun byteArrayToUUID(byteArray: ByteArray): String {
+        val buffer = ByteBuffer.wrap(byteArray)
+        val uuid = UUID(buffer.long, buffer.long).toString()
+        return uuid
     }
 }
