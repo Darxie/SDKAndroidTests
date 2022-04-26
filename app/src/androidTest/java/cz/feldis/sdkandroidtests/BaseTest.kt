@@ -80,8 +80,8 @@ abstract class BaseTest {
             }
         }
 
-        val authConfig = AuthConfig("https://auth.api.sygic.com", appContext.packageName,
-            BuildConfig.SYGIC_SDK_CLIENT_ID, null, "xxx")
+        val authConfig = AuthConfig("https://auth-testing.api.sygic.com", appContext.packageName,
+            BuildConfig.SYGIC_SDK_CLIENT_ID, null, "xxxxx")
 
         val authLibWrapper = MyAuthLibWrapper(authConfig, AuthStorageImpl(appContext), AuthHttpImpl())
 
