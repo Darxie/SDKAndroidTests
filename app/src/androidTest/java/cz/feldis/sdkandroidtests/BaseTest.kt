@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.annotation.CallSuper
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.rule.GrantPermissionRule
+import com.sygic.sdk.MapReaderSettings
 import com.sygic.sdk.SygicEngine
 import com.sygic.sdk.SygicEngine.initialize
 import com.sygic.sdk.context.CoreInitException
@@ -102,13 +103,12 @@ abstract class BaseTest {
 
     private fun buildTestingConfig(): String {
         this@BaseTest.defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(true)
+        this@BaseTest.defaultConfig.mapReaderSettings().startupPoiProvider(MapReaderSettings.StartupPoiProvider.CUSTOM_PLACES)
         val path = appContext.getExternalFilesDir(null).toString()
         this@BaseTest.defaultConfig.storageFolders().rootPath(path)
         this@BaseTest.defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
         this@BaseTest.defaultConfig.online().routingUrl("https://directions-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().sSOServerUrl("https://auth-testing.api.sygic.com")
-        this@BaseTest.defaultConfig.online().productServer()
-            .licenceUrl("https://licensing-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().productServer()
             .connectUrl("https://productserver-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().productServer()
@@ -120,6 +120,7 @@ abstract class BaseTest {
         this@BaseTest.defaultConfig.online()
             .offlineMapsApiUrl("https://licensing-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().voicesUrl("https://nonttsvoices-testing.api.sygic.com")
+        this@BaseTest.defaultConfig.online().placesUrl("https://places-testing.api.sygic.com")
         return this@BaseTest.defaultConfig.build()
     }
 
