@@ -3,7 +3,8 @@ buildscript {
     ext.kotlin_version = "1.5.31"
     ext.kotlinVersion = "1.5.31"
     repositories {
-        maven { url "https://repository.sygic.com/repository/maven-public/" }
+        maven { url "https://public.repo.sygic.com/repository/maven-sygic-releases/" }
+        maven { url "https://repository.sygic.com/repository/maven-sygic-internal/" }
         google()
         mavenCentral()
     }
@@ -22,7 +23,8 @@ buildscript {
 
 allprojects {
     repositories {
-        maven { url "https://repository.sygic.com/repository/maven-public/" }
+        maven { url "https://public.repo.sygic.com/repository/maven-sygic-releases/" }
+        maven { url "https://repository.sygic.com/repository/maven-sygic-internal/" }
         google()
         mavenCentral()
     }

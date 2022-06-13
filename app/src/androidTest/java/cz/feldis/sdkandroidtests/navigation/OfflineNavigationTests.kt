@@ -5,6 +5,7 @@ import com.sygic.sdk.context.CoreInitCallback
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
+import com.sygic.sdk.navigation.traffic.TrafficManagerProvider
 import com.sygic.sdk.position.CustomPositionUpdater
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.GeoPosition
@@ -122,11 +123,10 @@ class OfflineNavigationTests : BaseTest() {
      */
     @Test
     fun onRouteChangedTest() {
-//        mapDownload.ensureMapNotInstalled("sk")
         mapDownload.installAndLoadMap("sk")
+        TrafficManagerProvider.getInstance().get().enableTrafficService()
         val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
         val navigation = NavigationManagerProvider.getInstance().get()
-        PositionManagerProvider.getInstance().get().startPositionUpdating()
         val route =
             routeCompute.offlineRouteCompute(
                 GeoCoordinates(48.1432, 17.1308),
@@ -135,9 +135,9 @@ class OfflineNavigationTests : BaseTest() {
 
         navigation.setRouteForNavigation(route)
         val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
+        logSimulator.setSpeedMultiplier(2F)
         logSimulator.start()
         navigation.addOnRouteChangedListener(listener)
-        logSimulator.setSpeedMultiplier(4F)
 
         Mockito.verify(
             listener,
@@ -149,7 +149,7 @@ class OfflineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeOnRouteChangedListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        TrafficManagerProvider.getInstance().get().disableTrafficService()
         mapDownload.uninstallMap("sk")
     }
 

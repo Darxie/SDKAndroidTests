@@ -1,17 +1,14 @@
 package cz.feldis.sdkandroidtests.navigation
 
 import com.nhaarman.mockitokotlin2.*
-import com.sygic.sdk.map.RouteRestrictionSettings
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
-import com.sygic.sdk.route.RouteViolatedAvoidOptions
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import junit.framework.Assert.assertNotNull
-import org.hamcrest.CoreMatchers.not
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
@@ -441,8 +438,8 @@ class OnlineNavigationTests : BaseTest() {
 
         navigation.setRouteForNavigation(route)
         navigation.addOnRouteRecomputeProgressListener(listener)
-        val mLogSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
-        mLogSimulator.start()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
+        logSimulator.start()
 
         Mockito.verify(
             listener, Mockito.timeout(STATUS_TIMEOUT).times(1)
@@ -459,8 +456,8 @@ class OnlineNavigationTests : BaseTest() {
         )
             .onRouteRecomputeProgress(any(), eq(NavigationManager.RouteRecomputeStatus.Failed))
 
-        mLogSimulator.stop()
-        mLogSimulator.destroy()
+        logSimulator.stop()
+        logSimulator.destroy()
         navigation.removeOnRouteRecomputeProgressListener(listener)
         navigation.stopNavigation()
     }

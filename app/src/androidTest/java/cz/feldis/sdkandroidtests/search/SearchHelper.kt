@@ -70,7 +70,7 @@ class SearchHelper : BaseTest() {
 
         verify(listener, timeout(10_000L)).onPlacesLoaded(
             argumentCaptor.capture(),
-            isNull()
+            isNotNull()
         )
         searchManager.closeSession(session)
         return argumentCaptor.firstValue

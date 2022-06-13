@@ -134,8 +134,6 @@ abstract class BaseTest {
         this@BaseTest.defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
         this@BaseTest.defaultConfig.online().routingUrl("https://directions-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().sSOServerUrl("https://auth-testing.api.sygic.com")
-//        this@BaseTest.defaultConfig.online().productServer()
-//            .licenceUrl("https://licensing-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().productServer()
             .connectUrl("https://productserver-testing.api.sygic.com")
         this@BaseTest.defaultConfig.online().productServer()
