@@ -153,6 +153,26 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
+    fun computeReykjavikToVikOfflineGetAltitude() {
+        mapDownloadHelper.installAndLoadMap("is")
+        val listener : GeometryListener = mock(verboseLogging = true)
+        val start = GeoCoordinates(64.114341, -21.871153)
+        val destination = GeoCoordinates(63.417836, -19.002209)
+        val routeCompute = RouteComputeHelper()
+        val route = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            transportMode = RoutingOptions.TransportMode.Car
+        )
+        route.getRouteGeometry(true, listener)
+        verify(listener, timeout(1_000L)).onGeometry(argThat {
+            print(this)
+            return@argThat true
+        })
+//        mapDownloadHelper.uninstallMap("is")
+    }
+
+    @Test
     fun routePlanFromJSONOnline() {
         val start = GeoCoordinates(48.145718, 17.118669)
         val destination = GeoCoordinates(48.190322, 16.401080)
@@ -268,7 +288,7 @@ class RouteComputeTests : BaseTest() {
             transportMode = RoutingOptions.TransportMode.Car
             routingService = RoutingOptions.RoutingService.Online
             napStrategy = RoutingOptions.NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
-//            urlOverride = "https://ptv-routing-testing.api.sygic.com"
+            urlOverride = "https://ptv-routing-testing.api.sygic.com"
         }
         val routeRequest = RouteRequest()
         routeRequest.apply {

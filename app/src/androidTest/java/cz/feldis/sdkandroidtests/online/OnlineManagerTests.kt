@@ -28,7 +28,7 @@ class OnlineManagerTests : BaseTest() {
     @Test
     fun mapStreamingTestEnableError() {
 
-        if (!mOnlineManager.isOnlineMapStreamingEnabled) {
+        if (!mOnlineManager.isOnlineMapStreamingEnabled()) {
             val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
             mOnlineManager.enableOnlineMapStreaming(listener)
             Mockito.verify(listener, Mockito.timeout(STATUS_TIMEOUT))
@@ -55,7 +55,7 @@ class OnlineManagerTests : BaseTest() {
     @Test
     fun mapStreamingTestEnableSuccess() {
 
-        if (mOnlineManager.isOnlineMapStreamingEnabled) {
+        if (mOnlineManager.isOnlineMapStreamingEnabled()) {
             val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
             mOnlineManager.disableOnlineMapStreaming(listener)
             Mockito.verify(listener, timeout(STATUS_TIMEOUT))
@@ -79,7 +79,7 @@ class OnlineManagerTests : BaseTest() {
     @Test
     fun mapStreamingTestDisableSuccess() {
 
-        if (!mOnlineManager.isOnlineMapStreamingEnabled) {
+        if (!mOnlineManager.isOnlineMapStreamingEnabled()) {
             val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
             mOnlineManager.enableOnlineMapStreaming(listener)
             verify(listener, timeout(STATUS_TIMEOUT))
@@ -104,7 +104,7 @@ class OnlineManagerTests : BaseTest() {
     @Test
     fun mapStreamingTestDisableError() {
 
-        if (mOnlineManager.isOnlineMapStreamingEnabled) {
+        if (mOnlineManager.isOnlineMapStreamingEnabled()) {
             val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
             mOnlineManager.disableOnlineMapStreaming(listener)
             verify(listener, timeout(STATUS_TIMEOUT))

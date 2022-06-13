@@ -6,6 +6,5 @@ class InitializationTests : BaseTest() {
 
     @Test
     fun initializeAndDestroy() {
-        tearDown()
     }
 }

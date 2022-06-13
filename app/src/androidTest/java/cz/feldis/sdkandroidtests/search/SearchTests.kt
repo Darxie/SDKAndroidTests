@@ -61,7 +61,7 @@ class SearchTests : BaseTest() {
 
         val results = searchHelper.offlineSearchPlaces(placeRequest)
         results.forEach {
-            assert(it.link.category == PlaceCategories.PetrolStation)
+            assert(it.link.category == PlaceCategories.EVStation)
         }
     }
 

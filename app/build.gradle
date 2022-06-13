@@ -5,7 +5,7 @@ plugins {
 
 android {
     compileSdk 31
-
+    ndkVersion "21.1.6352462"
     defaultConfig {
         applicationId "cz.feldis.sdkandroidtests"
         minSdk 21
@@ -17,6 +17,7 @@ android {
 
         // use your own SDK client ID
         buildConfigField "String", "SYGIC_SDK_CLIENT_ID", getSdkClientId()
+        buildConfigField "String", "LICENSE_KEY", getSdkLicenseKey()
 
         if (gradle.wantsToBuildSdkFromSource) {
             missingDimensionStrategy 'build', 'development'
@@ -77,6 +78,23 @@ def getSdkClientId() {
     }
 
     return sdkClientId
+}
+
+def getSdkLicenseKey() {
+    def sdkLicenseKey = ""
+
+    def localProperties = project.rootProject.file('local.properties')
+    if (localProperties.exists()) {
+        Properties properties = new Properties()
+        properties.load(localProperties.newDataInputStream())
+        sdkLicenseKey = properties.getProperty('license.key', "")
+    }
+
+    if (sdkLicenseKey.isEmpty()) {
+        logger.error('Missing License Key for Sygic Maps SDK! Define one in local.properties as license.key="jwt"')
+    }
+
+    return sdkLicenseKey
 }
 
 dependencies {

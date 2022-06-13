@@ -73,8 +73,6 @@ class RouteComputeHelper : BaseTest() {
             captor.capture(), argThat { this == Router.RouteComputeStatus.Success }
         )
 
-        val json = captor.value.serializeToBriefJSON()
-
         return captor.value
     }
 }
