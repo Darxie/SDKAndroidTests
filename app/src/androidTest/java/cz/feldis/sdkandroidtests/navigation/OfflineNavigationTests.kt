@@ -168,9 +168,10 @@ class OfflineNavigationTests : BaseTest() {
         )
             .onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
         verify(
-            listener, timeout(60_000L).times(1)).onJunctionPassed(
+            listener, timeout(60_000L).times(1)
+        ).onJunctionPassed(
             eq(StreetDetail.JunctionType.EnteringUrbanArea)
-            )
+        )
 
         logSimulator.stop()
         logSimulator.destroy()

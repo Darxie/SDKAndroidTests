@@ -55,7 +55,7 @@ class SearchTests : BaseTest() {
     @Test
     fun searchEVStationInAreaOfflineTest() {
         mapDownloadHelper.installAndLoadMap("nl")
-        val position = GeoCoordinates( 51.6188,4.72933)
+        val position = GeoCoordinates(51.6188, 4.72933)
         val categories = listOf(PlaceCategories.EVStation)
         val placeRequest = PlaceRequest(position, categories, 4000)
 
@@ -127,13 +127,15 @@ class SearchTests : BaseTest() {
                     return@argThat false
                 }
                 for (place in this) {
-                    if (place.link.name.isEmpty() || place.details.isEmpty()){
+                    if (place.link.name.isEmpty() || place.details.isEmpty()) {
                         Timber.e("Place link name or place details are empty")
                         return@argThat false
                     }
                     if (place.link.category != PlaceCategories.Bank) {
-                        Timber.e("Category of the place: " + place.link.name + "at" +
-                        place.link.location + "is not equal to the requested one")
+                        Timber.e(
+                            "Category of the place: " + place.link.name + "at" +
+                                    place.link.location + "is not equal to the requested one"
+                        )
                         return@argThat false
                     }
                 }
@@ -170,7 +172,7 @@ class SearchTests : BaseTest() {
         val searchManager = SearchManagerProvider.getInstance().get()
 
         val categories = listOf(PlaceCategories.EVStation)
-        val request = PlaceRequest(GeoCoordinates(51.6188,4.72933), categories, 1000)
+        val request = PlaceRequest(GeoCoordinates(51.6188, 4.72933), categories, 1000)
         val session = searchManager.newOfflineSession()
 
         session.searchPlaces(request, listener)
@@ -182,13 +184,15 @@ class SearchTests : BaseTest() {
                     return@argThat false
                 }
                 for (place in this) {
-                    if (place.link.name.isEmpty() || place.details.isEmpty()){
+                    if (place.link.name.isEmpty() || place.details.isEmpty()) {
                         Timber.e("Place link name or place details are empty")
                         return@argThat false
                     }
                     if (place.link.category != PlaceCategories.EVStation) {
-                        Timber.e("Category of the place: " + place.link.name + "at" +
-                                place.link.location + "is not equal to the requested one")
+                        Timber.e(
+                            "Category of the place: " + place.link.name + "at" +
+                                    place.link.location + "is not equal to the requested one"
+                        )
                         return@argThat false
                     }
                 }

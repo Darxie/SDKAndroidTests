@@ -12,7 +12,6 @@ import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
 import junit.framework.Assert.assertFalse
 import org.junit.Assert
-import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import kotlin.concurrent.schedule

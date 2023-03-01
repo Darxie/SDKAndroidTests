@@ -30,9 +30,9 @@ import java.util.concurrent.TimeUnit
 abstract class BaseTest {
     private val defaultConfig = SygicEngine.JsonConfigBuilder()
     var isEngineInitialized = false
-    lateinit var appContext: Context
+    private lateinit var appContext: Context
     lateinit var sygicContext: SygicContext
-    lateinit var logConnector: LogConnector
+    private lateinit var logConnector: LogConnector
 
     @get:Rule
     var mActivityRule: ActivityScenarioRule<SygicActivity> =
@@ -64,7 +64,7 @@ abstract class BaseTest {
     @Before
     @CallSuper
     open fun setUp() {
-        this@BaseTest.appContext =
+        appContext =
             androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
         val latch = CountDownLatch(1)
         this.isEngineInitialized = false
@@ -77,7 +77,7 @@ abstract class BaseTest {
 
         val contextInitRequest = SygicContextInitRequest(
             jsonConfig,
-            this@BaseTest.appContext,
+            appContext,
             tracking = null,
             logConnector = logConnector,
             loadMaps = true,
@@ -90,8 +90,8 @@ abstract class BaseTest {
             }
 
             override fun onInstance(instance: SygicContext) {
-                this@BaseTest.isEngineInitialized = true
-                this@BaseTest.sygicContext = instance
+                isEngineInitialized = true
+                sygicContext = instance
                 PositionManagerProvider.getInstance().get().startPositionUpdating()
                 latch.countDown()
             }
@@ -101,45 +101,46 @@ abstract class BaseTest {
 
     @After
     open fun tearDown() {
-        this@BaseTest.sygicContext.destroy()
+        sygicContext.destroy()
     }
 
     private fun buildUATConfig(onlineMaps: Boolean): String {
-        this@BaseTest.defaultConfig.license(BuildConfig.LICENSE_KEY)
-        this@BaseTest.defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(onlineMaps)
+        defaultConfig.license(BuildConfig.LICENSE_KEY)
+        defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(onlineMaps)
         val path = appContext.getExternalFilesDir(null).toString()
-        this@BaseTest.defaultConfig.storageFolders().rootPath(path)
-        this@BaseTest.defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
-        this@BaseTest.defaultConfig.online().routingUrl("https://routing-uat.api.sygic.com")
-        this@BaseTest.defaultConfig.online().sSOServerUrl("https://auth-uat.api.sygic.com")
-        this@BaseTest.defaultConfig.online().productServer()
+        defaultConfig.storageFolders().rootPath(path)
+        defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
+        defaultConfig.online().routingUrl("https://routing-uat.api.sygic.com")
+        defaultConfig.online().sSOServerUrl("https://auth-uat.api.sygic.com")
+        defaultConfig.online().productServer()
             .onlineMapsLinkUrl("https://licensing-uat.api.sygic.com")
-        this@BaseTest.defaultConfig.online().searchUrl("https://search-uat.api.sygic.com")
-        this@BaseTest.defaultConfig.online().incidents()
+        defaultConfig.online().searchUrl("https://search-uat.api.sygic.com")
+        defaultConfig.online().incidents()
             .url("https://incidents-testing.api.sygic.com")
-        this@BaseTest.defaultConfig.online().trafficUrl("https://traffic-uat.api.sygic.com")
-        this@BaseTest.defaultConfig.online()
+        defaultConfig.online().trafficUrl("https://traffic-uat.api.sygic.com")
+        defaultConfig.online()
             .offlineMapsApiUrl("https://licensing-uat.api.sygic.com")
-        this@BaseTest.defaultConfig.online().voicesUrl("https://nonttsvoices-testing.api.sygic.com")
+        defaultConfig.online().voicesUrl("https://nonttsvoices-testing.api.sygic.com")
 
-        val consoleAppenderBuilder = LoggingSettings.LoggingItem.AppenderItem.ConsoleAppender.Builder()
-            .format("%levshort %datetime %msg\n")
-            .level(LoggingSettings.LoggingItem.AppenderItem.LogLevel.INFO)
-            .time("%y/%m/%d %H:%M:%S")
+        val consoleAppenderBuilder =
+            LoggingSettings.LoggingItem.AppenderItem.ConsoleAppender.Builder()
+                .format("%levshort %datetime %msg\n")
+                .level(LoggingSettings.LoggingItem.AppenderItem.LogLevel.INFO)
+                .time("%y/%m/%d %H:%M:%S")
         val loggingItemBuilder = LoggingSettings.LoggingItem.Builder()
             .name("logger")
             .addAppender(consoleAppenderBuilder)
-        this@BaseTest.defaultConfig.logging {
+        defaultConfig.logging {
             addLoggingItem(loggingItemBuilder)
         }
-        return this@BaseTest.defaultConfig.build()
+        return defaultConfig.build()
     }
 
     private fun buildProductionConfig(): String {
-        this@BaseTest.defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(true)
+        defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(true)
         val path = appContext.getExternalFilesDir(null).toString()
-        this@BaseTest.defaultConfig.storageFolders().rootPath(path)
-        this@BaseTest.defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
-        return this@BaseTest.defaultConfig.build()
+        defaultConfig.storageFolders().rootPath(path)
+        defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
+        return defaultConfig.build()
     }
 }

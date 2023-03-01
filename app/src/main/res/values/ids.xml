@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <item type="layout" name="sygic_sdk_test_ui_object"/>
-    <item type="drawable" name="sygic_sdk_primary_route_label"/>
-    <item type="id" name="sygicSdkFragmentContainer"/>
-    <item type="id" name="sygicSdkTestImage"/>
+    <item name="sygic_sdk_test_ui_object" type="layout" />
+    <item name="sygic_sdk_primary_route_label" type="drawable" />
+    <item name="sygicSdkFragmentContainer" type="id" />
+    <item name="sygicSdkTestImage" type="id" />
 </resources>
