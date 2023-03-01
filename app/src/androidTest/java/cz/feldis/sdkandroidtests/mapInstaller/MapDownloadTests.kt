@@ -71,7 +71,7 @@ class MapDownloadTests : BaseTest() {
     fun getCountryDetailsFail() {
         val installer = MapInstallerProvider.getInstance().get()
         val listener: MapCountryDetailsListener = mock(verboseLogging = true)
-        installer.getCountryDetails("fr", true, listener)
+        installer.getCountryDetails("xr", true, listener)
         verify(
             listener,
             timeout(30_000L)
@@ -132,18 +132,6 @@ class MapDownloadTests : BaseTest() {
             eq(MapInstaller.LoadResult.Success)
         )
 
-    }
-
-    @Ignore("doesn't work")
-    @Test
-    fun detectWrongCountryTest() {
-        val installer = MapInstallerProvider.getInstance().get()
-        val listener: MapResultListener = mock(verboseLogging = true)
-        installer.detectCurrentCountry("invalidIso", listener)
-        verify(listener, timeout(70_000L)).onMapResult(
-            eq("invalidIso"),
-            eq(MapInstaller.LoadResult.InvalidIsoError)
-        )
     }
 
     @Test

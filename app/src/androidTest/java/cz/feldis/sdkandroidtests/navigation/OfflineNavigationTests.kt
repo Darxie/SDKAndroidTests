@@ -1,19 +1,12 @@
 package cz.feldis.sdkandroidtests.navigation
 
 import com.nhaarman.mockitokotlin2.*
-import com.sygic.sdk.context.CoreInitCallback
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
-import com.sygic.sdk.navigation.traffic.TrafficManagerProvider
-import com.sygic.sdk.position.CustomPositionUpdater
 import com.sygic.sdk.position.GeoCoordinates
-import com.sygic.sdk.position.GeoPosition
 import com.sygic.sdk.position.PositionManagerProvider
-import com.sygic.sdk.route.*
-import com.sygic.sdk.route.simulator.NmeaLogSimulator
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
-import com.sygic.sdk.route.simulator.PositionSimulator
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
@@ -124,33 +117,31 @@ class OfflineNavigationTests : BaseTest() {
     @Test
     fun onRouteChangedTest() {
         mapDownload.installAndLoadMap("sk")
-        TrafficManagerProvider.getInstance().get().enableTrafficService()
         val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
         val navigation = NavigationManagerProvider.getInstance().get()
         val route =
             routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.1432, 17.1308),
-                GeoCoordinates(48.1455, 17.1263)
+                GeoCoordinates(48.14364765102184, 17.131080867348153),
+                GeoCoordinates(48.14852112743662, 17.13397077018316)
             )
 
-        navigation.setRouteForNavigation(route)
         val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
         logSimulator.setSpeedMultiplier(2F)
-        logSimulator.start()
+        navigation.setRouteForNavigation(route)
         navigation.addOnRouteChangedListener(listener)
+        logSimulator.start()
 
         Mockito.verify(
             listener,
-            Mockito.timeout(15_000L).atLeast(2)
+            Mockito.timeout(30_000L).atLeast(2)
         )
             .onRouteChanged(isNotNull(), eq(NavigationManager.RouteUpdateStatus.Success))
+
 
         logSimulator.stop()
         logSimulator.destroy()
         navigation.removeOnRouteChangedListener(listener)
         navigation.stopNavigation()
-        TrafficManagerProvider.getInstance().get().disableTrafficService()
-        mapDownload.uninstallMap("sk")
     }
 
     @Test

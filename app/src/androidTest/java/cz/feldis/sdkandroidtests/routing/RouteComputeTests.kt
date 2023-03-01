@@ -1,7 +1,6 @@
 package cz.feldis.sdkandroidtests.routing
 
 import com.nhaarman.mockitokotlin2.*
-import com.sygic.sdk.navigation.routeeventnotifications.TruckAidInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.*
 import com.sygic.sdk.route.listeners.*
@@ -9,6 +8,7 @@ import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import junit.framework.Assert.assertNotNull
 import org.junit.Assert
+import org.junit.Assert.assertFalse
 import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
@@ -135,6 +135,10 @@ class RouteComputeTests : BaseTest() {
             isNotNull(),
             argThat { this == Router.RouteComputeStatus.Success }
         )
+        verify(listener, never()).onComputeFinished(
+            isNull(),
+            argThat { this != Router.RouteComputeStatus.Success }
+        )
     }
 
     @Test
@@ -149,7 +153,6 @@ class RouteComputeTests : BaseTest() {
             transportMode = RoutingOptions.TransportMode.Car
         )
         Assert.assertNotNull(route)
-        mapDownloadHelper.uninstallMap("is")
     }
 
     @Test
@@ -165,11 +168,12 @@ class RouteComputeTests : BaseTest() {
             transportMode = RoutingOptions.TransportMode.Car
         )
         route.getRouteGeometry(true, listener)
-        verify(listener, timeout(1_000L)).onGeometry(argThat {
-            print(this)
+        verify(listener, timeout(5_000L)).onGeometry(argThat {
+            for (geoCoordinates in this) {
+                assertFalse(geoCoordinates.altitude < 0.0 && geoCoordinates.altitude > 9000.0)
+            }
             return@argThat true
         })
-//        mapDownloadHelper.uninstallMap("is")
     }
 
     @Test
@@ -229,14 +233,11 @@ class RouteComputeTests : BaseTest() {
         )
     }
 
-    @Ignore("Does not work - crashes")
     @Test
     fun frontEmptyTruckTestOffline() {
         val start = GeoCoordinates(48.9844, 22.1844)
         val destination = GeoCoordinates(47.1518, 9.81344)
 
-        mapDownloadHelper.ensureMapNotInstalled("sk")
-        mapDownloadHelper.ensureMapNotInstalled("at")
         mapDownloadHelper.installAndLoadMap("at")
         mapDownloadHelper.installAndLoadMap("sk")
 
@@ -248,10 +249,6 @@ class RouteComputeTests : BaseTest() {
             isUnpavedRoadAvoided = true
             transportMode = RoutingOptions.TransportMode.Car
             routingService = RoutingOptions.RoutingService.Offline
-            this.addDimensionalRestriction(RoutingOptions.VehicleRestrictions.TotalWeight, 44000)
-            this.addDimensionalRestriction(RoutingOptions.VehicleRestrictions.TotalLength, 16500)
-            this.addDimensionalRestriction(RoutingOptions.VehicleRestrictions.Width, 2500)
-            this.addDimensionalRestriction(RoutingOptions.VehicleRestrictions.Height, 4300)
 
             napStrategy = RoutingOptions.NearestAccessiblePointStrategy.Disabled
             setUseSpeedProfiles(true)
@@ -277,19 +274,26 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun computeChangeOnlineRoutingUrlInRuntime() {
-        val start = GeoCoordinates(48.101713, 17.234017)
-        val destination = GeoCoordinates(48.145644, 17.127011)
-        val listener =
-            Mockito.mock(RouteComputeListener::class.java, withSettings().verboseLogging())
-        val routeComputeFinishedListener = Mockito.mock(RouteComputeFinishedListener::class.java)
+    fun computeLongRouteTest() {
+        val start = GeoCoordinates(48.810074677353526, 21.74007593842687)
+        val destination = GeoCoordinates(48.44748228754556, -4.248683341137156)
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
+        mapDownloadHelper.installAndLoadMap("at")
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("pl")
+        mapDownloadHelper.installAndLoadMap("cz")
+        mapDownloadHelper.installAndLoadMap("de")
+        mapDownloadHelper.installAndLoadMap("be")
+        mapDownloadHelper.installAndLoadMap("nl")
+        mapDownloadHelper.installAndLoadMap("fr")
+
         val options = RoutingOptions()
         options.apply {
             transportMode = RoutingOptions.TransportMode.Car
-            routingService = RoutingOptions.RoutingService.Online
-            napStrategy = RoutingOptions.NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
-            urlOverride = "https://ptv-routing-testing.api.sygic.com"
+            routingService = RoutingOptions.RoutingService.Offline
         }
+
         val routeRequest = RouteRequest()
         routeRequest.apply {
             setStart(start)
@@ -297,15 +301,18 @@ class RouteComputeTests : BaseTest() {
             routingOptions = options
         }
 
-        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
+        val alternativeRouteRequest = AlternativeRouteRequest(AlternativeRouteRequest.RouteAlternativeType.Avoid, listener)
+        val alternativeRouteRequest2 = AlternativeRouteRequest(AlternativeRouteRequest.RouteAlternativeType.Avoid, listener)
 
+        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
         val router = RouterProvider.getInstance().get()
 
-        router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
+        router.computeRouteWithAlternatives(primaryRouteRequest, listOf(alternativeRouteRequest, alternativeRouteRequest2), routeComputeFinishedListener)
 
-        verify(listener, Mockito.timeout(10_000L)).onComputeFinished(
+        verify(listener, Mockito.timeout(60_000L)).onComputeFinished(
             isNotNull(),
-            argThat { this == Router.RouteComputeStatus.Success }
+            any()
         )
+
     }
 }

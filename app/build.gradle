@@ -4,12 +4,12 @@ plugins {
 }
 
 android {
-    compileSdk 31
+    compileSdk 33
     ndkVersion "21.1.6352462"
     defaultConfig {
-        applicationId "cz.feldis.sdkandroidtests"
+        applicationId "com.sygic.sdk.test.android"
         minSdk 21
-        targetSdk 31
+        targetSdk 33
         versionCode 1
         versionName "1.0"
 
@@ -26,8 +26,9 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
         }
     }
     compileOptions {
@@ -56,7 +57,7 @@ def getSdkVersion() {
     if (!localProperties.exists())
         throw new GradleScriptException("File local.properties doesn\'t exist")
     properties.load(localProperties.newDataInputStream())
-    def String version = properties.getProperty('sygic.sdk.version')
+    String version = properties.getProperty('sygic.sdk.version')
     if (version == null)
         throw new GradleScriptException("Property sygic.sdk.version is not set")
 
@@ -100,17 +101,17 @@ def getSdkLicenseKey() {
 dependencies {
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'androidx.appcompat:appcompat:1.4.1'
-    implementation 'androidx.core:core-ktx:1.7.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.3'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
-    androidTestImplementation 'androidx.test:core:1.4.0'
-    androidTestImplementation 'androidx.test:runner:1.4.0'
-    androidTestImplementation 'androidx.test:rules:1.4.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test:core:1.5.0'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
     androidTestImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
-    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.0'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4'
 
     if (!gradle.wantsToBuildSdkFromSource()) {
         // use aar from maven
@@ -124,9 +125,9 @@ dependencies {
         api project(':sdk')
     }
 
-    implementation 'com.google.android.material:material:1.5.0'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
-    implementation 'com.jakewharton.timber:timber:4.7.1'
-    androidTestImplementation 'org.mockito:mockito-android:3.1.0'
+    implementation 'com.google.android.material:material:1.8.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    implementation 'com.jakewharton.timber:timber:5.0.1'
+    androidTestImplementation 'org.mockito:mockito-android:5.1.1'
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.2'
 }
