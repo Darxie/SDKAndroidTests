@@ -6,19 +6,16 @@ import android.util.Log
 import androidx.annotation.CallSuper
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.rule.GrantPermissionRule
-import com.sygic.lib.auth.AuthConfig
+import com.sygic.sdk.LoggingSettings
+
 import com.sygic.sdk.SygicEngine
 import com.sygic.sdk.SygicEngine.initialize
-import com.sygic.sdk.auth.BuildHeadersCallback
-import com.sygic.sdk.auth.ErrorCode
 import com.sygic.sdk.context.CoreInitException
 import com.sygic.sdk.context.SygicContext
 import com.sygic.sdk.context.SygicContextInitRequest
 import com.sygic.sdk.diagnostics.LogConnector
 import com.sygic.sdk.position.PositionManagerProvider
-import cz.feldis.sdkandroidtests.auth.AuthHttpImpl
-import cz.feldis.sdkandroidtests.auth.AuthStorageImpl
-import cz.feldis.sdkandroidtests.auth.MyAuthLibWrapper
+
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -71,29 +68,12 @@ abstract class BaseTest {
             androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
         val latch = CountDownLatch(1)
         this.isEngineInitialized = false
-        val jsonConfig = buildTestingConfig()
+        val jsonConfig = buildUATConfig(true)
 
         logConnector = object : LogConnector() {
             override fun onLogReceived(message: String, logLevel: LogLevel) {
-                super.onLogReceived(message, logLevel)
-                println(message)
             }
         }
-
-        val authConfig = AuthConfig("https://auth-testing.api.sygic.com", appContext.packageName,
-            BuildConfig.SYGIC_SDK_CLIENT_ID, null, "xxxxx")
-
-        val authLibWrapper = MyAuthLibWrapper(authConfig, AuthStorageImpl(appContext), AuthHttpImpl())
-
-        authLibWrapper.buildHeaders(object: BuildHeadersCallback{
-            override fun onError(error: ErrorCode, errorMessage: String) {
-               print(errorMessage)
-            }
-
-            override fun onSuccess(headers: Map<String, String>) {
-               print(headers)
-            }
-        })
 
         val contextInitRequest = SygicContextInitRequest(
             jsonConfig,
@@ -101,8 +81,7 @@ abstract class BaseTest {
             tracking = null,
             logConnector = logConnector,
             loadMaps = true,
-            clearOnlineCache = true,
-            auth = authLibWrapper
+            clearOnlineCache = false
         )
         initialize(contextInitRequest, object : SygicEngine.OnInitCallback {
             override fun onError(error: CoreInitException) {
@@ -122,29 +101,37 @@ abstract class BaseTest {
 
     @After
     open fun tearDown() {
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
         this@BaseTest.sygicContext.destroy()
     }
 
-    private fun buildTestingConfig(): String {
+    private fun buildUATConfig(onlineMaps: Boolean): String {
         this@BaseTest.defaultConfig.license(BuildConfig.LICENSE_KEY)
-        this@BaseTest.defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(true)
+        this@BaseTest.defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(onlineMaps)
         val path = appContext.getExternalFilesDir(null).toString()
         this@BaseTest.defaultConfig.storageFolders().rootPath(path)
         this@BaseTest.defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
-        this@BaseTest.defaultConfig.online().routingUrl("https://directions-testing.api.sygic.com")
-        this@BaseTest.defaultConfig.online().sSOServerUrl("https://auth-testing.api.sygic.com")
+        this@BaseTest.defaultConfig.online().routingUrl("https://routing-uat.api.sygic.com")
+        this@BaseTest.defaultConfig.online().sSOServerUrl("https://auth-uat.api.sygic.com")
         this@BaseTest.defaultConfig.online().productServer()
-            .connectUrl("https://productserver-testing.api.sygic.com")
-        this@BaseTest.defaultConfig.online().productServer()
-            .onlineMapsLinkUrl("https://licensing-testing.api.sygic.com")
-        this@BaseTest.defaultConfig.online().searchUrl("https://search-testing.api.sygic.com")
+            .onlineMapsLinkUrl("https://licensing-uat.api.sygic.com")
+        this@BaseTest.defaultConfig.online().searchUrl("https://search-uat.api.sygic.com")
         this@BaseTest.defaultConfig.online().incidents()
             .url("https://incidents-testing.api.sygic.com")
-        this@BaseTest.defaultConfig.online().trafficUrl("https://traffic-testing.api.sygic.com")
+        this@BaseTest.defaultConfig.online().trafficUrl("https://traffic-uat.api.sygic.com")
         this@BaseTest.defaultConfig.online()
-            .offlineMapsApiUrl("https://licensing-testing.api.sygic.com")
+            .offlineMapsApiUrl("https://licensing-uat.api.sygic.com")
         this@BaseTest.defaultConfig.online().voicesUrl("https://nonttsvoices-testing.api.sygic.com")
+
+        val consoleAppenderBuilder = LoggingSettings.LoggingItem.AppenderItem.ConsoleAppender.Builder()
+            .format("%levshort %datetime %msg\n")
+            .level(LoggingSettings.LoggingItem.AppenderItem.LogLevel.INFO)
+            .time("%y/%m/%d %H:%M:%S")
+        val loggingItemBuilder = LoggingSettings.LoggingItem.Builder()
+            .name("logger")
+            .addAppender(consoleAppenderBuilder)
+        this@BaseTest.defaultConfig.logging {
+            addLoggingItem(loggingItemBuilder)
+        }
         return this@BaseTest.defaultConfig.build()
     }
 

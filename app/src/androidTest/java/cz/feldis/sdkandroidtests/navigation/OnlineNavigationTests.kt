@@ -141,8 +141,7 @@ class OnlineNavigationTests : BaseTest() {
         navigation.addOnSpeedLimitListener(listener)
 
         Mockito.verify(
-            listener,
-            Mockito.timeout(STATUS_TIMEOUT)
+            listener, timeout(STATUS_TIMEOUT).atLeast(2) // first call contains previous values
         )
             .onSpeedLimitInfoChanged(any())
 
@@ -265,6 +264,45 @@ class OnlineNavigationTests : BaseTest() {
         navigation.removeOnRouteChangedListener(listener)
         navigation.stopNavigation()
     }
+
+//    @Test
+//    fun onGuidedRouteChangedTest() {
+//        val navigation = NavigationManagerProvider.getInstance().get()
+//        val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
+//
+//        val start = GeoCoordinates(48.1432, 17.1308)
+//        val destination = GeoCoordinates(48.1455, 17.1263)
+//
+//        val guidedRouteProfile = GuidedRouteProfile()
+//        val routeRequest = RouteRequest()
+//
+//        val route = routeCompute.onlineComputeRoute(
+//            GeoCoordinates(48.1432, 17.1308),
+//            GeoCoordinates(48.1455, 17.1263)
+//        )
+//
+//        navigation.setRouteForNavigation(route)
+//        val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
+//        logSimulator.start()
+//        navigation.addOnRouteChangedListener(listener)
+//        logSimulator.setSpeedMultiplier(2F)
+//
+//        Mockito.verify(
+//            listener,
+//            Mockito.timeout(STATUS_TIMEOUT)
+//        )
+//            .onRouteChanged(argThat {
+//                if (this != route)  {
+//                    return@argThat true
+//                }
+//                else false
+//            }, eq(NavigationManager.RouteUpdateStatus.Success))
+//
+//        logSimulator.stop()
+//        logSimulator.destroy()
+//        navigation.removeOnRouteChangedListener(listener)
+//        navigation.stopNavigation()
+//    }
 
 
     /**
@@ -546,6 +584,6 @@ class OnlineNavigationTests : BaseTest() {
     }
 
     companion object {
-        private const val STATUS_TIMEOUT: Long = 60000
+        private const val STATUS_TIMEOUT: Long = 30000
     }
 }

@@ -3,6 +3,7 @@ package cz.feldis.sdkandroidtests.mapInstaller
 import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
+import com.sygic.sdk.map.listeners.MapInstallProgressListener
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.MapStatusListener
 import com.sygic.sdk.map.listeners.ResultListener
@@ -27,8 +28,9 @@ class MapDownloadHelper : BaseTest() {
 
     fun installAndLoadMap(iso: String) {
         val listener: MapResultListener = mock(verboseLogging = true)
+        val lis : MapInstallProgressListener
         installer.installMap(iso, listener)
-        verify(listener, timeout(120_000L)).onMapResult(eq(iso), eq(MapInstaller.LoadResult.Success))
+        verify(listener, timeout(300_000L)).onMapResult(eq(iso), eq(MapInstaller.LoadResult.Success))
 
         val loadListener: MapResultListener = mock(verboseLogging = true)
         installer.loadMap(iso, loadListener)

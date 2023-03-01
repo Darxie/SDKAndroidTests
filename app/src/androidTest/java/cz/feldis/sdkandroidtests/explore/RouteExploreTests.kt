@@ -2,6 +2,7 @@ package cz.feldis.sdkandroidtests.explore
 
 import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.navigation.explorer.RouteExplorer
+import com.sygic.sdk.navigation.traffic.TrafficManager
 import com.sygic.sdk.navigation.traffic.TrafficManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
 import cz.feldis.sdkandroidtests.BaseTest
@@ -12,10 +13,16 @@ import org.mockito.Mockito
 
 class RouteExploreTests : BaseTest() {
 
+    private lateinit var routeCompute: RouteComputeHelper
+
+    override fun setUp(){
+        super.setUp()
+        routeCompute = RouteComputeHelper()
+    }
+
     @Test
     fun exploreTrafficOnRoute() {
         TrafficManagerProvider.getInstance().get().enableTrafficService()
-        val routeCompute = RouteComputeHelper()
 
         val listener: RouteExplorer.OnExploreTrafficOnRouteListener = mock(verboseLogging = true)
 
@@ -35,6 +42,28 @@ class RouteExploreTests : BaseTest() {
         TrafficManagerProvider.getInstance().get().disableTrafficService()
     }
 
+    @Test
+    fun exploreTrafficOnRouteWithDisabledTraffic() {
+        TrafficManagerProvider.getInstance().get().disableTrafficService()
+
+        val listener: RouteExplorer.OnExploreTrafficOnRouteListener = mock(verboseLogging = true)
+
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.155195, 17.136827),
+            GeoCoordinates(48.289024, 17.264717)
+        )
+
+        RouteExplorer.exploreTrafficOnRoute(route, listener)
+
+        verify(listener, never())
+            .onExploreTrafficLoaded(any())
+
+        verify(listener, Mockito.timeout(5_000L))
+            .onExploreTrafficError(TrafficManager.ErrorCode.SERVICE_DISABLED)
+
+        TrafficManagerProvider.getInstance().get().disableTrafficService()
+    }
+
     /**
      * Explore test on places on route
      *
@@ -44,7 +73,6 @@ class RouteExploreTests : BaseTest() {
      */
     @Test
     fun onExplorePlacesOnRoute() {
-        val routeCompute = RouteComputeHelper()
         val listener: RouteExplorer.OnExplorePlacesOnRouteListener = mock(verboseLogging = true)
         val route =
             routeCompute.onlineComputeRoute(
@@ -67,7 +95,6 @@ class RouteExploreTests : BaseTest() {
 
     @Test
     fun exploreIncidentsOnRoute() {
-        val routeCompute = RouteComputeHelper()
         val listener: RouteExplorer.OnExploreIncidentsOnRouteListener = mock(verboseLogging = true)
 
         val route = routeCompute.onlineComputeRoute(
