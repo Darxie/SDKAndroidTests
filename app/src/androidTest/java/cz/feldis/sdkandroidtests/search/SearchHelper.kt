@@ -12,8 +12,6 @@ class SearchHelper : BaseTest() {
     private val searchManager = SearchManagerProvider.getInstance().get()
 
     fun offlineAutocomplete() {
-        val session = searchManager.newOnlineSession()
-        searchManager.closeSession(session)
     }
 
     fun onlineAutocomplete(autocompleteRequest: SearchRequest): List<AutocompleteResult> {
@@ -32,13 +30,11 @@ class SearchHelper : BaseTest() {
     }
 
     fun offlineGeocode() {
-        val session = searchManager.newOnlineSession()
-        searchManager.closeSession(session)
+
     }
 
     fun onlineGeocode() {
-        val session = searchManager.newOnlineSession()
-        searchManager.closeSession(session)
+
     }
 
     fun offlineReverseGeocode() {
