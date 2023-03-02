@@ -23,23 +23,6 @@ class SearchTests : BaseTest() {
         mapDownloadHelper = MapDownloadHelper()
     }
 
-    @Ignore("wtf toto nefunguje")
-    @Test
-    fun searchPlacesInvalidCategoryOnline() {
-        val listener: PlacesListener = mock(verboseLogging = true)
-        val searchManager = SearchManagerProvider.getInstance().get()
-        val categories = listOf("tu_nemame_kategoriu")
-        val request = PlaceRequest(GeoCoordinates(48.145718, 17.118669), categories, 100)
-        val session = SearchManagerProvider.getInstance().get().newOnlineSession()
-
-        session.searchPlaces(request, listener)
-        searchManager.closeSession(session)
-
-        verify(listener, Mockito.timeout(10_000L))
-            .onPlacesError(eq(ResultStatus.INVALID_CATEGORY_TAG))
-        verify(listener, Mockito.never()).onPlacesLoaded(any(), any())
-    }
-
     @Test
     fun searchPetrolStationInAreaOnlineTest() {
         val position = GeoCoordinates(48.100806, 17.234972)

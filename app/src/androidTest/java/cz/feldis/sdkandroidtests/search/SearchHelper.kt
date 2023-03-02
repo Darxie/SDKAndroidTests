@@ -48,31 +48,47 @@ class SearchHelper : BaseTest() {
     }
 
     fun offlineSearchPlaces(placeRequest: PlaceRequest): List<Place> {
-        val session = searchManager.newOfflineSession()
+        val searchCallback : CreateSearchCallback<OfflineMapSearch> = mock(verboseLogging = true)
         val listener: PlacesListener = mock(verboseLogging = true)
-        val argumentCaptor = argumentCaptor<List<Place>>()
-        session.searchPlaces(placeRequest, listener)
 
-        verify(listener, timeout(10_000L)).onPlacesLoaded(
-            argumentCaptor.capture(),
-            isNull()
+        val onlineMapSearchCaptor = argumentCaptor<OfflineMapSearch>()
+        val argumentCaptor = argumentCaptor<List<Place>>()
+
+        searchManager.createOfflineMapSearch(searchCallback)
+
+        verify(searchCallback, timeout(10_000L)).onSuccess(
+            onlineMapSearchCaptor.capture()
         )
-        searchManager.closeSession(session)
-        return argumentCaptor.firstValue
-    }
-
-
-    fun onlineSearchPlaces(placeRequest: PlaceRequest): List<Place> {
-        val session = searchManager.newOnlineSession()
-        val listener: PlacesListener = mock(verboseLogging = true)
-        session.searchPlaces(placeRequest, listener)
-        val argumentCaptor = argumentCaptor<List<Place>>()
+        onlineMapSearchCaptor.firstValue.createSession().searchPlaces(placeRequest, listener)
 
         verify(listener, timeout(10_000L)).onPlacesLoaded(
             argumentCaptor.capture(),
             isNotNull()
         )
-        searchManager.closeSession(session)
+
+        return argumentCaptor.firstValue
+    }
+
+
+    fun onlineSearchPlaces(placeRequest: PlaceRequest): List<Place> {
+        val searchCallback : CreateSearchCallback<OnlineMapSearch> = mock(verboseLogging = true)
+        val listener: PlacesListener = mock(verboseLogging = true)
+
+        val onlineMapSearchCaptor = argumentCaptor<OnlineMapSearch>()
+        val argumentCaptor = argumentCaptor<List<Place>>()
+
+        searchManager.createOnlineMapSearch(searchCallback)
+
+        verify(searchCallback, timeout(10_000L)).onSuccess(
+            onlineMapSearchCaptor.capture()
+        )
+        onlineMapSearchCaptor.firstValue.createSession().searchPlaces(placeRequest, listener)
+
+        verify(listener, timeout(10_000L)).onPlacesLoaded(
+            argumentCaptor.capture(),
+            isNotNull()
+        )
+
         return argumentCaptor.firstValue
     }
 

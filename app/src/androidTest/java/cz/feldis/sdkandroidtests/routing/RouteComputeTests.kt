@@ -188,7 +188,7 @@ class RouteComputeTests : BaseTest() {
         val routeJson = originalRoute.serializeToBriefJSON()
 
         RouteRequest.createRouteRequestFromJSONString(json = routeJson, listener)
-        verify(listener, timeout(1000)).onSuccess(
+        verify(listener, timeout(1_000L)).onSuccess(
             argThat {
                 if (this.start?.originalPosition == start && this.destination?.originalPosition == destination) {
                     return@argThat true
