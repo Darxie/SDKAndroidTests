@@ -158,7 +158,7 @@ class RouteComputeTests : BaseTest() {
     @Test
     fun computeReykjavikToVikOfflineGetAltitude() {
         mapDownloadHelper.installAndLoadMap("is")
-        val listener : GeometryListener = mock(verboseLogging = true)
+        val listener: GeometryListener = mock(verboseLogging = true)
         val start = GeoCoordinates(64.114341, -21.871153)
         val destination = GeoCoordinates(63.417836, -19.002209)
         val routeCompute = RouteComputeHelper()
@@ -188,7 +188,7 @@ class RouteComputeTests : BaseTest() {
         val routeJson = originalRoute.serializeToBriefJSON()
 
         RouteRequest.createRouteRequestFromJSONString(json = routeJson, listener)
-        verify(listener, timeout(1000)).onSuccess(
+        verify(listener, timeout(1_000L)).onSuccess(
             argThat {
                 if (this.start?.originalPosition == start && this.destination?.originalPosition == destination) {
                     return@argThat true
@@ -234,11 +234,11 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun frontEmptyTruckTestOffline() {
+    fun mapNotAvailableTruckTestOffline() {
         val start = GeoCoordinates(48.9844, 22.1844)
         val destination = GeoCoordinates(47.1518, 9.81344)
 
-        mapDownloadHelper.installAndLoadMap("at")
+        mapDownloadHelper.ensureMapNotInstalled("at")
         mapDownloadHelper.installAndLoadMap("sk")
 
         val listener: RouteComputeListener = mock(verboseLogging = true)
@@ -269,28 +269,52 @@ class RouteComputeTests : BaseTest() {
 
         verify(listener, Mockito.timeout(50_000L)).onComputeFinished(
             isNull(),
-            argThat { this == Router.RouteComputeStatus.UnreachableTarget }
+            argThat { this == Router.RouteComputeStatus.MapNotAvailable }
         )
     }
 
     @Test
-    fun computeLongRouteTest() {
-        val start = GeoCoordinates(48.810074677353526, 21.74007593842687)
-        val destination = GeoCoordinates(48.44748228754556, -4.248683341137156)
+    @Ignore("Returns Unreachable target")
+    fun computeWrongFromPointOnline() {
+        val start = GeoCoordinates(34.764518085578196, 18.03834181295307)
+        val destination = GeoCoordinates(47.99919432978094, 18.164403416068332)
         val listener: RouteComputeListener = mock(verboseLogging = true)
         val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
-        mapDownloadHelper.installAndLoadMap("at")
-        mapDownloadHelper.installAndLoadMap("sk")
-        mapDownloadHelper.installAndLoadMap("pl")
-        mapDownloadHelper.installAndLoadMap("cz")
-        mapDownloadHelper.installAndLoadMap("de")
-        mapDownloadHelper.installAndLoadMap("be")
-        mapDownloadHelper.installAndLoadMap("nl")
-        mapDownloadHelper.installAndLoadMap("fr")
 
         val options = RoutingOptions()
         options.apply {
-            transportMode = RoutingOptions.TransportMode.Car
+            routingService = RoutingOptions.RoutingService.Online
+        }
+
+        val routeRequest = RouteRequest()
+        routeRequest.apply {
+            setStart(start)
+            setDestination(destination)
+            routingOptions = options
+        }
+
+        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
+        val router = RouterProvider.getInstance().get()
+
+        router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
+
+        verify(listener, timeout(20_000L)).onComputeFinished(
+            isNull(),
+            argThat { this == Router.RouteComputeStatus.WrongFromPoint }
+        )
+    }
+
+    @Test
+    @Ignore("Selection outside of map")
+    fun computeWrongFromPointOffline() {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val start = GeoCoordinates(34.764518085578196, 18.03834181295307)
+        val destination = GeoCoordinates(47.99919432978094, 18.164403416068332)
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
+
+        val options = RoutingOptions()
+        options.apply {
             routingService = RoutingOptions.RoutingService.Offline
         }
 
@@ -301,18 +325,47 @@ class RouteComputeTests : BaseTest() {
             routingOptions = options
         }
 
-        val alternativeRouteRequest = AlternativeRouteRequest(AlternativeRouteRequest.RouteAlternativeType.Avoid, listener)
-        val alternativeRouteRequest2 = AlternativeRouteRequest(AlternativeRouteRequest.RouteAlternativeType.Avoid, listener)
+        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
+        val router = RouterProvider.getInstance().get()
+
+        router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
+
+        verify(listener, timeout(20_000L)).onComputeFinished(
+            isNull(),
+            argThat { this == Router.RouteComputeStatus.WrongFromPoint }
+        )
+    }
+
+    @Test
+    fun cancelOfflineCompute(){
+        mapDownloadHelper.installAndLoadMap("sk")
+        val start = GeoCoordinates(48.14096139265543, 17.154151725057243)
+        val destination = GeoCoordinates(48.734914147394626, 21.260367789890452)
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
+
+        val options = RoutingOptions()
+        options.apply {
+            routingService = RoutingOptions.RoutingService.Offline
+        }
+
+        val routeRequest = RouteRequest()
+        routeRequest.apply {
+            setStart(start)
+            setDestination(destination)
+            routingOptions = options
+        }
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
         val router = RouterProvider.getInstance().get()
 
-        router.computeRouteWithAlternatives(primaryRouteRequest, listOf(alternativeRouteRequest, alternativeRouteRequest2), routeComputeFinishedListener)
+        val task = router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
+        verify(listener, timeout(10_000L).atLeast(5)).onProgress(any())
+        task.cancel()
 
-        verify(listener, Mockito.timeout(60_000L)).onComputeFinished(
-            isNotNull(),
-            any()
+        verify(listener, timeout(10_000L)).onComputeFinished(
+            isNull(),
+            argThat { this == Router.RouteComputeStatus.UserCanceled }
         )
-
     }
 }

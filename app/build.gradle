@@ -1,6 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
 }
 
 android {
@@ -105,6 +107,8 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'com.google.firebase:firebase-crashlytics:18.3.5'
+    implementation 'com.google.firebase:firebase-analytics:21.2.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test:core:1.5.0'
@@ -115,7 +119,7 @@ dependencies {
 
     if (!gradle.wantsToBuildSdkFromSource()) {
         // use aar from maven
-        api ("com.sygic.sdk:maps-android:${getSdkVersion()}@aar") {
+        api("com.sygic.sdk:maps-android:${getSdkVersion()}@aar") {
             exclude group: 'com.google.android.gms'
             exclude group: 'androidx.core', module: 'core-ktx'
             transitive true

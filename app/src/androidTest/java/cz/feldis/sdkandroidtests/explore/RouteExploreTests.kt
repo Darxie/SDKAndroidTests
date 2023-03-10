@@ -15,7 +15,7 @@ class RouteExploreTests : BaseTest() {
 
     private lateinit var routeCompute: RouteComputeHelper
 
-    override fun setUp(){
+    override fun setUp() {
         super.setUp()
         routeCompute = RouteComputeHelper()
     }

@@ -1,6 +1,9 @@
 package cz.feldis.sdkandroidtests.online
 
-import com.nhaarman.mockitokotlin2.*
+import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.timeout
+import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.online.OnlineManager
 import com.sygic.sdk.online.OnlineManagerProvider
 import cz.feldis.sdkandroidtests.BaseTest

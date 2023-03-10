@@ -253,10 +253,9 @@ class OnlineNavigationTests : BaseTest() {
             Mockito.timeout(STATUS_TIMEOUT)
         )
             .onRouteChanged(argThat {
-                if (this != route)  {
+                if (this != route) {
                     return@argThat true
-                }
-                else false
+                } else false
             }, eq(NavigationManager.RouteUpdateStatus.Success))
 
         logSimulator.stop()

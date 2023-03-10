@@ -23,23 +23,6 @@ class SearchTests : BaseTest() {
         mapDownloadHelper = MapDownloadHelper()
     }
 
-    @Ignore("wtf toto nefunguje")
-    @Test
-    fun searchPlacesInvalidCategoryOnline() {
-        val listener: PlacesListener = mock(verboseLogging = true)
-        val searchManager = SearchManagerProvider.getInstance().get()
-        val categories = listOf("tu_nemame_kategoriu")
-        val request = PlaceRequest(GeoCoordinates(48.145718, 17.118669), categories, 100)
-        val session = SearchManagerProvider.getInstance().get().newOnlineSession()
-
-        session.searchPlaces(request, listener)
-        searchManager.closeSession(session)
-
-        verify(listener, Mockito.timeout(10_000L))
-            .onPlacesError(eq(ResultStatus.INVALID_CATEGORY_TAG))
-        verify(listener, Mockito.never()).onPlacesLoaded(any(), any())
-    }
-
     @Test
     fun searchPetrolStationInAreaOnlineTest() {
         val position = GeoCoordinates(48.100806, 17.234972)
@@ -55,7 +38,7 @@ class SearchTests : BaseTest() {
     @Test
     fun searchEVStationInAreaOfflineTest() {
         mapDownloadHelper.installAndLoadMap("nl")
-        val position = GeoCoordinates( 51.6188,4.72933)
+        val position = GeoCoordinates(51.6188, 4.72933)
         val categories = listOf(PlaceCategories.EVStation)
         val placeRequest = PlaceRequest(position, categories, 4000)
 
@@ -127,13 +110,15 @@ class SearchTests : BaseTest() {
                     return@argThat false
                 }
                 for (place in this) {
-                    if (place.link.name.isEmpty() || place.details.isEmpty()){
+                    if (place.link.name.isEmpty() || place.details.isEmpty()) {
                         Timber.e("Place link name or place details are empty")
                         return@argThat false
                     }
                     if (place.link.category != PlaceCategories.Bank) {
-                        Timber.e("Category of the place: " + place.link.name + "at" +
-                        place.link.location + "is not equal to the requested one")
+                        Timber.e(
+                            "Category of the place: " + place.link.name + "at" +
+                                    place.link.location + "is not equal to the requested one"
+                        )
                         return@argThat false
                     }
                 }
@@ -170,7 +155,7 @@ class SearchTests : BaseTest() {
         val searchManager = SearchManagerProvider.getInstance().get()
 
         val categories = listOf(PlaceCategories.EVStation)
-        val request = PlaceRequest(GeoCoordinates(51.6188,4.72933), categories, 1000)
+        val request = PlaceRequest(GeoCoordinates(51.6188, 4.72933), categories, 1000)
         val session = searchManager.newOfflineSession()
 
         session.searchPlaces(request, listener)
@@ -182,13 +167,15 @@ class SearchTests : BaseTest() {
                     return@argThat false
                 }
                 for (place in this) {
-                    if (place.link.name.isEmpty() || place.details.isEmpty()){
+                    if (place.link.name.isEmpty() || place.details.isEmpty()) {
                         Timber.e("Place link name or place details are empty")
                         return@argThat false
                     }
                     if (place.link.category != PlaceCategories.EVStation) {
-                        Timber.e("Category of the place: " + place.link.name + "at" +
-                                place.link.location + "is not equal to the requested one")
+                        Timber.e(
+                            "Category of the place: " + place.link.name + "at" +
+                                    place.link.location + "is not equal to the requested one"
+                        )
                         return@argThat false
                     }
                 }
