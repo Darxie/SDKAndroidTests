@@ -6,21 +6,25 @@ import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.*
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
 import timber.log.Timber
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class SearchTests : BaseTest() {
 
     private lateinit var searchHelper: SearchHelper
     private lateinit var mapDownloadHelper: MapDownloadHelper
+    private lateinit var reverseGeocoder: ReverseGeocoder
 
     override fun setUp() {
         super.setUp()
         searchHelper = SearchHelper()
         mapDownloadHelper = MapDownloadHelper()
+        reverseGeocoder = ReverseGeocoderProvider.getInstance().get()
     }
 
     @Test
@@ -314,6 +318,41 @@ class SearchTests : BaseTest() {
                 }
                 true
             }, any())
+    }
+
+    @Test
+    fun getTimeZoneOnlineMap() {
+        val listener: ReverseGeocoder.TimeAtLocationResultListener = mock()
+        val utcUnixTimestamp = System.currentTimeMillis() / 1000L
+        val location = GeoCoordinates(-37.82626706998113, 140.77709279621698) // South Australia
+
+        reverseGeocoder.getLocalTimeAtLocation(location, utcUnixTimestamp, listener)
+
+        val timestampCaptor = argumentCaptor<Long>()
+
+        verify(listener, timeout(5_000L)).onSuccess(timestampCaptor.capture())
+        verify(listener, never()).onError(any())
+
+        assertTrue(timestampCaptor.lastValue - utcUnixTimestamp in 36000..37800) // in seconds
+    }
+
+    @Test
+    fun getTimeZoneOfflineMap() {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val listener: ReverseGeocoder.TimeAtLocationResultListener = mock()
+        val utcUnixTimestamp = System.currentTimeMillis() / 1000L
+        val location = GeoCoordinates(48.12361, 17.11153) // Bratiska
+
+        reverseGeocoder.getLocalTimeAtLocation(location, utcUnixTimestamp, listener)
+
+        val timestampCaptor = argumentCaptor<Long>()
+
+        verify(listener, timeout(5_000L)).onSuccess(timestampCaptor.capture())
+        verify(listener, never()).onError(any())
+
+        // local time in Bratiska is always later, but no more than 2 hours (summer time)
+        assertTrue(timestampCaptor.lastValue > utcUnixTimestamp)
+        assertTrue(timestampCaptor.lastValue - utcUnixTimestamp <= TimeUnit.HOURS.toMillis(2))
     }
 
 }

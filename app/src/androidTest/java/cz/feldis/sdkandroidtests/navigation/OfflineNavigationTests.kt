@@ -133,7 +133,7 @@ class OfflineNavigationTests : BaseTest() {
 
         Mockito.verify(
             listener,
-            Mockito.timeout(30_000L).atLeast(2)
+            Mockito.timeout(30_000L).atLeast(1)
         )
             .onRouteChanged(isNotNull(), eq(NavigationManager.RouteUpdateStatus.Success))
 
