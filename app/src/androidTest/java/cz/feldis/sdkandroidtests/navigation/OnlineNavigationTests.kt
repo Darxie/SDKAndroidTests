@@ -7,6 +7,7 @@ import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
+import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import junit.framework.Assert.assertNotNull
 import org.junit.Assert
@@ -19,11 +20,14 @@ import timber.log.Timber
 
 class OnlineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
+    private lateinit var mapDownload: MapDownloadHelper
 
     @Before
     override fun setUp() {
         super.setUp()
         routeCompute = RouteComputeHelper()
+        mapDownload = MapDownloadHelper()
+        mapDownload.ensureMapNotInstalled("sk")
     }
 
     @Test
@@ -318,13 +322,15 @@ class OnlineNavigationTests : BaseTest() {
 
         val route =
             routeCompute.onlineComputeRoute(
-                GeoCoordinates(48.151204, 17.106735),
-                GeoCoordinates(48.149639, 17.110376)
+                GeoCoordinates(48.147682401781026, 17.14365655304184),
+                GeoCoordinates(48.15310362223699, 17.147190865317768)
             )
 
         navigation.setRouteForNavigation(route)
         navigation.addOnLaneListener(listener)
+
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        simulator.setSpeedMultiplier(4F)
         simulator.start()
 
         Mockito.verify(
@@ -332,10 +338,10 @@ class OnlineNavigationTests : BaseTest() {
             Mockito.timeout(STATUS_TIMEOUT)
         )
             .onLaneInfoChanged(argThat {
-                if (this.complexLanesInfo.isEmpty()) {
-                    return@argThat false
+                if (this.simpleLanesInfo?.lanes?.isNotEmpty() == true){
+                    return@argThat true
                 }
-                true
+                false
             })
 
         simulator.stop()
@@ -479,12 +485,22 @@ class OnlineNavigationTests : BaseTest() {
         logSimulator.start()
 
         Mockito.verify(
-            listener, Mockito.timeout(STATUS_TIMEOUT).times(1)
+            listener, Mockito.timeout(30_000L).times(1)
         )
             .onRouteRecomputeProgress(eq(0), eq(NavigationManager.RouteRecomputeStatus.Started))
 
         Mockito.verify(
-            listener, Mockito.timeout(STATUS_TIMEOUT).times(1)
+            listener, Mockito.timeout(30_000L).times(1)
+        )
+            .onRouteRecomputeProgress(eq(0), eq(NavigationManager.RouteRecomputeStatus.Computing))
+
+        Mockito.verify(
+            listener, Mockito.timeout(30_000L).times(1)
+        )
+            .onRouteRecomputeProgress(eq(100), eq(NavigationManager.RouteRecomputeStatus.Computing))
+
+        Mockito.verify(
+            listener, Mockito.timeout(30_000L).times(1)
         )
             .onRouteRecomputeProgress(eq(100), eq(NavigationManager.RouteRecomputeStatus.Finished))
 

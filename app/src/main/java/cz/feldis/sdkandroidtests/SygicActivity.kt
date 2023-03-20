@@ -7,7 +7,6 @@ import timber.log.Timber
 import timber.log.Timber.DebugTree
 
 class SygicActivity : AppCompatActivity() {
-
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Timber.plant(DebugTree())

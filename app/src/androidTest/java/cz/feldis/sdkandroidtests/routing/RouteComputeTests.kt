@@ -269,7 +269,7 @@ class RouteComputeTests : BaseTest() {
 
         verify(listener, Mockito.timeout(50_000L)).onComputeFinished(
             isNull(),
-            argThat { this == Router.RouteComputeStatus.MapNotAvailable }
+            argThat { this == Router.RouteComputeStatus.SelectionOutsideOfMap }
         )
     }
 

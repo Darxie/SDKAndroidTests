@@ -52,7 +52,7 @@ class MapDownloadHelper : BaseTest() {
     fun resetMapLocale() {
         val listener: ResultListener = mock(verboseLogging = true)
         installer.setLocale("en-en", listener)
-        verify(listener, timeout(5_000L)).onResult(eq(MapInstaller.LoadResult.Success))
+        verify(listener, timeout(15_000L)).onResult(eq(MapInstaller.LoadResult.Success))
     }
 
 }

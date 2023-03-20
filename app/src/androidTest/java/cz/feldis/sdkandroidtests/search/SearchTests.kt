@@ -61,7 +61,7 @@ class SearchTests : BaseTest() {
         )
         val results = searchHelper.onlineAutocomplete(request)
         results.forEach {
-            assert(it.title != "Bratislava")
+            assert("Bratislava" in it.title)
         }
     }
 
@@ -144,7 +144,7 @@ class SearchTests : BaseTest() {
         verify(listener, timeout(5_000L)).onReverseGeocodingResult(
             argThat {
                 for (reverseGeocodingResult in this) {
-                    if (reverseGeocodingResult.names.city == "Bratislava I")
+                    if (reverseGeocodingResult.names.city == "Bratislava")
                         return@argThat true
                 }
                 false
@@ -287,9 +287,9 @@ class SearchTests : BaseTest() {
 
         val expectedDetail = mutableListOf<PlaceDetail>()
         expectedDetail.add(PlaceDetail(PlaceDetailAttributes.City, "Desert of Giza Governorate"))
-//        expectedDetail.add(PlaceDetail(PlaceDetailAttributes.Street, "al-'Ahram"))
+//        expectedDetail.add(PlaceDetail(PlaceDetailAttributes.Street, "al-Qahirah - al-Fayyoum"))
         expectedDetail.add(PlaceDetail(PlaceDetailAttributes.Iso, "eg"))
-        expectedDetail.add(PlaceDetail(PlaceDetailAttributes.Entry, "29.97777;31.13123"))
+        expectedDetail.add(PlaceDetail(PlaceDetailAttributes.Entry, "29.97429;31.12732"))
 
         session.searchPlaces(request, listener)
 

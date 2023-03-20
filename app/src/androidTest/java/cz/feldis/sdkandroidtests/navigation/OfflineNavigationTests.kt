@@ -29,7 +29,6 @@ class OfflineNavigationTests : BaseTest() {
 
     @Test
     fun onSharpCurveListenerTest() {
-        mapDownload.ensureMapNotInstalled("sk")
         mapDownload.installAndLoadMap("sk")
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnSharpCurveListener = mock(verboseLogging = true)
@@ -71,7 +70,6 @@ class OfflineNavigationTests : BaseTest() {
      */
     @Test
     fun onDirectionInfoChangedTest() {
-        mapDownload.ensureMapNotInstalled("sk")
         mapDownload.installAndLoadMap("sk")
         val directionListener: NavigationManager.OnDirectionListener = mock(verboseLogging = true)
         val navigation = NavigationManagerProvider.getInstance().get()
@@ -180,4 +178,47 @@ class OfflineNavigationTests : BaseTest() {
         PositionManagerProvider.getInstance().get().stopPositionUpdating()
     }
 
+    /**
+     * Navigation test on lane listener
+     *
+     * In this test we compute route and set it for navigation.
+     * Via simulator provider we set this route and start demonstrate navigation.
+     * We verify that onLaneInfoChanged was invoked.
+     */
+    @Test
+    fun onLaneListenerTestOffline() {
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnLaneListener = mock(verboseLogging = true)
+
+        val route =
+            routeCompute.offlineRouteCompute(
+                GeoCoordinates(48.147682401781026, 17.14365655304184),
+                GeoCoordinates(48.15310362223699, 17.147190865317768)
+            )
+
+        navigation.setRouteForNavigation(route)
+        navigation.addOnLaneListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        simulator.setSpeedMultiplier(4F)
+        simulator.start()
+
+
+        Mockito.verify(
+            listener,
+            Mockito.timeout(30_000L)
+        )
+            .onLaneInfoChanged(argThat {
+                if (this.simpleLanesInfo?.lanes?.isNotEmpty() == true){
+                    return@argThat true
+                }
+                false
+            })
+
+        simulator.stop()
+        simulator.destroy()
+        navigation.removeOnLaneListener(listener)
+        navigation.stopNavigation()
+    }
 }
