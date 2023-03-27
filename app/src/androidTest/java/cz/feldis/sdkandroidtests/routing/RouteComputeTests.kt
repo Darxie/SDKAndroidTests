@@ -368,4 +368,21 @@ class RouteComputeTests : BaseTest() {
             argThat { this == Router.RouteComputeStatus.UserCanceled }
         )
     }
+
+    @Test
+    @Ignore("Crashes - SDC-8559")
+    fun computeGuidedRouteWithEmptyPolyline() {
+        val polyline = mutableListOf<GeoCoordinates>()
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
+
+        val guidedRouteProfile = GuidedRouteProfile(polyline)
+        val routeRequest = RouteRequest(guidedRouteProfile)
+
+        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
+        val router = RouterProvider.getInstance().get()
+
+        router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
+        verify(listener, timeout(10_000L)).onComputeFinished(null, eq(Router.RouteComputeStatus.UnspecifiedFault))
+    }
 }
