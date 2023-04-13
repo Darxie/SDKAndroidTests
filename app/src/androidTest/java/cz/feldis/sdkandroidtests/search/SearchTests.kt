@@ -53,6 +53,35 @@ class SearchTests : BaseTest() {
     }
 
     @Test
+    fun autocompleteEyckveldCheckResult() {
+        mapDownloadHelper.installAndLoadMap("be")
+        val position = GeoCoordinates(50.84367811558576, 4.667406856390823)
+        val searchRequest = SearchRequest("Eyckveld 7", position)
+
+        val results = searchHelper.offlineAutocomplete(searchRequest)
+
+        assertTrue(results.isNotEmpty())
+        assertTrue(results.first().titleHighlights.isNotEmpty())
+        assertTrue(results.first().title == "Eyckeveld 7")
+
+    }
+
+    @Test
+    @Ignore("SDC-8569")
+    fun searchAddressCheckLocationGeocoding() {
+        mapDownloadHelper.installAndLoadMap("be")
+        val position = GeoCoordinates(50.84367811558576, 4.667406856390823)
+        val searchRequest = SearchRequest("Eyckeveld 7", position)
+
+        val results = searchHelper.offlineGeocode(searchRequest)
+
+        val firstResult = results.first() as HouseNumberResult
+        assertTrue(firstResult.entry != firstResult.location)
+        assertTrue(firstResult.entry == GeoCoordinates(50.84349060058594, 4.667229652404785))
+        assertTrue(firstResult.location == GeoCoordinates(50.843379974365234, 4.6673197746276855))
+    }
+
+    @Test
     fun onlineAutocompleteBratislava() {
         val request = SearchRequest(
             "bratislava",

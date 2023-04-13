@@ -11,26 +11,83 @@ class SearchHelper : BaseTest() {
 
     private val searchManager = SearchManagerProvider.getInstance().get()
 
-    fun offlineAutocomplete() {
+    fun offlineAutocomplete(searchRequest: SearchRequest): List<AutocompleteResult> {
+        val autocompleteResultListener: AutocompleteResultListener = mock(verboseLogging = true)
+        val createSearchListener: CreateSearchCallback<OfflineMapSearch> =
+            mock(verboseLogging = true)
+        val searchCaptor = argumentCaptor<OfflineMapSearch>()
+        val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
+        searchManager.createOfflineMapSearch(createSearchListener)
+        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
+        val search = searchCaptor.lastValue
+
+        val session = search.createSession()
+
+        session.autocomplete(searchRequest, autocompleteResultListener)
+
+        verify(autocompleteResultListener, timeout(10_000L)).onAutocomplete(
+            resultCaptor.capture()
+        )
+        verify(autocompleteResultListener, never()).onAutocompleteError(any())
+        return resultCaptor.firstValue
     }
 
     fun onlineAutocomplete(autocompleteRequest: SearchRequest): List<AutocompleteResult> {
-        val session = searchManager.newOnlineSession()
-        val listener: AutocompleteResultListener = mock(verboseLogging = true)
-        val argumentCaptor = argumentCaptor<List<AutocompleteResult>>()
-        session.autocomplete(autocompleteRequest, listener)
-        verify(listener, timeout(10_000L)).onAutocomplete(
-            argumentCaptor.capture()
+        val autocompleteResultListener: AutocompleteResultListener = mock(verboseLogging = true)
+        val createSearchListener: CreateSearchCallback<OnlineMapSearch> = mock()
+        val searchCaptor = argumentCaptor<OnlineMapSearch>()
+        val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
+        searchManager.createOnlineMapSearch(createSearchListener)
+        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
+        val search = searchCaptor.lastValue
+
+        val session = search.createSession()
+
+        session.autocomplete(autocompleteRequest, autocompleteResultListener)
+
+        verify(autocompleteResultListener, timeout(10_000L)).onAutocomplete(
+            resultCaptor.capture()
         )
-        verify(listener, never()).onAutocompleteError(
-            any()
-        )
-        searchManager.closeSession(session)
-        return argumentCaptor.firstValue
+        verify(autocompleteResultListener, never()).onAutocompleteError(any())
+        return resultCaptor.firstValue
     }
 
-    fun offlineGeocode() {
+    //ToDo doesnt work
+    fun offlineGeocodeLocation(geocodeRequest: GeocodeLocationRequest): GeocodingResult {
+        val geocodingResultListener: GeocodingResultListener = mock(verboseLogging = true)
+        val createSearchListener: CreateSearchCallback<OfflineMapSearch> = mock()
+        val searchCaptor = argumentCaptor<OfflineMapSearch>()
+        val resultCaptor = argumentCaptor<GeocodingResult>()
+        searchManager.createOfflineMapSearch(createSearchListener)
+        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
+        val search = searchCaptor.lastValue
+        val session = search.createSession()
+        session.geocode(geocodeRequest, geocodingResultListener)
+        verify(geocodingResultListener, timeout(10_000L)).onGeocodingResult(resultCaptor.capture())
+        verify(geocodingResultListener, never()).onGeocodingResultError(any())
 
+        return resultCaptor.lastValue
+    }
+
+    fun offlineGeocode(searchRequest: SearchRequest): List<GeocodingResult> {
+        val geocodeResultListener: GeocodingResultsListener = mock(verboseLogging = true)
+        val createSearchListener: CreateSearchCallback<OfflineMapSearch> =
+            mock(verboseLogging = true)
+        val searchCaptor = argumentCaptor<OfflineMapSearch>()
+        val resultCaptor = argumentCaptor<List<GeocodingResult>>()
+        searchManager.createOfflineMapSearch(createSearchListener)
+        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
+        val search = searchCaptor.lastValue
+
+        val session = search.createSession()
+
+        session.geocode(searchRequest, geocodeResultListener)
+
+        verify(geocodeResultListener, timeout(10_000L)).onGeocodingResults(
+            resultCaptor.capture()
+        )
+        verify(geocodeResultListener, never()).onGeocodingResultsError(any())
+        return resultCaptor.firstValue
     }
 
     fun onlineGeocode() {
@@ -44,7 +101,7 @@ class SearchHelper : BaseTest() {
     }
 
     fun offlineSearchPlaces(placeRequest: PlaceRequest): List<Place> {
-        val searchCallback : CreateSearchCallback<OfflineMapSearch> = mock(verboseLogging = true)
+        val searchCallback: CreateSearchCallback<OfflineMapSearch> = mock(verboseLogging = true)
         val listener: PlacesListener = mock(verboseLogging = true)
 
         val onlineMapSearchCaptor = argumentCaptor<OfflineMapSearch>()
@@ -67,7 +124,7 @@ class SearchHelper : BaseTest() {
 
 
     fun onlineSearchPlaces(placeRequest: PlaceRequest): List<Place> {
-        val searchCallback : CreateSearchCallback<OnlineMapSearch> = mock(verboseLogging = true)
+        val searchCallback: CreateSearchCallback<OnlineMapSearch> = mock(verboseLogging = true)
         val listener: PlacesListener = mock(verboseLogging = true)
 
         val onlineMapSearchCaptor = argumentCaptor<OnlineMapSearch>()
