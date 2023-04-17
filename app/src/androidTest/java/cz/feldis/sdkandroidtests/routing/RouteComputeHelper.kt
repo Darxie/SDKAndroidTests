@@ -49,13 +49,13 @@ class RouteComputeHelper : BaseTest() {
         start: GeoCoordinates,
         destination: GeoCoordinates,
         waypoint: GeoCoordinates? = null,
-        @RoutingOptions.TransportMode transportMode: Int = RoutingOptions.TransportMode.Car
+        routingOptions: RoutingOptions = RoutingOptions()
     ): Route {
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
             waypoint?.let { this.addViaPoint(it) }
-            this.routingOptions.transportMode = transportMode
+            this.routingOptions = routingOptions
             this.routingOptions.routingService = RoutingOptions.RoutingService.Offline
         }
         val listener: RouteComputeListener = mock(verboseLogging = true)
@@ -70,7 +70,7 @@ class RouteComputeHelper : BaseTest() {
             routeComputeFinishedListener
         )
         verify(listener, timeout(10_000L)).onComputeFinished(
-            captor.capture(), argThat { this == Router.RouteComputeStatus.Success }
+            captor.capture(), argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
         )
 
         return captor.value

@@ -147,10 +147,14 @@ class RouteComputeTests : BaseTest() {
         val start = GeoCoordinates(64.114341, -21.871153)
         val destination = GeoCoordinates(63.417836, -19.002209)
         val routeCompute = RouteComputeHelper()
+        val routingOptions = RoutingOptions().apply {
+            transportMode = RoutingOptions.TransportMode.Car
+        }
+
         val route = routeCompute.offlineRouteCompute(
             start,
             destination,
-            transportMode = RoutingOptions.TransportMode.Car
+            routingOptions = routingOptions
         )
         Assert.assertNotNull(route)
     }
@@ -162,10 +166,14 @@ class RouteComputeTests : BaseTest() {
         val start = GeoCoordinates(64.114341, -21.871153)
         val destination = GeoCoordinates(63.417836, -19.002209)
         val routeCompute = RouteComputeHelper()
+        val routingOptions = RoutingOptions().apply {
+            transportMode = RoutingOptions.TransportMode.Car
+        }
+
         val route = routeCompute.offlineRouteCompute(
             start,
             destination,
-            transportMode = RoutingOptions.TransportMode.Car
+            routingOptions = routingOptions
         )
         route.getRouteGeometry(true, listener)
         verify(listener, timeout(5_000L)).onGeometry(argThat {
