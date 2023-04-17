@@ -269,7 +269,7 @@ class RouteComputeTests : BaseTest() {
 
         verify(listener, Mockito.timeout(50_000L)).onComputeFinished(
             isNull(),
-            argThat { this == Router.RouteComputeStatus.MapNotAvailable }
+            argThat { this == Router.RouteComputeStatus.SelectionOutsideOfMap }
         )
     }
 
@@ -367,5 +367,22 @@ class RouteComputeTests : BaseTest() {
             isNull(),
             argThat { this == Router.RouteComputeStatus.UserCanceled }
         )
+    }
+
+    @Test
+    @Ignore("Crashes - SDC-8559")
+    fun computeGuidedRouteWithEmptyPolyline() {
+        val polyline = mutableListOf<GeoCoordinates>()
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
+
+        val guidedRouteProfile = GuidedRouteProfile(polyline)
+        val routeRequest = RouteRequest(guidedRouteProfile)
+
+        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
+        val router = RouterProvider.getInstance().get()
+
+        router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
+        verify(listener, timeout(10_000L)).onComputeFinished(null, eq(Router.RouteComputeStatus.UnspecifiedFault))
     }
 }

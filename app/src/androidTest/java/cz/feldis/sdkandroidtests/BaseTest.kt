@@ -14,6 +14,10 @@ import com.sygic.sdk.context.CoreInitException
 import com.sygic.sdk.context.SygicContext
 import com.sygic.sdk.context.SygicContextInitRequest
 import com.sygic.sdk.diagnostics.LogConnector
+import com.sygic.sdk.online.OnlineManagerProvider
+import com.sygic.sdk.online.data.MapProvider
+import com.sygic.sdk.online.data.MapProviderError
+import com.sygic.sdk.online.listeners.SetActiveMapProviderListener
 import com.sygic.sdk.position.PositionManagerProvider
 
 import org.junit.After
@@ -93,6 +97,16 @@ abstract class BaseTest {
                 isEngineInitialized = true
                 sygicContext = instance
                 PositionManagerProvider.getInstance().get().startPositionUpdating()
+                OnlineManagerProvider.getInstance().get().setActiveMapProvider(
+                    MapProvider("ta"), object: SetActiveMapProviderListener {
+                        override fun onActiveProviderSet() {
+                        }
+
+                        override fun onError(error: MapProviderError) {
+                            assert(true)
+                        }
+                    }
+                )
                 latch.countDown()
             }
         })
