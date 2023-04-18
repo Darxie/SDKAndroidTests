@@ -121,7 +121,7 @@ abstract class BaseTest {
     private fun buildUATConfig(onlineMaps: Boolean): String {
         defaultConfig.license(BuildConfig.LICENSE_KEY)
         defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(onlineMaps)
-        val path = appContext.getExternalFilesDir(null).toString()
+        val path = appContext.filesDir.absolutePath
         defaultConfig.storageFolders().rootPath(path)
         defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
         defaultConfig.online().routingUrl("https://routing-uat.api.sygic.com")

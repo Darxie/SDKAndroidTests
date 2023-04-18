@@ -1,6 +1,8 @@
 package cz.feldis.sdkandroidtests.routing
 
 import com.nhaarman.mockitokotlin2.*
+import com.sygic.sdk.online.OnlineManager
+import com.sygic.sdk.online.OnlineManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.GeoPolyline
 import com.sygic.sdk.route.RouteWarning
@@ -21,25 +23,30 @@ class RouteWarningTests : BaseTest() {
     private lateinit var mapDownloadHelper: MapDownloadHelper
     private lateinit var routeComputeHelper: RouteComputeHelper
 
-    private val warning = RouteWarning.SectionWarning.UnavoidableTraffic(
-        GeoPolyline(
-            listOf(
-                GeoCoordinates(48.1, 17.1),
-                GeoCoordinates(48.2, 17.2)
-            )
-        ), 80
-    )
-
     override fun setUp() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
+        OnlineManagerProvider.getInstance().get().disableOnlineMapStreaming(object: OnlineManager.MapStreamingListener {
+            override fun onError(errorCode: OnlineManager.MapStreamingError) {
+            }
 
-
+            override fun onSuccess() {
+            }
+        })
     }
 
     @Test
     fun checkCreatedWarning() {
+        val warning = RouteWarning.SectionWarning.UnavoidableTraffic(
+            GeoPolyline(
+                listOf(
+                    GeoCoordinates(48.1, 17.1),
+                    GeoCoordinates(48.2, 17.2)
+                )
+            ), 80
+        )
+
         assertEquals(warning.duration, 80)
         assertEquals(warning.section, GeoPolyline(
             listOf(
@@ -247,6 +254,92 @@ class RouteWarningTests : BaseTest() {
             assertTrue(tun.limitValue == HazmatSettings.HazmatTunnelCategory.E)
             assertTrue(tun.realValue == HazmatSettings.HazmatTunnelCategory.E)
         }
+    }
+
+    // crashes with online maps
+    @Test
+    fun startAndEndInViolationCheckValues() {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.1422, 17.1271)
+        val destination = GeoCoordinates(48.142, 17.1278)
+        val routingOptions = RoutingOptions().apply {
+            transportMode = TransportTruck
+            addDimensionalRestriction(VehicleRestrictions.Height, 5000)
+            setUseEndpointProtection(true)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val captor = argumentCaptor<List<RouteWarning>>()
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.DimensionalRestriction.ExceededHeight } != null
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.isNotEmpty()
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(captor.capture())
+
+        val restriction1 =
+            captor.firstValue[0] as RouteWarning.SectionWarning.DimensionalRestriction.ExceededHeight
+        val restriction2 =
+            captor.firstValue[1] as RouteWarning.SectionWarning.DimensionalRestriction.ExceededHeight
+        assertTrue(restriction1.limitValue == 1900F)
+        assertTrue(restriction1.realValue == 5000F)
+        assertTrue(restriction2.realValue == 2100F)
+        assertTrue(restriction2.realValue == 5000F)
+    }
+
+    // crashes with online maps
+    @Test
+    fun startAndEndInViolationCheckValues2() {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.1652, 17.162)
+        val destination = GeoCoordinates(48.1598, 17.1806)
+        val routingOptions = RoutingOptions().apply {
+            transportMode = TransportTruck
+            addDimensionalRestriction(VehicleRestrictions.Height, 5000)
+            setUseEndpointProtection(true)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val captor = argumentCaptor<List<RouteWarning>>()
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.DimensionalRestriction.ExceededHeight } != null
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.isNotEmpty()
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(captor.capture())
+
+        val restriction1 =
+            captor.firstValue[0] as RouteWarning.SectionWarning.DimensionalRestriction.ExceededHeight
+        val restriction2 =
+            captor.firstValue[1] as RouteWarning.SectionWarning.DimensionalRestriction.ExceededHeight
+        assertTrue(restriction1.limitValue == 3000F)
+        assertTrue(restriction1.realValue == 5000F)
+        assertTrue(restriction2.limitValue == 4500F)
+        assertTrue(restriction2.realValue == 5000F)
     }
 }
 
