@@ -2,6 +2,7 @@ package cz.feldis.sdkandroidtests.routing
 
 import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.position.GeoPolyline
 import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
@@ -11,6 +12,7 @@ import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.vehicletraits.HazmatSettings
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -19,11 +21,32 @@ class RouteWarningTests : BaseTest() {
     private lateinit var mapDownloadHelper: MapDownloadHelper
     private lateinit var routeComputeHelper: RouteComputeHelper
 
+    private val warning = RouteWarning.SectionWarning.UnavoidableTraffic(
+        GeoPolyline(
+            listOf(
+                GeoCoordinates(48.1, 17.1),
+                GeoCoordinates(48.2, 17.2)
+            )
+        ), 80
+    )
+
     override fun setUp() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
 
+
+    }
+
+    @Test
+    fun checkCreatedWarning() {
+        assertEquals(warning.duration, 80)
+        assertEquals(warning.section, GeoPolyline(
+            listOf(
+                GeoCoordinates(48.1, 17.1),
+                GeoCoordinates(48.2, 17.2)
+            )
+        ))
     }
 
     @Test
@@ -176,7 +199,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun hazmatAndTunneViolationTest() {
+    fun hazmatAndTunnelViolationTest() {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
