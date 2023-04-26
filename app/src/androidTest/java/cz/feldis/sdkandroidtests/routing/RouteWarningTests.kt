@@ -295,7 +295,7 @@ class RouteWarningTests : BaseTest() {
             captor.firstValue[1] as RouteWarning.SectionWarning.DimensionalRestriction.ExceededHeight
         assertTrue(restriction1.limitValue == 1900F)
         assertTrue(restriction1.realValue == 5000F)
-        assertTrue(restriction2.realValue == 2100F)
+        assertTrue(restriction2.limitValue == 2100F)
         assertTrue(restriction2.realValue == 5000F)
     }
 
