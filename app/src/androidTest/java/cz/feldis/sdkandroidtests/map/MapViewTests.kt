@@ -130,10 +130,50 @@ class MapViewTests : BaseTest() {
 
         verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(id))
 
-        val obj = captor.firstValue
-        print(obj)
         val resultSpeedCam = (captor.firstValue[0] as MapIncident).data.incident as SpeedCamera
         assertEquals(resultSpeedCam.category, IncidentType.RadarMobileSpeed)
+
+        //close scenario & activity
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    @Test
+    fun addAndVerifyCustomIncidentCustomCategory(): Unit = runBlocking {
+        val listener: IncidentsResultListener = mock()
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+
+        val importedSpeedCam = getMockSpeedCamCustomCategory()
+        val importedIncidentData = IncidentData(importedSpeedCam, audioNotificationParams)
+        incidentsManager.addIncidents(listOf(importedIncidentData), listener)
+        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, never()).onError(any())
+
+        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
+        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.tilt = 0F
+        delay(3000) // it takes around 1,5s until the speedcam is shown on map
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        val view = requireNotNull(mapView.view)
+
+        val x: Float = view.width / 2F
+        val y: Float = view.height / 2F
+        val id = mapView.requestObjectsAtPoint(x, y, callback)
+
+        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(id))
+
+        val resultSpeedCam = (captor.firstValue[0] as MapIncident).data.incident as SpeedCamera
+        assertEquals(resultSpeedCam.category, "custom_incident_category")
 
         //close scenario & activity
         scenario.moveToState(Lifecycle.State.DESTROYED)
@@ -182,6 +222,18 @@ class MapViewTests : BaseTest() {
                 359F,
                 true,
                 80
+            )
+        }
+
+        private fun getMockSpeedCamCustomCategory(): SpeedCamera {
+            return SpeedCamera(
+                IncidentId("26a69832-7f72-42ba-8f1d-a94811376579"),
+                GeoCoordinates(48.10095535808773, 17.234824479529344),
+                "custom_incident_category",
+                1713510440, // 19.4.2024
+                0F,
+                false,
+                120
             )
         }
     }
