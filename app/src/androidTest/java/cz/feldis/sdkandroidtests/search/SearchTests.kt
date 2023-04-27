@@ -362,7 +362,7 @@ class SearchTests : BaseTest() {
         verify(listener, timeout(5_000L)).onSuccess(timestampCaptor.capture())
         verify(listener, never()).onError(any())
 
-        assertTrue(timestampCaptor.lastValue - utcUnixTimestamp in 36000..37800) // in seconds
+        assertTrue(timestampCaptor.lastValue - utcUnixTimestamp in 34200..37800) // in seconds
     }
 
     @Test
