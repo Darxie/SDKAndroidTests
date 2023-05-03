@@ -26,7 +26,6 @@ class RouteComputeTests : BaseTest() {
     @Ignore("Does not work")
     @Test
     fun computeNextDurationsTestOnline() {
-
         val listener: RouteDurationListener = mock(verboseLogging = true)
         val routeCompute = RouteComputeHelper()
         val router = RouterProvider.getInstance().get()
