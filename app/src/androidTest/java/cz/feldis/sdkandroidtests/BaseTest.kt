@@ -7,6 +7,7 @@ import androidx.annotation.CallSuper
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.rule.GrantPermissionRule
 import com.sygic.sdk.LoggingSettings
+import com.sygic.sdk.MapReaderSettings
 
 import com.sygic.sdk.SygicEngine
 import com.sygic.sdk.SygicEngine.initialize
@@ -27,6 +28,7 @@ import org.junit.Rule
 import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
+import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -121,8 +123,12 @@ abstract class BaseTest {
     private fun buildUATConfig(onlineMaps: Boolean): String {
         defaultConfig.license(BuildConfig.LICENSE_KEY)
         defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(onlineMaps)
+
         val path = appContext.getExternalFilesDir(null).toString()
         defaultConfig.storageFolders().rootPath(path)
+
+        defaultConfig.mapReaderSettings().startupPoiProvider(MapReaderSettings.StartupPoiProvider.CUSTOM_PLACES)
+
         defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
         defaultConfig.online().routingUrl("https://routing-uat.api.sygic.com")
         defaultConfig.online().sSOServerUrl("https://auth-uat.api.sygic.com")
@@ -135,6 +141,7 @@ abstract class BaseTest {
         defaultConfig.online()
             .offlineMapsApiUrl("https://licensing-uat.api.sygic.com")
         defaultConfig.online().voicesUrl("https://nonttsvoices-testing.api.sygic.com")
+        defaultConfig.online().placesUrl("https://places-uat.api.sygic.com")
 
         val consoleAppenderBuilder =
             LoggingSettings.LoggingItem.AppenderItem.ConsoleAppender.Builder()
@@ -156,5 +163,17 @@ abstract class BaseTest {
         defaultConfig.storageFolders().rootPath(path)
         defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
         return defaultConfig.build()
+    }
+
+    open fun readJson(filename: String): String {
+        lateinit var jsonString: String
+        try {
+            jsonString = appContext.assets.open(filename)
+                .bufferedReader()
+                .use { it.readText() }
+        } catch (_: IOException) {
+            assert(true)
+        }
+        return jsonString
     }
 }

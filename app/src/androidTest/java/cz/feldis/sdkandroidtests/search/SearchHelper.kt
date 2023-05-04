@@ -7,7 +7,7 @@ import cz.feldis.sdkandroidtests.BaseTest
 import java.nio.ByteBuffer
 import java.util.*
 
-class SearchHelper : BaseTest() {
+class SearchHelper {
 
     private val searchManager = SearchManagerProvider.getInstance().get()
 
@@ -140,6 +140,28 @@ class SearchHelper : BaseTest() {
         verify(listener, timeout(10_000L)).onPlacesLoaded(
             argumentCaptor.capture(),
             isNotNull()
+        )
+
+        return argumentCaptor.firstValue
+    }
+
+    fun searchCustomPlaces(placeRequest: PlaceRequest): List<Place> {
+        val searchCallback: CreateSearchCallback<CustomPlacesSearch> = mock(verboseLogging = true)
+        val listener: PlacesListener = mock(verboseLogging = true)
+
+        val customPlacesSearchCaptor = argumentCaptor<CustomPlacesSearch>()
+        val argumentCaptor = argumentCaptor<List<Place>>()
+
+        SearchManagerProvider.getInstance().get().createCustomPlacesSearch(searchCallback)
+
+        verify(searchCallback, timeout(10_000L)).onSuccess(
+            customPlacesSearchCaptor.capture()
+        )
+        customPlacesSearchCaptor.firstValue.createSession().searchPlaces(placeRequest, listener)
+
+        verify(listener, timeout(10_000L)).onPlacesLoaded(
+            argumentCaptor.capture(),
+            anyOrNull()
         )
 
         return argumentCaptor.firstValue
