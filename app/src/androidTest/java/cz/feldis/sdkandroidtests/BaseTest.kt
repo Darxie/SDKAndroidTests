@@ -121,7 +121,7 @@ abstract class BaseTest {
     private fun buildUATConfig(onlineMaps: Boolean): String {
         defaultConfig.license(BuildConfig.LICENSE_KEY)
         defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(onlineMaps)
-        val path = appContext.filesDir.absolutePath
+        val path = appContext.getExternalFilesDir(null).toString()
         defaultConfig.storageFolders().rootPath(path)
         defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
         defaultConfig.online().routingUrl("https://routing-uat.api.sygic.com")
@@ -139,7 +139,7 @@ abstract class BaseTest {
         val consoleAppenderBuilder =
             LoggingSettings.LoggingItem.AppenderItem.ConsoleAppender.Builder()
                 .format("%levshort %datetime %msg\n")
-                .level(LoggingSettings.LoggingItem.AppenderItem.LogLevel.INFO)
+                .level(LoggingSettings.LoggingItem.AppenderItem.LogLevel.TRACE)
                 .time("%y/%m/%d %H:%M:%S")
         val loggingItemBuilder = LoggingSettings.LoggingItem.Builder()
             .name("logger")

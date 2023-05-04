@@ -9,6 +9,7 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import junit.framework.Assert.assertNotNull
 import org.junit.Assert
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
@@ -25,7 +26,6 @@ class RouteComputeTests : BaseTest() {
     @Ignore("Does not work")
     @Test
     fun computeNextDurationsTestOnline() {
-
         val listener: RouteDurationListener = mock(verboseLogging = true)
         val routeCompute = RouteComputeHelper()
         val router = RouterProvider.getInstance().get()
@@ -345,7 +345,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun cancelOfflineCompute(){
+    fun cancelOfflineCompute() {
         mapDownloadHelper.installAndLoadMap("sk")
         val start = GeoCoordinates(48.14096139265543, 17.154151725057243)
         val destination = GeoCoordinates(48.734914147394626, 21.260367789890452)
@@ -392,5 +392,38 @@ class RouteComputeTests : BaseTest() {
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
         verify(listener, timeout(10_000L)).onComputeFinished(null, eq(Router.RouteComputeStatus.UnspecifiedFault))
+    }
+
+    @Test
+    fun camperAndTruckETADifferentComparison() {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val start = GeoCoordinates(48.13116130573944, 17.11782382599132)
+        val destination = GeoCoordinates(49.05314733520812, 18.325403607220828)
+        val routeCompute = RouteComputeHelper()
+        val routingOptions = RoutingOptions().apply {
+            transportMode = RoutingOptions.TransportMode.TransportTruck
+            setMaxspeed(90)
+        }
+
+        val routeTruck = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+        val timeToEndTruck = routeTruck.routeInfo.waypointDurations.last().withSpeedProfiles
+
+        routingOptions.apply {
+            transportMode = RoutingOptions.TransportMode.Camper
+            setMaxspeed(130)
+        }
+
+        val routeCamper = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+        val timeToEndCamper = routeCamper.routeInfo.waypointDurations.last().withSpeedProfiles
+
+        assertTrue("camper: $timeToEndCamper, truck: $timeToEndTruck ", timeToEndCamper + 100 < timeToEndTruck)
     }
 }

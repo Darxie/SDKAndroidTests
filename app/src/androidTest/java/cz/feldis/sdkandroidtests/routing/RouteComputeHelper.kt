@@ -1,7 +1,10 @@
 package cz.feldis.sdkandroidtests.routing
 
+import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argThat
+import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.never
 import com.nhaarman.mockitokotlin2.timeout
 import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.position.GeoCoordinates
@@ -72,6 +75,7 @@ class RouteComputeHelper : BaseTest() {
         verify(listener, timeout(10_000L)).onComputeFinished(
             captor.capture(), argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
         )
+        verify(listener, never()).onComputeFinished(eq(null), any())
 
         return captor.value
     }

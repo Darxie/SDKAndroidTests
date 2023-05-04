@@ -13,6 +13,7 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Before
 import org.junit.Test
+import org.mockito.AdditionalMatchers
 import org.mockito.Mockito
 import timber.log.Timber
 
@@ -105,7 +106,6 @@ class OfflineNavigationTests : BaseTest() {
     }
 
     /**
-     * TODo toto asi nie uplne korektne funguje
      * Navigation test on route changed
      *
      * In this test we compute an offline route and set it for navigation.
@@ -133,7 +133,7 @@ class OfflineNavigationTests : BaseTest() {
             listener,
             Mockito.timeout(30_000L).atLeast(1)
         )
-            .onRouteChanged(isNotNull(), eq(NavigationManager.RouteUpdateStatus.Success))
+            .onRouteChanged(AdditionalMatchers.not(eq(route)), eq(NavigationManager.RouteUpdateStatus.Success))
 
 
         logSimulator.stop()
