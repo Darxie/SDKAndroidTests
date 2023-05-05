@@ -17,8 +17,6 @@ import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.MapView.InjectSkinResultListener
 import com.sygic.sdk.map.listeners.OnMapInitListener
-import com.sygic.sdk.online.OnlineManager
-import com.sygic.sdk.online.OnlineManagerProvider
 import com.sygic.sdk.places.CustomPlacesManager
 import com.sygic.sdk.places.CustomPlacesManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
@@ -119,7 +117,7 @@ class CustomPlacesTests : BaseTest() {
     }
 
     @Test
-    fun testInstallAndVerifyPlaceNameEnglishLanguageTag() {
+    fun testInstallAndSearchAndVerifyPlaceNameEnglishLanguageTag() {
         installOfflinePlaces("sk")
         val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
 
@@ -158,7 +156,7 @@ class CustomPlacesTests : BaseTest() {
 
     @Test
     @Repeat(5)
-    fun testInstallAndVerifyPlaceNameFrenchLanguageTag() {
+    fun testInstallAndSearchAndVerifyPlaceNameFrenchLanguageTag() {
         installOfflinePlaces("sk")
         val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
 
