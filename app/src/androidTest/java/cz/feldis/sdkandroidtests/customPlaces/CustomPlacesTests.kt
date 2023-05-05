@@ -119,7 +119,7 @@ class CustomPlacesTests : BaseTest() {
     }
 
     @Test
-    fun testInstallAndVerifyPlaceEnglishLanguageTag() {
+    fun testInstallAndVerifyPlaceNameEnglishLanguageTag() {
         installOfflinePlaces("sk")
         val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
 
@@ -158,7 +158,7 @@ class CustomPlacesTests : BaseTest() {
 
     @Test
     @Repeat(5)
-    fun testInstallAndVerifyPlaceFrenchLanguageTag() {
+    fun testInstallAndVerifyPlaceNameFrenchLanguageTag() {
         installOfflinePlaces("sk")
         val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
 
