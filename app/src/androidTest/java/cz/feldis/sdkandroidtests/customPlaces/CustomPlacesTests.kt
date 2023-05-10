@@ -20,7 +20,14 @@ import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.places.CustomPlacesManager
 import com.sygic.sdk.places.CustomPlacesManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.search.AutocompleteResult
+import com.sygic.sdk.search.AutocompleteResultListener
+import com.sygic.sdk.search.CreateSearchCallback
+import com.sygic.sdk.search.CustomPlacesSearch
 import com.sygic.sdk.search.PlaceRequest
+import com.sygic.sdk.search.ResultType
+import com.sygic.sdk.search.SearchManagerProvider
+import com.sygic.sdk.search.SearchRequest
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.SygicActivity
 import cz.feldis.sdkandroidtests.TestMapFragment
@@ -191,5 +198,74 @@ class CustomPlacesTests : BaseTest() {
 
         //close scenario & activity
         scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    @Test
+    fun testInstallPlacesAndAutocompleteOffline() {
+        installOfflinePlaces("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "vyzlec sa",
+            location = GeoCoordinates(48.2718, 17.7697),
+        )
+
+        val autocompleteResult = searchHelper.offlineAutocompleteCustomPlaces(searchRequest)[0]
+        assertEquals("ibi maiga", autocompleteResult.subtitle)
+        assertEquals("mojaSuperKategoria", autocompleteResult.categoryTags[0])
+        assertEquals("vyzlec sa", autocompleteResult.title)
+    }
+
+    @Test
+    fun testInstallPlacesAndAutocompleteOfflineLangFr() {
+        installOfflinePlaces("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "ibi maiga",
+            location = GeoCoordinates(48.2718, 17.7697),
+            languageTag = "fr"
+        )
+
+        val autocompleteResult = searchHelper.offlineAutocompleteCustomPlaces(searchRequest)[0]
+        assertEquals("ibi maiga", autocompleteResult.subtitle)
+        assertEquals("mojaSuperKategoria", autocompleteResult.categoryTags[0])
+        assertEquals("ja som POI", autocompleteResult.title)
+    }
+
+    // we search for ibi maiga in english, but ibi maiga is only in french
+    @Test
+    fun testInstallPlacesAndAutocompleteOfflineLangEnExpectFoundByFr() {
+        installOfflinePlaces("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "ibi maiga",
+            location = GeoCoordinates(48.2718, 17.7697),
+            languageTag = "en"
+        )
+
+        val autocompleteResultListener: AutocompleteResultListener = mock(verboseLogging = true)
+        val createSearchListener: CreateSearchCallback<CustomPlacesSearch> =
+            mock(verboseLogging = true)
+        val searchCaptor = argumentCaptor<CustomPlacesSearch>()
+        val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
+        SearchManagerProvider.getInstance().get().createCustomPlacesSearch(createSearchListener)
+        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
+        val search = searchCaptor.lastValue
+
+        val session = search.createSession()
+
+        session.autocomplete(searchRequest, autocompleteResultListener)
+
+        verify(autocompleteResultListener, timeout(10_000L)).onAutocomplete(
+            resultCaptor.capture()
+        )
+        assertEquals("ja som POI", resultCaptor.firstValue[0].title)
+    }
+
+    @Test
+    fun onlineAutocompletePlace() {
+        val searchRequest = SearchRequest(
+            searchInput = "ibi maiga",
+            location = GeoCoordinates(48.2718, 17.7697),
+        )
+        val searchResult = searchHelper.onlineAutocomplete(searchRequest)
+        // assert if there is no custom place in the results
+        assert(searchResult.find { it.type == ResultType.CUSTOM_PLACE } != null)
     }
 }

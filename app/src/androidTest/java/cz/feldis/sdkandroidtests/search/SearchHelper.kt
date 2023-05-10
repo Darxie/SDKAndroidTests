@@ -90,6 +90,28 @@ class SearchHelper {
         return resultCaptor.firstValue
     }
 
+    fun offlineAutocompleteCustomPlaces(searchRequest: SearchRequest): List<AutocompleteResult> {
+        val autocompleteResultListener: AutocompleteResultListener = mock(verboseLogging = true)
+        val createSearchListener: CreateSearchCallback<CustomPlacesSearch> =
+            mock(verboseLogging = true)
+        val searchCaptor = argumentCaptor<CustomPlacesSearch>()
+        val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
+        searchManager.createCustomPlacesSearch(createSearchListener)
+        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
+        val search = searchCaptor.lastValue
+
+        val session = search.createSession()
+
+        session.autocomplete(searchRequest, autocompleteResultListener)
+
+        verify(autocompleteResultListener, timeout(10_000L)).onAutocomplete(
+            resultCaptor.capture()
+        )
+        verify(autocompleteResultListener, never()).onAutocompleteError(any())
+        assert(resultCaptor.firstValue[0].type == ResultType.CUSTOM_PLACE) // fail here already
+        return resultCaptor.firstValue
+    }
+
     fun onlineGeocode() {
 
     }
