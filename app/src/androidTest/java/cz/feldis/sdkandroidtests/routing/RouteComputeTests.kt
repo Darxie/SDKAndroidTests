@@ -8,6 +8,7 @@ import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import junit.framework.Assert.assertNotNull
 import org.junit.Assert
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
@@ -425,5 +426,21 @@ class RouteComputeTests : BaseTest() {
         val timeToEndCamper = routeCamper.routeInfo.waypointDurations.last().withSpeedProfiles
 
         assertTrue("camper: $timeToEndCamper, truck: $timeToEndTruck ", timeToEndCamper + 100 < timeToEndTruck)
+    }
+
+    @Test
+    @Ignore("returns FR, lol")
+    fun onlineRoutingGetLastManeuverCountry() {
+        val start = GeoCoordinates(48.13204503419638, 17.09786238379282)
+        val destination = GeoCoordinates(51.491340, -0.102940)
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.onlineComputeRoute(
+            start,
+            destination
+        )
+
+        val maneuvers = route.maneuvers
+        assertEquals("gb",maneuvers.last().toIso)
     }
 }
