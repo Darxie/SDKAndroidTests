@@ -2,11 +2,14 @@ package cz.feldis.sdkandroidtests.customPlaces
 
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
+import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.anyOrNull
 import com.nhaarman.mockitokotlin2.argThat
 import com.nhaarman.mockitokotlin2.argumentCaptor
+import com.nhaarman.mockitokotlin2.atLeastOnce
 import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.never
 import com.nhaarman.mockitokotlin2.timeout
 import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.map.Camera
@@ -19,6 +22,7 @@ import com.sygic.sdk.map.MapView.InjectSkinResultListener
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.places.CustomPlacesManager
 import com.sygic.sdk.places.CustomPlacesManagerProvider
+import com.sygic.sdk.places.listeners.CustomPlacesSearchIndexingListener
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.AutocompleteResult
 import com.sygic.sdk.search.AutocompleteResultListener
@@ -83,7 +87,7 @@ class CustomPlacesTests : BaseTest() {
     }
 
     private fun getMapView(mapFragment: TestMapFragment): MapView {
-        val mapInitListener : OnMapInitListener = mock(verboseLogging = true)
+        val mapInitListener: OnMapInitListener = mock(verboseLogging = true)
         val mapViewCaptor = argumentCaptor<MapView>()
 
         mapFragment.getMapAsync(mapInitListener)
@@ -98,6 +102,16 @@ class CustomPlacesTests : BaseTest() {
         val customPlacesResultListener: CustomPlacesManager.InstallResultListener = mock(verboseLogging = true)
         cpManager.installOfflinePlaces("sk", customPlacesResultListener)
         verify(customPlacesResultListener, timeout(20_000L)).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
+    }
+
+    @Test
+    fun testInstallCustomPlacesAndVerifyIndexing() {
+        val customPlacesSearchIndexingListener : CustomPlacesSearchIndexingListener = mock(verboseLogging = true)
+        cpManager.addSearchIndexingListener(customPlacesSearchIndexingListener)
+        installOfflinePlaces("sk")
+        verify(customPlacesSearchIndexingListener, atLeastOnce()).onStarted()
+        verify(customPlacesSearchIndexingListener, atLeastOnce()).onSuccess()
+        verify(customPlacesSearchIndexingListener, never()).onError(any(), any())
     }
 
     @Test
@@ -126,9 +140,10 @@ class CustomPlacesTests : BaseTest() {
     @Test
     fun testInstallAndSearchAndVerifyPlaceNameEnglishLanguageTag() {
         installOfflinePlaces("sk")
+        // Create a mock InjectSkinResultListener for skin injection logging.
         val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
 
-        // create mapView
+        // Create a TestMapFragment and launch the SygicActivity for testing.
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
         val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
             it.supportFragmentManager
@@ -136,28 +151,34 @@ class CustomPlacesTests : BaseTest() {
                 .add(android.R.id.content, mapFragment)
                 .commitNow()
         }
+
+        // Get the MapView instance from the TestMapFragment.
         val mapView = getMapView(mapFragment)
 
-        // inject skin
+        // Inject a skin definition using a JSON file and the injectSkinResultListener.
         mapView.injectSkinDefinition(
             readJson("skin_poi_custom.json"),
             injectSkinResultListener
         )
+
+        // Verify that the skin injection result is successful.
         verify(injectSkinResultListener, timeout(5_000L)).onResult(eq(MapView.InjectSkinResult.Success))
 
-        // search for places
+        // Create a place request with location, category tags, radius, and language tag.
         val placeRequest = PlaceRequest(
             location = GeoCoordinates(48.2718, 17.7697),
             categoryTags = listOf("mojaSuperKategoria"),
             radius = 50,
-            languageTag = "en"
+            languageTag = "fr"
         )
+
+        // Perform a search for custom places using the place request.
         val searchResult = searchHelper.searchCustomPlaces(placeRequest)[0]
 
-        // verify
-        assertEquals("vyzlec sa", searchResult.link.name)
+        // Verify that the searched place's name is "ja som POI".
+        assertEquals("ja som POI", searchResult.link.name)
 
-        //close scenario & activity
+        // Close the scenario and destroy the activity.
         scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
