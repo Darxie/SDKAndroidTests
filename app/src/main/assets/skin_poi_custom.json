@@ -12,20 +12,6 @@
             "showWithoutText": true,
             "zoomLevel": 12,
             "importance": "Major"
-          },
-          "PioneerCamping": {
-            "enabled": true,
-            "color": "0x171C26ff",
-            "icon": "0xe34d",
-            "priority": 5,
-            "zoomLevel": 12.7
-          },
-          "Ducati": {
-            "enabled": true,
-            "color": "0xE63939ff",
-            "icon": "0xe319",
-            "priority": 5,
-            "zoomLevel": 12.7
           }
         },
         "categories":
@@ -39,12 +25,6 @@
             "priority": 0,
             "zoomLevel": 14,
             "importance": "Major"
-          },
-          "PioneerCamping": {
-            "groupId": "PioneerCamping"
-          },
-          "Ducati": {
-            "groupId": "Ducati"
           }
         }
       }
