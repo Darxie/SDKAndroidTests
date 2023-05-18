@@ -10,9 +10,7 @@ import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
-import junit.framework.Assert.assertEquals
-import junit.framework.Assert.assertFalse
-import org.junit.Assert
+import org.junit.Assert.*
 import org.junit.Test
 import java.util.*
 import kotlin.concurrent.schedule
@@ -58,14 +56,14 @@ class MapDownloadTests : BaseTest() {
             listener,
             never()
         ).onCountryDetailsError(argThat { this != MapInstaller.LoadResult.Success })
-        Assert.assertEquals("France", countryCaptor.firstValue.name)
-        Assert.assertEquals("Europe", countryCaptor.firstValue.continentName)
-        Assert.assertEquals("fr", countryCaptor.firstValue.iso)
-        Assert.assertEquals(13, countryCaptor.firstValue.regions.size)
-        Assert.assertTrue(countryCaptor.firstValue.totalSize > 0)
-        Assert.assertNotNull(countryCaptor.firstValue.version.month)
-        Assert.assertNotNull(countryCaptor.firstValue.version.year)
-        countryCaptor.firstValue.regions.forEach { Assert.assertTrue(it.startsWith("fr")) }
+        assertEquals("France", countryCaptor.firstValue.name)
+        assertEquals("Europe", countryCaptor.firstValue.continentName)
+        assertEquals("fr", countryCaptor.firstValue.iso)
+        assertEquals(13, countryCaptor.firstValue.regions.size)
+        assertTrue(countryCaptor.firstValue.totalSize > 0)
+        assertNotNull(countryCaptor.firstValue.version.month)
+        assertNotNull(countryCaptor.firstValue.version.year)
+        countryCaptor.firstValue.regions.forEach { assertTrue(it.startsWith("fr")) }
     }
 
     @Test
