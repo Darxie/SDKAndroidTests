@@ -10,6 +10,7 @@ import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
+import junit.framework.Assert.assertEquals
 import junit.framework.Assert.assertFalse
 import org.junit.Assert
 import org.junit.Test
@@ -24,6 +25,7 @@ class MapDownloadTests : BaseTest() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         mapDownloadHelper.resetMapLocale()
+        mapDownloadHelper.clearCache()
     }
 
     @Test
@@ -196,5 +198,37 @@ class MapDownloadTests : BaseTest() {
         installer.setLocale("sk-def", listener)
         verify(listener, timeout(20_000L).times(1))
             .onResult(eq(MapInstaller.LoadResult.Success))
+    }
+
+    @Test
+    fun verifyProviderOfInstalledMapTest() {
+        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        mapDownloadHelper.installAndLoadMap("is")
+        MapInstallerProvider.getInstance().get().getCountryDetails("is", true, cdListener)
+        val captor = argumentCaptor<CountryDetails>()
+        verify(cdListener, timeout(10_000L)).onCountryDetails(captor.capture())
+        verify(cdListener, never()).onCountryDetailsError(any())
+        val details = captor.firstValue
+        assertEquals("ta", details.version.provider.toString())
+    }
+
+    @Test
+    fun verifyProviderOfNotInstalledMapCountrySplit() {
+        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        mapDownloadHelper.ensureMapNotInstalled("de-02")
+        MapInstallerProvider.getInstance().get().getCountryDetails("de-02", false, cdListener)
+        val captor = argumentCaptor<CountryDetails>()
+        verify(cdListener, timeout(10_000L)).onCountryDetails(captor.capture())
+        verify(cdListener, never()).onCountryDetailsError(any())
+        val details = captor.firstValue
+        assertEquals("ta", details.version.provider.toString())
+    }
+
+    @Test
+    fun verifyNonExistentCountryDetailsOfResourceMap() {
+        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        MapInstallerProvider.getInstance().get().getCountryDetails("de-01", false, cdListener)
+        verify(cdListener, never()).onCountryDetails(any())
+        verify(cdListener, timeout(10_000L)).onCountryDetailsError(eq(MapInstaller.LoadResult.DetailsNotAvailable))
     }
 }
