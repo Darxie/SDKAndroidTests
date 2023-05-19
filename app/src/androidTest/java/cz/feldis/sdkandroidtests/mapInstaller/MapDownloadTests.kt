@@ -5,6 +5,7 @@ import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.map.CountryDetails
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
+import com.sygic.sdk.map.data.MapProvider
 import com.sygic.sdk.map.listeners.MapCountryDetailsListener
 import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
@@ -219,7 +220,7 @@ class MapDownloadTests : BaseTest() {
         verify(cdListener, timeout(10_000L)).onCountryDetails(captor.capture())
         verify(cdListener, never()).onCountryDetailsError(any())
         val details = captor.firstValue
-        assertEquals("ta", details.version.provider.toString())
+        assertEquals(MapProvider("ta"), details.version.provider)
     }
 
     @Test

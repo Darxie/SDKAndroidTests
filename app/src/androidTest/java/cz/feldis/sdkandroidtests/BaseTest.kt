@@ -15,8 +15,8 @@ import com.sygic.sdk.context.CoreInitException
 import com.sygic.sdk.context.SygicContext
 import com.sygic.sdk.context.SygicContextInitRequest
 import com.sygic.sdk.diagnostics.LogConnector
+import com.sygic.sdk.map.data.MapProvider
 import com.sygic.sdk.online.OnlineManagerProvider
-import com.sygic.sdk.online.data.MapProvider
 import com.sygic.sdk.online.data.MapProviderError
 import com.sygic.sdk.online.listeners.SetActiveMapProviderListener
 import com.sygic.sdk.position.PositionManagerProvider
@@ -162,6 +162,7 @@ abstract class BaseTest {
         val path = appContext.getExternalFilesDir(null).toString()
         defaultConfig.storageFolders().rootPath(path)
         defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
+        defaultConfig.license(BuildConfig.LICENSE_KEY)
         return defaultConfig.build()
     }
 
