@@ -28,7 +28,6 @@ class MapDownloadHelper : BaseTest() {
 
     fun installAndLoadMap(iso: String) {
         val listener: MapResultListener = mock(verboseLogging = true)
-        val lis: MapInstallProgressListener
         installer.installMap(iso, listener)
         verify(listener, timeout(300_000L)).onMapResult(
             eq(iso),
@@ -55,4 +54,9 @@ class MapDownloadHelper : BaseTest() {
         verify(listener, timeout(15_000L)).onResult(eq(MapInstaller.LoadResult.Success))
     }
 
+    fun clearCache() {
+        val listener : ResultListener = mock(verboseLogging = true)
+        installer.clearCache(listener)
+        verify(listener, timeout(20_000L)).onResult(eq(MapInstaller.LoadResult.Success))
+    }
 }
