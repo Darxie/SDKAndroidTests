@@ -418,7 +418,7 @@ class OnlineNavigationTests : BaseTest() {
             listener,
             Mockito.timeout(STATUS_TIMEOUT)
         )
-            .onIncidentInfoChanged(any())
+            .onIncidentsInfoChanged(anyList())
 
         simulator.stop()
         simulator.destroy()
