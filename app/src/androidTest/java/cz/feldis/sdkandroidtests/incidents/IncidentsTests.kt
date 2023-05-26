@@ -2,16 +2,20 @@ package cz.feldis.sdkandroidtests.incidents
 
 import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.incidents.*
+import com.sygic.sdk.navigation.NavigationManager
+import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.explorer.RouteExplorer
 import com.sygic.sdk.navigation.routeeventnotifications.IncidentInfo
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
+import cz.feldis.sdkandroidtests.navigation.OnlineNavigationTests
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.Mockito
 
-class IncidentsTests : BaseTest(){
+class IncidentsTests : BaseTest() {
 
     private lateinit var routeCompute: RouteComputeHelper
     private lateinit var incidentsManager: IncidentsManager
@@ -95,8 +99,54 @@ class IncidentsTests : BaseTest(){
         reset(listener)
     }
 
+    @Test
+    fun onIncidentListenerTest() {
+        val importedSpeedCam1 = getMockSpeedCamForAnalyzer1()
+        val importedSpeedCam2 = getMockSpeedCamForAnalyzer2()
+        val importedSpeedCam3 = getMockSpeedCamForAnalyzer3()
+        val importedSpeedCam4 = getMockSpeedCamForAnalyzer4()
+        val importedIncidentData1 = IncidentData(importedSpeedCam1, audioNotificationParams)
+        val importedIncidentData2 = IncidentData(importedSpeedCam2, audioNotificationParams)
+        val importedIncidentData3 = IncidentData(importedSpeedCam3, audioNotificationParams)
+        val importedIncidentData4 = IncidentData(importedSpeedCam4, audioNotificationParams)
+        incidentsManager.addIncidents(
+            listOf(
+                importedIncidentData1, importedIncidentData2, importedIncidentData3, importedIncidentData4
+            ), listener
+        )
+
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
+
+        val route =
+            routeCompute.onlineComputeRoute(
+                GeoCoordinates(48.113888808253996, 17.218758652700572),
+                GeoCoordinates(48.12788892758158, 17.195351511200577)
+            )
+
+        navigation.setRouteForNavigation(route)
+        navigation.addOnIncidentListener(listener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        simulator.start()
+
+        Mockito.verify(
+            listener,
+            Mockito.timeout(10_000L)
+        ).onIncidentsInfoChanged(argThat<List<IncidentInfo>> {
+            if (this.size > 3)
+                return@argThat true
+            return@argThat false
+        })
+
+        simulator.stop()
+        simulator.destroy()
+        navigation.removeOnIncidentListener(listener)
+        navigation.stopNavigation()
+        reset(listener)
+    }
+
     companion object {
-        private val audioNotificationParams = IncidentsManager.AudioNotificationParameters(5, 10)
+        private val audioNotificationParams = IncidentsManager.AudioNotificationParameters(500, 1000)
         private const val Timeout = 3000L
 
         private fun getMockSpeedCam(): SpeedCamera {
@@ -117,6 +167,54 @@ class IncidentsTests : BaseTest(){
                 GeoCoordinates(48.10095535808773, 17.234824479529344),
                 "ejjj_buracka",
                 1650352040, // 19.4.2022
+                359F,
+                true,
+                80
+            )
+        }
+
+        private fun getMockSpeedCamForAnalyzer1(): SpeedCamera {
+            return SpeedCamera(
+                IncidentId("26a69832-7f72-42ba-8f1d-324811371579"),
+                GeoCoordinates(48.11516784597829, 17.21736550170222),
+                IncidentType.DangerousPlaceVehicleStopped,
+                1713510440,
+                359F,
+                true,
+                80
+            )
+        }
+
+        private fun getMockSpeedCamForAnalyzer2(): SpeedCamera {
+            return SpeedCamera(
+                IncidentId("26a69834-7f72-42ba-8f1d-324811371579"),
+                GeoCoordinates(48.1152235606362, 17.217302913637262),
+                "tristo_hrmenych",
+                1713510440,
+                359F,
+                true,
+                80
+            )
+        }
+
+        private fun getMockSpeedCamForAnalyzer3(): SpeedCamera {
+            return SpeedCamera(
+                IncidentId("26a69830-7f72-42ba-8f1d-324811371579"),
+                GeoCoordinates(48.115278008993506, 17.217244118788365),
+                "kategorija",
+                1713510440,
+                359F,
+                true,
+                80
+            )
+        }
+
+        private fun getMockSpeedCamForAnalyzer4(): SpeedCamera {
+            return SpeedCamera(
+                IncidentId("26a69831-7f72-42ba-8f1d-324811371579"),
+                GeoCoordinates(48.11534258720295, 17.21716256464312),
+                IncidentType.CrashMinor,
+                1713510440,
                 359F,
                 true,
                 80
