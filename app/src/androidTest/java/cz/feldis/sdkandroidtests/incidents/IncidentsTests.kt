@@ -58,7 +58,7 @@ class IncidentsTests : BaseTest() {
 
         } while (progressCaptor.lastValue != 100)
 
-        lateinit var expectedSpeedcam: SpeedCamera
+        var expectedSpeedcam: SpeedCamera? = null
         for (lists in captor.allValues) {
             for (incidentInfo in lists) {
                 if (incidentInfo.incident is SpeedCamera) {
@@ -67,6 +67,7 @@ class IncidentsTests : BaseTest() {
             }
         }
 
+        requireNotNull(expectedSpeedcam)
         assertEquals("ejjj_buracka", expectedSpeedcam.category)
         assertEquals("26a69832-7f72-42ba-8f1d-394811376579", expectedSpeedcam.id.uuid)
         assertEquals(1713510440, expectedSpeedcam.validToTimestamp)
