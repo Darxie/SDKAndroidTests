@@ -9,7 +9,6 @@ import com.sygic.sdk.navigation.routeeventnotifications.IncidentInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
-import cz.feldis.sdkandroidtests.navigation.OnlineNavigationTests
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -105,7 +104,10 @@ class IncidentsTests : BaseTest() {
         val importedSpeedCam2 = getMockSpeedCamForAnalyzer2()
         val importedSpeedCam3 = getMockSpeedCamForAnalyzer3()
         val importedSpeedCam4 = getMockSpeedCamForAnalyzer4()
-        val importedIncidentData1 = IncidentData(importedSpeedCam1, audioNotificationParams)
+        val importedIncidentData1 = IncidentData(
+            importedSpeedCam1,
+            IncidentsManager.AudioNotificationParameters(-1, 0)
+        )
         val importedIncidentData2 = IncidentData(importedSpeedCam2, audioNotificationParams)
         val importedIncidentData3 = IncidentData(importedSpeedCam3, audioNotificationParams)
         val importedIncidentData4 = IncidentData(importedSpeedCam4, audioNotificationParams)
@@ -146,7 +148,8 @@ class IncidentsTests : BaseTest() {
     }
 
     companion object {
-        private val audioNotificationParams = IncidentsManager.AudioNotificationParameters(500, 1000)
+        private val audioNotificationParams =
+            IncidentsManager.AudioNotificationParameters(20, 25)
         private const val Timeout = 3000L
 
         private fun getMockSpeedCam(): SpeedCamera {
