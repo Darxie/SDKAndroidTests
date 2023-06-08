@@ -208,7 +208,7 @@ class MapDownloadTests : BaseTest() {
         verify(cdListener, timeout(10_000L)).onCountryDetails(captor.capture())
         verify(cdListener, never()).onCountryDetailsError(any())
         val details = captor.firstValue
-        assertEquals("ta", details.version.provider.toString())
+        assertEquals(MapProvider("ta"), details.version.provider)
     }
 
     @Test
