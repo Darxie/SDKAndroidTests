@@ -12,6 +12,7 @@ import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.mockito.AdditionalMatchers
 import org.mockito.Mockito
@@ -210,7 +211,7 @@ class OfflineNavigationTests : BaseTest() {
             Mockito.timeout(30_000L)
         )
             .onLaneInfoChanged(argThat {
-                if (this.simpleLanesInfo?.lanes?.isNotEmpty() == true){
+                if (this.simpleLanesInfo?.lanes?.isNotEmpty() == true) {
                     return@argThat true
                 }
                 false
@@ -220,5 +221,36 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnLaneListener(listener)
         navigation.stopNavigation()
+    }
+
+    @Test
+    //@Ignore("how is this supposed to work? ")
+    fun sectionCameraTest() {
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
+
+        val route =
+            routeCompute.offlineRouteCompute(
+                GeoCoordinates(48.212465230469, 17.03545199713536),
+                GeoCoordinates(48.18179480984319, 17.05224437941669)
+            )
+
+        navigation.setRouteForNavigation(route)
+        navigation.addOnIncidentListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        simulator.setSpeedMultiplier(4F)
+        simulator.start()
+
+        verify(listener, timeout(20_000L)).onIncidentsInfoChanged(
+            argThat {
+                this.forEach {
+                    if (it.recommendedSpeed != -1)
+                        return@argThat true
+                }
+                false
+            }
+        )
     }
 }

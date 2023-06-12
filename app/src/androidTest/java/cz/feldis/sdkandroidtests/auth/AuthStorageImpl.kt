@@ -46,7 +46,6 @@
 //        if (getInt(SettingsMigratedFlag, 0) == 1) {
 //            return
 //        }
-//
 //        val isLoginTypeDevice = SharedPreferences.getValue(context, IsLoginTypeDeviceOldSettings) ?: return
 //        val refreshToken = SygicPreferences.getValue(context, RefreshTokenOldSettings) ?: return
 //        val accessToken = SygicPreferences.getValue(context, AccessTokenOldSettings) ?: return
