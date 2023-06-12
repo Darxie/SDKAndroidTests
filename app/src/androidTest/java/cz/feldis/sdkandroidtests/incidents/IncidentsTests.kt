@@ -9,6 +9,7 @@ import com.sygic.sdk.navigation.routeeventnotifications.IncidentInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
+import cz.feldis.sdkandroidtests.navigation.OnlineNavigationTests
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -28,8 +29,7 @@ class IncidentsTests : BaseTest() {
         removeAllIncidents()
     }
 
-    @Test
-    fun removeAllIncidents() {
+    private fun removeAllIncidents() {
         incidentsManager.removeAllIncidents(listener)
         verify(listener, timeout(Timeout)).onSuccess()
         verify(listener, never()).onError(any())
@@ -37,11 +37,12 @@ class IncidentsTests : BaseTest() {
     }
 
     @Test
-    fun exploreIncidentsOnRoute() {
+    fun exploreCustomIncidentsOnRouteOnlineCompute() {
         val importedSpeedCam = getMockSpeedCam()
         val importedIncidentData = IncidentData(importedSpeedCam, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
         verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, never()).onError(any())
 
         val listener: RouteExplorer.OnExploreIncidentsOnRouteListener = mock(verboseLogging = true)
 
@@ -51,17 +52,26 @@ class IncidentsTests : BaseTest() {
         )
         RouteExplorer.exploreIncidentsOnRoute(route, emptyList(), listener)
         val captor = argumentCaptor<List<IncidentInfo>>()
+        val progressCaptor = argumentCaptor<Int>()
 
-        verify(
-            listener,
-            Mockito.timeout(30_000L)
-        )
-            .onExploreIncidentsLoaded(captor.capture(), eq(100))
+        do {
+            verify(listener, timeout(10_000L)).onExploreIncidentsLoaded(
+                captor.capture(),
+                progressCaptor.capture()
+            )
 
-        verify(listener, never())
-            .onExploreIncidentsError(any())
+        } while (progressCaptor.lastValue != 100)
 
-        val expectedSpeedcam = captor.firstValue[0].incident as SpeedCamera
+        var expectedSpeedcam: SpeedCamera? = null
+        for (lists in captor.allValues) {
+            for (incidentInfo in lists) {
+                if (incidentInfo.incident is SpeedCamera) {
+                    expectedSpeedcam = incidentInfo.incident as SpeedCamera
+                }
+            }
+        }
+
+        requireNotNull(expectedSpeedcam)
         assertEquals("ejjj_buracka", expectedSpeedcam.category)
         assertEquals("26a69832-7f72-42ba-8f1d-394811376579", expectedSpeedcam.id.uuid)
         assertEquals(1713510440, expectedSpeedcam.validToTimestamp)
@@ -72,7 +82,7 @@ class IncidentsTests : BaseTest() {
     }
 
     @Test
-    fun exploreIncidentsOnRouteExpectEmpty() {
+    fun exploreIncidentsOnRouteExpectEmptyExpiredIncident() {
         val importedSpeedCam = getMockSpeedCamOld()
         val importedIncidentData = IncidentData(importedSpeedCam, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)

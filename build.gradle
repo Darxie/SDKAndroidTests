@@ -21,7 +21,6 @@ buildscript {
             classpath "com.sygic.sdk:assets-plugin:1.0.0-rc09"
             classpath "com.google.android.gms:strict-version-matcher-plugin:1.2.2"
         }
-        classpath("com.sygic.sdk:symbols-gradle-plugin:1.0.0")
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }

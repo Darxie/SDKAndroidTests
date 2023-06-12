@@ -6,21 +6,23 @@ import android.util.Log
 import androidx.annotation.CallSuper
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.rule.GrantPermissionRule
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.timeout
+import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.LoggingSettings
 import com.sygic.sdk.MapReaderSettings
-
 import com.sygic.sdk.SygicEngine
 import com.sygic.sdk.SygicEngine.initialize
 import com.sygic.sdk.context.CoreInitException
 import com.sygic.sdk.context.SygicContext
 import com.sygic.sdk.context.SygicContextInitRequest
 import com.sygic.sdk.diagnostics.LogConnector
+import com.sygic.sdk.map.data.MapProvider
+import com.sygic.sdk.online.OnlineManager
 import com.sygic.sdk.online.OnlineManagerProvider
-import com.sygic.sdk.online.data.MapProvider
 import com.sygic.sdk.online.data.MapProviderError
 import com.sygic.sdk.online.listeners.SetActiveMapProviderListener
 import com.sygic.sdk.position.PositionManagerProvider
-
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -100,7 +102,7 @@ abstract class BaseTest {
                 sygicContext = instance
                 PositionManagerProvider.getInstance().get().startPositionUpdating()
                 OnlineManagerProvider.getInstance().get().setActiveMapProvider(
-                    MapProvider("ta"), object: SetActiveMapProviderListener {
+                    MapProvider("ta"), object : SetActiveMapProviderListener {
                         override fun onActiveProviderSet() {
                         }
 
@@ -127,7 +129,8 @@ abstract class BaseTest {
         val path = appContext.getExternalFilesDir(null).toString()
         defaultConfig.storageFolders().rootPath(path)
 
-        defaultConfig.mapReaderSettings().startupPoiProvider(MapReaderSettings.StartupPoiProvider.CUSTOM_PLACES)
+        defaultConfig.mapReaderSettings()
+            .startupPoiProvider(MapReaderSettings.StartupPoiProvider.CUSTOM_PLACES)
 
         defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
         defaultConfig.online().routingUrl("https://routing-uat.api.sygic.com")
@@ -162,6 +165,7 @@ abstract class BaseTest {
         val path = appContext.getExternalFilesDir(null).toString()
         defaultConfig.storageFolders().rootPath(path)
         defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
+        defaultConfig.license(BuildConfig.LICENSE_KEY)
         return defaultConfig.build()
     }
 
@@ -175,5 +179,21 @@ abstract class BaseTest {
             assert(true)
         }
         return jsonString
+    }
+
+    open fun disableOnlineMaps() {
+        if (!OnlineManagerProvider.getInstance().get().isOnlineMapStreamingEnabled()) {
+            val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+            OnlineManagerProvider.getInstance().get().enableOnlineMapStreaming(listener)
+            verify(listener, timeout(5_000L))
+                .onSuccess()
+        }
+
+        val listener2: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+
+        OnlineManagerProvider.getInstance().get().disableOnlineMapStreaming(listener2)
+
+        verify(listener2, timeout(5_000L))
+            .onSuccess()
     }
 }
