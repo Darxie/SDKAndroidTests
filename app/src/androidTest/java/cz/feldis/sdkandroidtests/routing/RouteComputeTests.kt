@@ -244,6 +244,7 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun mapNotAvailableTruckTestOffline() {
+        disableOnlineMaps()
         val start = GeoCoordinates(48.9844, 22.1844)
         val destination = GeoCoordinates(47.1518, 9.81344)
 
