@@ -49,6 +49,7 @@ android {
             assets.srcDirs = ['src/main/assets']
         }
     }
+    namespace 'cz.feldis.sdkandroidtests'
 }
 
 def getSdkVersion() {

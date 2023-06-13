@@ -6,6 +6,8 @@ import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.*
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
@@ -129,34 +131,35 @@ class SearchTests : BaseTest() {
     fun searchPlacesValidCategoryBankOnline() {
         val listener: PlacesListener = mock(verboseLogging = true)
         val searchManager = SearchManagerProvider.getInstance().get()
+        val searchCallback: CreateSearchCallback<OnlineMapSearch> = mock(verboseLogging = true)
 
         val categories = listOf(PlaceCategories.Bank)
-        val request = PlaceRequest(GeoCoordinates(48.145718, 17.118669), categories, 10000)
-        val session = searchManager.newOnlineSession()
+        val request = PlaceRequest(GeoCoordinates(48.145718, 17.118669), categories, 1000)
+        searchManager.createOnlineMapSearch(searchCallback)
 
-        session.searchPlaces(request, listener)
+        val onlineMapSearchCaptor = argumentCaptor<OnlineMapSearch>()
+        val argumentCaptor = argumentCaptor<List<Place>>()
 
-        verify(listener, Mockito.timeout(10_000L))
-            .onPlacesLoaded(argThat {
-                if (this.isEmpty()) {
-                    Timber.e("List of loaded places is empty")
-                    return@argThat false
-                }
-                for (place in this) {
-                    if (place.link.name.isEmpty() || place.details.isEmpty()) {
-                        Timber.e("Place link name or place details are empty")
-                        return@argThat false
-                    }
-                    if (place.link.category != PlaceCategories.Bank) {
-                        Timber.e(
-                            "Category of the place: " + place.link.name + "at" +
-                                    place.link.location + "is not equal to the requested one"
-                        )
-                        return@argThat false
-                    }
-                }
-                true
-            }, any())
+        verify(searchCallback, timeout(10_000L)).onSuccess(
+            onlineMapSearchCaptor.capture()
+        )
+
+        // actual search
+        onlineMapSearchCaptor.firstValue.createSession().searchPlaces(request, listener)
+
+        verify(listener, timeout(10_000L)).onPlacesLoaded(
+            argumentCaptor.capture(),
+            isNotNull()
+        )
+        verify(listener, never()).onPlacesError(any())
+
+        val resultList = argumentCaptor.firstValue
+        for (bank in resultList) {
+        assertNotNull(resultList)
+            assertFalse(bank.link.name.isEmpty())
+            assertFalse(bank.details.isEmpty())
+            assertTrue(bank.link.category == PlaceCategories.Bank)
+        }
     }
 
     @Test
@@ -195,10 +198,6 @@ class SearchTests : BaseTest() {
 
         verify(listener, timeout(10_000L))
             .onPlacesLoaded(argThat {
-                if (this.isEmpty()) {
-                    Timber.e("List of loaded places is empty")
-                    return@argThat false
-                }
                 for (place in this) {
                     if (place.link.name.isEmpty() || place.details.isEmpty()) {
                         Timber.e("Place link name or place details are empty")

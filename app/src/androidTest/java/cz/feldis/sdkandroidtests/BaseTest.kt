@@ -138,6 +138,7 @@ abstract class BaseTest {
         defaultConfig.online().productServer()
             .onlineMapsLinkUrl("https://licensing-uat.api.sygic.com")
         defaultConfig.online().searchUrl("https://search-uat.api.sygic.com")
+        defaultConfig.online().speedCameras().url("https://incidents-testing.api.sygic.com")
         defaultConfig.online().incidents()
             .url("https://incidents-testing.api.sygic.com")
         defaultConfig.online().trafficUrl("https://traffic-uat.api.sygic.com")
