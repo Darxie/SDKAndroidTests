@@ -69,7 +69,6 @@ class SearchTests : BaseTest() {
     }
 
     @Test
-    @Ignore("SDC-8569")
     fun searchAddressCheckLocationGeocoding() {
         mapDownloadHelper.installAndLoadMap("be")
         val position = GeoCoordinates(50.84367811558576, 4.667406856390823)
@@ -123,9 +122,9 @@ class SearchTests : BaseTest() {
     /**
      * Search places test with valid string category and load place with link from search
      *
-     * In this test we create place request with Radius 10000, GeoCoordinates (Bratislava 48.145718, 17.118669)
-     * and category Bank. Verify search places onPlaceLoaded is not empty and place link name and details is not empty.
-     * We get last place link from places and with loadPlaces verify that onPlaceLoaded is Bank place category.
+     * In this test we create place request with Radius 1000, GeoCoordinates (Bratislava 48.145718, 17.118669)
+     * and category Bank. Verify that the list from onPlaceLoaded is not empty and place link name and details are not empty.
+     * We then verify that all of the found Places are of the category Bank.
      */
     @Test
     fun searchPlacesValidCategoryBankOnline() {
