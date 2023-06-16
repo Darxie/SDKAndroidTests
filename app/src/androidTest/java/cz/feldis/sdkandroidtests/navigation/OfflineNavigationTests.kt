@@ -1,6 +1,7 @@
 package cz.feldis.sdkandroidtests.navigation
 
 import com.nhaarman.mockitokotlin2.*
+import com.sygic.sdk.incidents.SpeedCamera
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
@@ -27,6 +28,7 @@ class OfflineNavigationTests : BaseTest() {
         super.setUp()
         routeCompute = RouteComputeHelper()
         mapDownload = MapDownloadHelper()
+        disableOnlineMaps()
     }
 
     @Test
@@ -224,7 +226,7 @@ class OfflineNavigationTests : BaseTest() {
     }
 
     @Test
-    //@Ignore("how is this supposed to work? ")
+    @Ignore("waiting for fix - https://jira.sygic.com/browse/SDC-9122")
     fun sectionCameraTest() {
         mapDownload.installAndLoadMap("sk")
         val navigation = NavigationManagerProvider.getInstance().get()
@@ -243,11 +245,45 @@ class OfflineNavigationTests : BaseTest() {
         simulator.setSpeedMultiplier(4F)
         simulator.start()
 
+        verify(listener, timeout(20_000L).atLeast(5)).onIncidentsInfoChanged(
+            argThat {
+                this.forEach {
+                    println("speedcam: $it")
+                    if (it.recommendedSpeed != -1)
+                        return@argThat true
+                }
+                false
+            }
+        )
+    }
+
+    @Test
+    fun checkSpeedLimitOfRealCamera() {
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
+
+        val route =
+            routeCompute.offlineRouteCompute(
+                GeoCoordinates(48.649189548913924, 17.842829374576407),
+                GeoCoordinates(48.662019021892746, 17.869242810014157)
+            )
+
+        navigation.setRouteForNavigation(route)
+        navigation.addOnIncidentListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        simulator.setSpeedMultiplier(4F)
+        simulator.start()
+
         verify(listener, timeout(20_000L)).onIncidentsInfoChanged(
             argThat {
                 this.forEach {
-                    if (it.recommendedSpeed != -1)
-                        return@argThat true
+                    if (it.incident is SpeedCamera) {
+                        val expectedSpeedcam = it.incident as SpeedCamera
+                        if (expectedSpeedcam.speedLimit == 130)
+                            return@argThat true
+                    }
                 }
                 false
             }
