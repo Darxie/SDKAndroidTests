@@ -20,14 +20,16 @@ class RouteComputeHelper : BaseTest() {
     fun onlineComputeRoute(
         start: GeoCoordinates,
         destination: GeoCoordinates,
-        waypoint: GeoCoordinates? = null
+        waypoint: GeoCoordinates? = null,
+        routingOptions: RoutingOptions = RoutingOptions()
     ): Route {
 
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
             waypoint?.let { this.addViaPoint(it) }
-            routingOptions.routingService = RoutingOptions.RoutingService.Online
+            this.routingOptions = routingOptions
+            this.routingOptions.routingService = RoutingOptions.RoutingService.Online
         }
 
         val listener: RouteComputeListener = mock(verboseLogging = true)

@@ -27,13 +27,6 @@ class RouteWarningTests : BaseTest() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
-        OnlineManagerProvider.getInstance().get().disableOnlineMapStreaming(object: OnlineManager.MapStreamingListener {
-            override fun onError(errorCode: OnlineManager.MapStreamingError) {
-            }
-
-            override fun onSuccess() {
-            }
-        })
     }
 
     @Test
@@ -58,6 +51,7 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun tollRoadAvoidWarningTest() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -85,6 +79,7 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun tollRoadAvoidWarningTestNegative() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -105,6 +100,7 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun heightExceededTest() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -143,6 +139,7 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun heightExceededTestPolylineCheck() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -180,6 +177,7 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun heightExceededTestNegative() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -207,6 +205,7 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun hazmatAndTunnelViolationTest() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -256,9 +255,9 @@ class RouteWarningTests : BaseTest() {
         }
     }
 
-    // crashes with online maps
     @Test
     fun startAndEndInViolationCheckValues() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -299,9 +298,9 @@ class RouteWarningTests : BaseTest() {
         assertTrue(restriction2.realValue == 5000F)
     }
 
-    // crashes with online maps
     @Test
     fun startAndEndInViolationCheckValues2() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -341,6 +340,33 @@ class RouteWarningTests : BaseTest() {
         assertTrue(restriction2.limitValue == 4500F)
         assertTrue(restriction2.realValue == 5000F)
     }
+
+    @Test
+    fun tollRoadAvoidWarningTestOnline() {
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.07473125945471, 17.121696472685443)
+        val destination = GeoCoordinates(48.41623783484128, 17.747376207492863)
+        val routingOptions = RoutingOptions().apply {
+            isTollRoadAvoided = true
+        }
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } != null
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.isNotEmpty()
+        })
+    }
+
 }
 
 fun checkFirstTwoDigits(num: Double, expected: String): Boolean {

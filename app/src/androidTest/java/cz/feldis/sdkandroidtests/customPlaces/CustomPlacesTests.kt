@@ -105,6 +105,14 @@ class CustomPlacesTests : BaseTest() {
     }
 
     @Test
+    fun setModeGetModeTest() {
+        cpManager.setMode(CustomPlacesManager.Mode.ONLINE)
+        assertEquals(cpManager.getMode(), CustomPlacesManager.Mode.ONLINE)
+        cpManager.setMode(CustomPlacesManager.Mode.OFFLINE)
+        assertEquals(cpManager.getMode(), CustomPlacesManager.Mode.OFFLINE)
+    }
+
+    @Test
     fun testInstallCustomPlacesAndVerifyIndexing() {
         val customPlacesSearchIndexingListener : CustomPlacesSearchIndexingListener = mock(verboseLogging = true)
         cpManager.addSearchIndexingListener(customPlacesSearchIndexingListener)
