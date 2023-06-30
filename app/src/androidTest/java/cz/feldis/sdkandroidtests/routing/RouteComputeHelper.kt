@@ -1,7 +1,10 @@
 package cz.feldis.sdkandroidtests.routing
 
+import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argThat
+import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.never
 import com.nhaarman.mockitokotlin2.timeout
 import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.position.GeoCoordinates
@@ -17,14 +20,16 @@ class RouteComputeHelper : BaseTest() {
     fun onlineComputeRoute(
         start: GeoCoordinates,
         destination: GeoCoordinates,
-        waypoint: GeoCoordinates? = null
+        waypoint: GeoCoordinates? = null,
+        routingOptions: RoutingOptions = RoutingOptions()
     ): Route {
 
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
             waypoint?.let { this.addViaPoint(it) }
-            routingOptions.routingService = RoutingOptions.RoutingService.Online
+            this.routingOptions = routingOptions
+            this.routingOptions.routingService = RoutingOptions.RoutingService.Online
         }
 
         val listener: RouteComputeListener = mock(verboseLogging = true)
@@ -49,13 +54,13 @@ class RouteComputeHelper : BaseTest() {
         start: GeoCoordinates,
         destination: GeoCoordinates,
         waypoint: GeoCoordinates? = null,
-        @RoutingOptions.TransportMode transportMode: Int = RoutingOptions.TransportMode.Car
+        routingOptions: RoutingOptions = RoutingOptions()
     ): Route {
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
             waypoint?.let { this.addViaPoint(it) }
-            this.routingOptions.transportMode = transportMode
+            this.routingOptions = routingOptions
             this.routingOptions.routingService = RoutingOptions.RoutingService.Offline
         }
         val listener: RouteComputeListener = mock(verboseLogging = true)
@@ -70,8 +75,9 @@ class RouteComputeHelper : BaseTest() {
             routeComputeFinishedListener
         )
         verify(listener, timeout(10_000L)).onComputeFinished(
-            captor.capture(), argThat { this == Router.RouteComputeStatus.Success }
+            captor.capture(), argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
         )
+        verify(listener, never()).onComputeFinished(eq(null), any())
 
         return captor.value
     }

@@ -6,20 +6,23 @@ import android.util.Log
 import androidx.annotation.CallSuper
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.rule.GrantPermissionRule
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.timeout
+import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.LoggingSettings
-
+import com.sygic.sdk.MapReaderSettings
 import com.sygic.sdk.SygicEngine
 import com.sygic.sdk.SygicEngine.initialize
 import com.sygic.sdk.context.CoreInitException
 import com.sygic.sdk.context.SygicContext
 import com.sygic.sdk.context.SygicContextInitRequest
 import com.sygic.sdk.diagnostics.LogConnector
+import com.sygic.sdk.map.data.MapProvider
+import com.sygic.sdk.online.OnlineManager
 import com.sygic.sdk.online.OnlineManagerProvider
-import com.sygic.sdk.online.data.MapProvider
 import com.sygic.sdk.online.data.MapProviderError
 import com.sygic.sdk.online.listeners.SetActiveMapProviderListener
 import com.sygic.sdk.position.PositionManagerProvider
-
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -27,6 +30,7 @@ import org.junit.Rule
 import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
+import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -98,7 +102,7 @@ abstract class BaseTest {
                 sygicContext = instance
                 PositionManagerProvider.getInstance().get().startPositionUpdating()
                 OnlineManagerProvider.getInstance().get().setActiveMapProvider(
-                    MapProvider("ta"), object: SetActiveMapProviderListener {
+                    MapProvider("ta"), object : SetActiveMapProviderListener {
                         override fun onActiveProviderSet() {
                         }
 
@@ -121,25 +125,32 @@ abstract class BaseTest {
     private fun buildUATConfig(onlineMaps: Boolean): String {
         defaultConfig.license(BuildConfig.LICENSE_KEY)
         defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(onlineMaps)
+
         val path = appContext.getExternalFilesDir(null).toString()
         defaultConfig.storageFolders().rootPath(path)
+
+        defaultConfig.mapReaderSettings()
+            .startupPoiProvider(MapReaderSettings.StartupPoiProvider.CUSTOM_PLACES)
+
         defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
         defaultConfig.online().routingUrl("https://routing-uat.api.sygic.com")
         defaultConfig.online().sSOServerUrl("https://auth-uat.api.sygic.com")
         defaultConfig.online().productServer()
             .onlineMapsLinkUrl("https://licensing-uat.api.sygic.com")
         defaultConfig.online().searchUrl("https://search-uat.api.sygic.com")
+        defaultConfig.online().speedCameras().url("https://incidents-testing.api.sygic.com")
         defaultConfig.online().incidents()
             .url("https://incidents-testing.api.sygic.com")
         defaultConfig.online().trafficUrl("https://traffic-uat.api.sygic.com")
         defaultConfig.online()
             .offlineMapsApiUrl("https://licensing-uat.api.sygic.com")
         defaultConfig.online().voicesUrl("https://nonttsvoices-testing.api.sygic.com")
+        defaultConfig.online().placesUrl("https://places-uat.api.sygic.com")
 
         val consoleAppenderBuilder =
             LoggingSettings.LoggingItem.AppenderItem.ConsoleAppender.Builder()
                 .format("%levshort %datetime %msg\n")
-                .level(LoggingSettings.LoggingItem.AppenderItem.LogLevel.INFO)
+                .level(LoggingSettings.LoggingItem.AppenderItem.LogLevel.TRACE)
                 .time("%y/%m/%d %H:%M:%S")
         val loggingItemBuilder = LoggingSettings.LoggingItem.Builder()
             .name("logger")
@@ -155,6 +166,35 @@ abstract class BaseTest {
         val path = appContext.getExternalFilesDir(null).toString()
         defaultConfig.storageFolders().rootPath(path)
         defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
+        defaultConfig.license(BuildConfig.LICENSE_KEY)
         return defaultConfig.build()
+    }
+
+    open fun readJson(filename: String): String {
+        lateinit var jsonString: String
+        try {
+            jsonString = appContext.assets.open(filename)
+                .bufferedReader()
+                .use { it.readText() }
+        } catch (_: IOException) {
+            assert(true)
+        }
+        return jsonString
+    }
+
+    open fun disableOnlineMaps() {
+        if (!OnlineManagerProvider.getInstance().get().isOnlineMapStreamingEnabled()) {
+            val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+            OnlineManagerProvider.getInstance().get().enableOnlineMapStreaming(listener)
+            verify(listener, timeout(5_000L))
+                .onSuccess()
+        }
+
+        val listener2: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+
+        OnlineManagerProvider.getInstance().get().disableOnlineMapStreaming(listener2)
+
+        verify(listener2, timeout(5_000L))
+            .onSuccess()
     }
 }

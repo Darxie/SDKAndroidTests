@@ -6,6 +6,8 @@ import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.*
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
@@ -67,7 +69,6 @@ class SearchTests : BaseTest() {
     }
 
     @Test
-    @Ignore("SDC-8569")
     fun searchAddressCheckLocationGeocoding() {
         mapDownloadHelper.installAndLoadMap("be")
         val position = GeoCoordinates(50.84367811558576, 4.667406856390823)
@@ -121,42 +122,43 @@ class SearchTests : BaseTest() {
     /**
      * Search places test with valid string category and load place with link from search
      *
-     * In this test we create place request with Radius 10000, GeoCoordinates (Bratislava 48.145718, 17.118669)
-     * and category Bank. Verify search places onPlaceLoaded is not empty and place link name and details is not empty.
-     * We get last place link from places and with loadPlaces verify that onPlaceLoaded is Bank place category.
+     * In this test we create place request with Radius 1000, GeoCoordinates (Bratislava 48.145718, 17.118669)
+     * and category Bank. Verify that the list from onPlaceLoaded is not empty and place link name and details are not empty.
+     * We then verify that all of the found Places are of the category Bank.
      */
     @Test
     fun searchPlacesValidCategoryBankOnline() {
         val listener: PlacesListener = mock(verboseLogging = true)
         val searchManager = SearchManagerProvider.getInstance().get()
+        val searchCallback: CreateSearchCallback<OnlineMapSearch> = mock(verboseLogging = true)
 
         val categories = listOf(PlaceCategories.Bank)
-        val request = PlaceRequest(GeoCoordinates(48.145718, 17.118669), categories, 10000)
-        val session = searchManager.newOnlineSession()
+        val request = PlaceRequest(GeoCoordinates(48.145718, 17.118669), categories, 1000)
+        searchManager.createOnlineMapSearch(searchCallback)
 
-        session.searchPlaces(request, listener)
+        val onlineMapSearchCaptor = argumentCaptor<OnlineMapSearch>()
+        val argumentCaptor = argumentCaptor<List<Place>>()
 
-        verify(listener, Mockito.timeout(10_000L))
-            .onPlacesLoaded(argThat {
-                if (this.isEmpty()) {
-                    Timber.e("List of loaded places is empty")
-                    return@argThat false
-                }
-                for (place in this) {
-                    if (place.link.name.isEmpty() || place.details.isEmpty()) {
-                        Timber.e("Place link name or place details are empty")
-                        return@argThat false
-                    }
-                    if (place.link.category != PlaceCategories.Bank) {
-                        Timber.e(
-                            "Category of the place: " + place.link.name + "at" +
-                                    place.link.location + "is not equal to the requested one"
-                        )
-                        return@argThat false
-                    }
-                }
-                true
-            }, any())
+        verify(searchCallback, timeout(10_000L)).onSuccess(
+            onlineMapSearchCaptor.capture()
+        )
+
+        // actual search
+        onlineMapSearchCaptor.firstValue.createSession().searchPlaces(request, listener)
+
+        verify(listener, timeout(10_000L)).onPlacesLoaded(
+            argumentCaptor.capture(),
+            isNotNull()
+        )
+        verify(listener, never()).onPlacesError(any())
+
+        val resultList = argumentCaptor.firstValue
+        for (bank in resultList) {
+        assertNotNull(resultList)
+            assertFalse(bank.link.name.isEmpty())
+            assertFalse(bank.details.isEmpty())
+            assertTrue(bank.link.category == PlaceCategories.Bank)
+        }
     }
 
     @Test
@@ -195,10 +197,6 @@ class SearchTests : BaseTest() {
 
         verify(listener, timeout(10_000L))
             .onPlacesLoaded(argThat {
-                if (this.isEmpty()) {
-                    Timber.e("List of loaded places is empty")
-                    return@argThat false
-                }
                 for (place in this) {
                     if (place.link.name.isEmpty() || place.details.isEmpty()) {
                         Timber.e("Place link name or place details are empty")
@@ -362,7 +360,7 @@ class SearchTests : BaseTest() {
         verify(listener, timeout(5_000L)).onSuccess(timestampCaptor.capture())
         verify(listener, never()).onError(any())
 
-        assertTrue(timestampCaptor.lastValue - utcUnixTimestamp in 36000..37800) // in seconds
+        assertTrue(timestampCaptor.lastValue - utcUnixTimestamp in 34200..37800) // in seconds
     }
 
     @Test

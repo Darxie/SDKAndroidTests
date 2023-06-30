@@ -5,13 +5,13 @@ import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.map.CountryDetails
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
+import com.sygic.sdk.map.data.MapProvider
 import com.sygic.sdk.map.listeners.MapCountryDetailsListener
 import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
-import junit.framework.Assert.assertFalse
-import org.junit.Assert
+import org.junit.Assert.*
 import org.junit.Test
 import java.util.*
 import kotlin.concurrent.schedule
@@ -24,6 +24,7 @@ class MapDownloadTests : BaseTest() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         mapDownloadHelper.resetMapLocale()
+        mapDownloadHelper.clearCache()
     }
 
     @Test
@@ -56,14 +57,14 @@ class MapDownloadTests : BaseTest() {
             listener,
             never()
         ).onCountryDetailsError(argThat { this != MapInstaller.LoadResult.Success })
-        Assert.assertEquals("France", countryCaptor.firstValue.name)
-        Assert.assertEquals("Europe", countryCaptor.firstValue.continentName)
-        Assert.assertEquals("fr", countryCaptor.firstValue.iso)
-        Assert.assertEquals(13, countryCaptor.firstValue.regions.size)
-        Assert.assertTrue(countryCaptor.firstValue.totalSize > 0)
-        Assert.assertNotNull(countryCaptor.firstValue.version.month)
-        Assert.assertNotNull(countryCaptor.firstValue.version.year)
-        countryCaptor.firstValue.regions.forEach { Assert.assertTrue(it.startsWith("fr")) }
+        assertEquals("France", countryCaptor.firstValue.name)
+        assertEquals("Europe", countryCaptor.firstValue.continentName)
+        assertEquals("fr", countryCaptor.firstValue.iso)
+        assertEquals(13, countryCaptor.firstValue.regions.size)
+        assertTrue(countryCaptor.firstValue.totalSize > 0)
+        assertNotNull(countryCaptor.firstValue.version.month)
+        assertNotNull(countryCaptor.firstValue.version.year)
+        countryCaptor.firstValue.regions.forEach { assertTrue(it.startsWith("fr")) }
     }
 
     @Test
@@ -196,5 +197,37 @@ class MapDownloadTests : BaseTest() {
         installer.setLocale("sk-def", listener)
         verify(listener, timeout(20_000L).times(1))
             .onResult(eq(MapInstaller.LoadResult.Success))
+    }
+
+    @Test
+    fun verifyProviderOfInstalledMapTest() {
+        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        mapDownloadHelper.installAndLoadMap("is")
+        MapInstallerProvider.getInstance().get().getCountryDetails("is", true, cdListener)
+        val captor = argumentCaptor<CountryDetails>()
+        verify(cdListener, timeout(10_000L)).onCountryDetails(captor.capture())
+        verify(cdListener, never()).onCountryDetailsError(any())
+        val details = captor.firstValue
+        assertEquals(MapProvider("ta"), details.version.provider)
+    }
+
+    @Test
+    fun verifyProviderOfNotInstalledMapCountrySplit() {
+        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        mapDownloadHelper.ensureMapNotInstalled("de-02")
+        MapInstallerProvider.getInstance().get().getCountryDetails("de-02", false, cdListener)
+        val captor = argumentCaptor<CountryDetails>()
+        verify(cdListener, timeout(10_000L)).onCountryDetails(captor.capture())
+        verify(cdListener, never()).onCountryDetailsError(any())
+        val details = captor.firstValue
+        assertEquals(MapProvider("ta"), details.version.provider)
+    }
+
+    @Test
+    fun verifyNonExistentCountryDetailsOfResourceMap() {
+        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        MapInstallerProvider.getInstance().get().getCountryDetails("de-01", false, cdListener)
+        verify(cdListener, never()).onCountryDetails(any())
+        verify(cdListener, timeout(10_000L)).onCountryDetailsError(eq(MapInstaller.LoadResult.DetailsNotAvailable))
     }
 }
