@@ -81,6 +81,7 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun getRouteElementsIcelandOffline() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("is")
 
         val elementsListener: RouteElementsListener = mock(verboseLogging = true)
@@ -144,6 +145,7 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun computeReykjavikToVikOffline() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("is")
         val start = GeoCoordinates(64.114341, -21.871153)
         val destination = GeoCoordinates(63.417836, -19.002209)
@@ -162,6 +164,7 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun computeReykjavikToVikOfflineGetAltitude() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("is")
         val listener: GeometryListener = mock(verboseLogging = true)
         val start = GeoCoordinates(64.114341, -21.871153)
@@ -317,6 +320,7 @@ class RouteComputeTests : BaseTest() {
     @Test
     @Ignore("Selection outside of map")
     fun computeWrongFromPointOffline() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
         val start = GeoCoordinates(34.764518085578196, 18.03834181295307)
         val destination = GeoCoordinates(47.99919432978094, 18.164403416068332)
@@ -348,6 +352,7 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun cancelOfflineCompute() {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
         val start = GeoCoordinates(48.14096139265543, 17.154151725057243)
         val destination = GeoCoordinates(48.734914147394626, 21.260367789890452)
@@ -443,5 +448,61 @@ class RouteComputeTests : BaseTest() {
 
         val maneuvers = route.maneuvers
         assertEquals("gb",maneuvers.last().toIso)
+    }
+
+    @Test
+    fun countriesInfoOrderAtSkHu() {
+        mapDownloadHelper.installAndLoadMap("at")
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("hu")
+        val start = GeoCoordinates(48.133521125857136, 16.904835360462567)
+        val waypoint = GeoCoordinates(48.12917385634974, 17.19439161086379)
+        val destination = GeoCoordinates(47.71987275813502, 17.653115614211107)
+
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            waypoint = waypoint
+        )
+
+        val expectedCountries = listOf(
+            TransitCountryInfo("at", emptyList()), // "at" should be the first
+            TransitCountryInfo("sk", emptyList()), // "sk" should be the second
+            TransitCountryInfo("hu", emptyList())  // "hu" should be the third
+        )
+
+        val transitCountriesInfoListener: TransitCountriesInfoListener = mock(verboseLogging = true)
+        route.getTransitCountriesInfo(transitCountriesInfoListener)
+        verify(transitCountriesInfoListener, timeout(5_000L)).onTransitCountriesInfo(expectedCountries)
+    }
+
+    @Test
+    fun countriesInfoOrderHuAtSk() {
+        mapDownloadHelper.installAndLoadMap("at")
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("hu")
+        val start = GeoCoordinates(47.591, 16.8735)
+        val waypoint = GeoCoordinates(48.0184, 16.9746)
+        val destination = GeoCoordinates(48.12917385634974, 17.19439161086379)
+
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            waypoint = waypoint
+        )
+
+        val expectedCountries = listOf(
+            TransitCountryInfo("hu", emptyList()),
+            TransitCountryInfo("at", emptyList()),
+            TransitCountryInfo("sk", emptyList())
+        )
+
+        val transitCountriesInfoListener: TransitCountriesInfoListener = mock(verboseLogging = true)
+        route.getTransitCountriesInfo(transitCountriesInfoListener)
+        verify(transitCountriesInfoListener, timeout(5_000L)).onTransitCountriesInfo(expectedCountries)
     }
 }
