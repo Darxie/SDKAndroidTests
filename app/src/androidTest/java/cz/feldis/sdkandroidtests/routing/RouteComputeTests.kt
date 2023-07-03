@@ -60,6 +60,43 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
+    @Ignore("Crashes - https://jira.sygic.com/browse/SDC-9295")
+    fun computeNextDurationsTestOffline() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+        val listener: RouteDurationListener = mock(verboseLogging = true)
+        val routeCompute = RouteComputeHelper()
+        val router = RouterProvider.getInstance().get()
+
+        val start = GeoCoordinates(48.145718, 17.118669)
+        val destination = GeoCoordinates(48.190322, 16.401080)
+        val route = routeCompute.offlineRouteCompute(start, destination)
+
+        val times =
+            listOf(
+                System.currentTimeMillis() / 1000 + 1800,
+                System.currentTimeMillis() / 1000 + 3700
+            )
+
+        router.computeNextDurations(route, times, listener)
+
+        verify(listener, timeout(35_000L))
+            .onRouteDurations(argThat {
+                if (this != route) {
+                    Timber.e("Route is not equal to the original route.")
+                    return@argThat false
+                }
+                true
+            }, argThat {
+                if (this.size != 2) {
+                    Timber.e("List of durations is not equal to 2, List size is ${this.size}")
+                    return@argThat false
+                }
+                true
+            })
+    }
+
+    @Test
     fun getRouteElementsIcelandOnline() {
         val elementsListener: RouteElementsListener = mock(verboseLogging = true)
         val routeCompute = RouteComputeHelper()
@@ -318,7 +355,6 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    @Ignore("Selection outside of map")
     fun computeWrongFromPointOffline() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
@@ -346,7 +382,7 @@ class RouteComputeTests : BaseTest() {
 
         verify(listener, timeout(20_000L)).onComputeFinished(
             isNull(),
-            argThat { this == Router.RouteComputeStatus.WrongFromPoint }
+            argThat { this == Router.RouteComputeStatus.SelectionOutsideOfMap }
         )
     }
 
