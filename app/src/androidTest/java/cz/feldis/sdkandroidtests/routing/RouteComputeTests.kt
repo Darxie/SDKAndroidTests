@@ -3,6 +3,9 @@ package cz.feldis.sdkandroidtests.routing
 import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.*
+import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
+import com.sygic.sdk.route.RoutingOptions.TransportMode
+import com.sygic.sdk.route.RoutingOptions.VehicleRestrictions
 import com.sygic.sdk.route.listeners.*
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
@@ -153,9 +156,9 @@ class RouteComputeTests : BaseTest() {
         val routeComputeFinishedListener = Mockito.mock(RouteComputeFinishedListener::class.java)
         val options = RoutingOptions()
         options.apply {
-            transportMode = RoutingOptions.TransportMode.Car
+            transportMode = TransportMode.Car
             routingService = RoutingOptions.RoutingService.Online
-            napStrategy = RoutingOptions.NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
+            napStrategy = NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
         }
         val routeRequest = RouteRequest()
         routeRequest.apply {
@@ -188,7 +191,7 @@ class RouteComputeTests : BaseTest() {
         val destination = GeoCoordinates(63.417836, -19.002209)
         val routeCompute = RouteComputeHelper()
         val routingOptions = RoutingOptions().apply {
-            transportMode = RoutingOptions.TransportMode.Car
+            transportMode = TransportMode.Car
         }
 
         val route = routeCompute.offlineRouteCompute(
@@ -208,7 +211,7 @@ class RouteComputeTests : BaseTest() {
         val destination = GeoCoordinates(63.417836, -19.002209)
         val routeCompute = RouteComputeHelper()
         val routingOptions = RoutingOptions().apply {
-            transportMode = RoutingOptions.TransportMode.Car
+            transportMode = TransportMode.Car
         }
 
         val route = routeCompute.offlineRouteCompute(
@@ -258,10 +261,10 @@ class RouteComputeTests : BaseTest() {
         val options = RoutingOptions()
         options.apply {
             isUnpavedRoadAvoided = true
-            transportMode = RoutingOptions.TransportMode.TransportTruck
+            transportMode = TransportMode.TransportTruck
             routingService = RoutingOptions.RoutingService.Online
-            this.addDimensionalRestriction(RoutingOptions.VehicleRestrictions.TotalWeight, 50000)
-            napStrategy = RoutingOptions.NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
+            this.addDimensionalRestriction(VehicleRestrictions.TotalWeight, 50000)
+            napStrategy = NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
         }
 
         val routeRequest = RouteRequest()
@@ -297,10 +300,10 @@ class RouteComputeTests : BaseTest() {
         val options = RoutingOptions()
         options.apply {
             isUnpavedRoadAvoided = true
-            transportMode = RoutingOptions.TransportMode.Car
+            transportMode = TransportMode.Car
             routingService = RoutingOptions.RoutingService.Offline
 
-            napStrategy = RoutingOptions.NearestAccessiblePointStrategy.Disabled
+            napStrategy = NearestAccessiblePointStrategy.Disabled
             setUseSpeedProfiles(true)
         }
 
@@ -410,7 +413,11 @@ class RouteComputeTests : BaseTest() {
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
         val router = RouterProvider.getInstance().get()
 
-        val task = router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
+        val task = router.computeRouteWithAlternatives(
+            primaryRouteRequest,
+            null,
+            routeComputeFinishedListener
+        )
         verify(listener, timeout(10_000L).atLeast(5)).onProgress(any())
         task.cancel()
 
@@ -434,7 +441,10 @@ class RouteComputeTests : BaseTest() {
         val router = RouterProvider.getInstance().get()
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
-        verify(listener, timeout(10_000L)).onComputeFinished(null, eq(Router.RouteComputeStatus.UnspecifiedFault))
+        verify(listener, timeout(10_000L)).onComputeFinished(
+            null,
+            eq(Router.RouteComputeStatus.UnspecifiedFault)
+        )
     }
 
     @Test
@@ -444,7 +454,7 @@ class RouteComputeTests : BaseTest() {
         val destination = GeoCoordinates(49.05314733520812, 18.325403607220828)
         val routeCompute = RouteComputeHelper()
         val routingOptions = RoutingOptions().apply {
-            transportMode = RoutingOptions.TransportMode.TransportTruck
+            transportMode = TransportMode.TransportTruck
             setMaxspeed(90)
         }
 
@@ -456,7 +466,7 @@ class RouteComputeTests : BaseTest() {
         val timeToEndTruck = routeTruck.routeInfo.waypointDurations.last().withSpeedProfiles
 
         routingOptions.apply {
-            transportMode = RoutingOptions.TransportMode.Camper
+            transportMode = TransportMode.Camper
             setMaxspeed(130)
         }
 
@@ -467,7 +477,10 @@ class RouteComputeTests : BaseTest() {
         )
         val timeToEndCamper = routeCamper.routeInfo.waypointDurations.last().withSpeedProfiles
 
-        assertTrue("camper: $timeToEndCamper, truck: $timeToEndTruck ", timeToEndCamper + 100 < timeToEndTruck)
+        assertTrue(
+            "camper: $timeToEndCamper, truck: $timeToEndTruck ",
+            timeToEndCamper + 100 < timeToEndTruck
+        )
     }
 
     @Test
@@ -483,7 +496,7 @@ class RouteComputeTests : BaseTest() {
         )
 
         val maneuvers = route.maneuvers
-        assertEquals("gb",maneuvers.last().toIso)
+        assertEquals("gb", maneuvers.last().toIso)
     }
 
     @Test
@@ -511,7 +524,9 @@ class RouteComputeTests : BaseTest() {
 
         val transitCountriesInfoListener: TransitCountriesInfoListener = mock(verboseLogging = true)
         route.getTransitCountriesInfo(transitCountriesInfoListener)
-        verify(transitCountriesInfoListener, timeout(5_000L)).onTransitCountriesInfo(expectedCountries)
+        verify(transitCountriesInfoListener, timeout(5_000L)).onTransitCountriesInfo(
+            expectedCountries
+        )
     }
 
     @Test
@@ -539,6 +554,114 @@ class RouteComputeTests : BaseTest() {
 
         val transitCountriesInfoListener: TransitCountriesInfoListener = mock(verboseLogging = true)
         route.getTransitCountriesInfo(transitCountriesInfoListener)
-        verify(transitCountriesInfoListener, timeout(5_000L)).onTransitCountriesInfo(expectedCountries)
+        verify(transitCountriesInfoListener, timeout(5_000L)).onTransitCountriesInfo(
+            expectedCountries
+        )
+    }
+
+    @Test
+    fun changeWeightAtWaypoint() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val start = GeoCoordinates(48.19159435449465, 17.223366296005075)
+        val waypoint = GeoCoordinates(48.19136102846576, 17.226362460836786)
+        val destination = GeoCoordinates(48.19159237577265, 17.22143784412721)
+        val routingOptions = RoutingOptions().apply {
+            addDimensionalRestriction(VehicleRestrictions.TotalWeight, 50000)
+            transportMode = TransportMode.TransportTruck
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection()
+            routingService = RoutingOptions.RoutingService.Offline
+        }
+        val request = RouteRequest().apply {
+            this.setStart(start)
+            this.addViaPoint(waypoint)
+            this.setDestination(destination)
+            this.routingOptions = routingOptions
+            this.getViaPoints()[0].vehicleInfo = Waypoint.VehicleInfo(3000) // we unload here
+        }
+
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
+        val primaryRouteRequest = PrimaryRouteRequest(request, listener)
+
+        val captor = argumentCaptor<Route>()
+        val captorWarnings = argumentCaptor<List<RouteWarning>>()
+
+        RouterProvider.getInstance().get().computeRouteWithAlternatives(
+            primaryRouteRequest,
+            null,
+            routeComputeFinishedListener
+        )
+        verify(listener, timeout(10_000L)).onComputeFinished(
+            captor.capture(), eq(Router.RouteComputeStatus.SuccessWithWarnings)
+        )
+
+        val route = captor.firstValue
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(10_000L)).onRouteWarnings(captorWarnings.capture())
+
+        assert(captorWarnings.firstValue.size == 1)
+        // as we get back through the same road, there would be two warnings if we didn't change the weight
+        assertEquals(
+            34000.0F,
+            (captorWarnings.firstValue[0] as RouteWarning.SectionWarning.WeightRestriction).limitValue
+        )
+        assertEquals(
+            50000.0F,
+            (captorWarnings.firstValue[0] as RouteWarning.SectionWarning.WeightRestriction).realValue
+        )
+    }
+
+    @Test
+    fun doNotChangeWeightAtWaypoint() {
+        // this is an anti-change weight at waypoint test that confirms that the another test works as expected
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val start = GeoCoordinates(48.19159435449465, 17.223366296005075)
+        val waypoint = GeoCoordinates(48.19136102846576, 17.226362460836786)
+        val destination = GeoCoordinates(48.19159237577265, 17.22143784412721)
+        val routingOptions = RoutingOptions().apply {
+            addDimensionalRestriction(VehicleRestrictions.TotalWeight, 50000)
+            transportMode = TransportMode.TransportTruck
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection()
+            routingService = RoutingOptions.RoutingService.Offline
+        }
+        val request = RouteRequest().apply {
+            this.setStart(start)
+            this.addViaPoint(waypoint)
+            this.setDestination(destination)
+            this.routingOptions = routingOptions
+            // we do not change the weight at waypoint
+        }
+
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
+        val primaryRouteRequest = PrimaryRouteRequest(request, listener)
+
+        val captor = argumentCaptor<Route>()
+        val captorWarnings = argumentCaptor<List<RouteWarning>>()
+
+        RouterProvider.getInstance().get().computeRouteWithAlternatives(
+            primaryRouteRequest,
+            null,
+            routeComputeFinishedListener
+        )
+        verify(listener, timeout(10_000L)).onComputeFinished(
+            captor.capture(), eq(Router.RouteComputeStatus.SuccessWithWarnings)
+        )
+
+        val route = captor.firstValue
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(10_000L)).onRouteWarnings(captorWarnings.capture())
+
+        assert(captorWarnings.firstValue.size > 1)
     }
 }
