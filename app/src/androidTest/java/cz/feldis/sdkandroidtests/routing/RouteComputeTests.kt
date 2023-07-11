@@ -1,6 +1,7 @@
 package cz.feldis.sdkandroidtests.routing
 
 import com.nhaarman.mockitokotlin2.*
+import com.sygic.sdk.places.EVConnector
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.*
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
@@ -25,6 +26,32 @@ class RouteComputeTests : BaseTest() {
     override fun setUp() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
+    }
+
+    private fun newEvProfile(remainingCapacity: Float): EVProfile {
+        return EVProfile(
+            batteryProfile = BatteryProfile(
+                batteryCapacity = 30f,
+                remainingCapacity = remainingCapacity,
+                batteryChargingThreshold = .2f,
+                batteryFullChargeThreshold = .8f,
+                batteryMinimumReserveThreshold = .05f
+            ),
+            chargingMaxPower = 100,
+            connector = setOf(EVConnector.ConnectorType.Type2_any),
+            power = setOf(EVConnector.PowerType.DC, EVConnector.PowerType.AC),
+            weight = 1600.0,
+            frontalArea = 2.5,
+            coefAD = .25,
+            coefRR = .015,
+            nee1 = .85,
+            nee2 = .8,
+            Ka = .28,
+            V1 = -1.0,
+            Kv1 = -1.0,
+            V2 = -1.0,
+            Kv2 = -1.0
+        )
     }
 
     @Ignore("Does not work")
@@ -579,7 +606,7 @@ class RouteComputeTests : BaseTest() {
             this.addViaPoint(waypoint)
             this.setDestination(destination)
             this.routingOptions = routingOptions
-            this.getViaPoints()[0].vehicleInfo = Waypoint.VehicleInfo(3000) // we unload here
+//            this.getViaPoints()[0].vehicleInfo = Waypoint.VehicleInfo(3000) // we unload here
         }
 
         val listener: RouteComputeListener = mock(verboseLogging = true)
@@ -663,5 +690,29 @@ class RouteComputeTests : BaseTest() {
         verify(routeWarningsListener, timeout(10_000L)).onRouteWarnings(captorWarnings.capture())
 
         assert(captorWarnings.firstValue.size > 1)
+    }
+
+    @Test
+    fun preferenceViolationWarningEVTest() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+        val evProfile = newEvProfile(20f)
+        val routeCompute = RouteComputeHelper()
+        val evPreferences = routeCompute.newEVPreferencesHighChargeRange()
+        val start = GeoCoordinates(48.14548507020328, 17.126529723864405)
+        val destination = GeoCoordinates(49.00162457306762, 22.157874201012863)
+
+        val route = routeCompute.evRouteCompute(
+            start,
+            destination,
+            evProfile = evProfile,
+            evPreferences = evPreferences
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.LocationWarning.EVPreferenceViolation } != null
+        })
     }
 }
