@@ -5,6 +5,7 @@ import com.sygic.sdk.places.EVConnector
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.*
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
+import com.sygic.sdk.route.RoutingOptions.RoutingType
 import com.sygic.sdk.route.RoutingOptions.TransportMode
 import com.sygic.sdk.route.RoutingOptions.VehicleRestrictions
 import com.sygic.sdk.route.listeners.*
@@ -14,6 +15,7 @@ import junit.framework.Assert.assertNotNull
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
@@ -606,7 +608,7 @@ class RouteComputeTests : BaseTest() {
             this.addViaPoint(waypoint)
             this.setDestination(destination)
             this.routingOptions = routingOptions
-//            this.getViaPoints()[0].vehicleInfo = Waypoint.VehicleInfo(3000) // we unload here
+            this.getViaPoints()[0].vehicleInfo = Waypoint.VehicleInfo(3000) // we unload here
         }
 
         val listener: RouteComputeListener = mock(verboseLogging = true)
@@ -715,4 +717,46 @@ class RouteComputeTests : BaseTest() {
             this.find { it is RouteWarning.LocationWarning.EVPreferenceViolation } != null
         })
     }
+
+    @Test
+    fun rovinkaToSygicEcoRouteComparison() {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val consumptionCurve = mutableMapOf(
+            40.0 to 0.09,
+            50.0 to 0.075,
+            80.0 to 0.065,
+            90.0 to 0.07,
+            130.0 to 0.092
+        )
+        val start = GeoCoordinates(48.10180335214629, 17.233888233640172)
+        val destination = GeoCoordinates(48.145628357674845, 17.12695279400835)
+
+        val ecoRoutingOptions = RoutingOptions().apply {
+            consumptionData.consumptionCurve = consumptionCurve
+            routingType = RoutingType.Economic
+        }
+
+        val routeCompute = RouteComputeHelper()
+
+        val ecoRoute = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = ecoRoutingOptions
+        )
+
+        val fastestRoutingOptions = RoutingOptions().apply {
+            routingType = RoutingType.Fastest
+        }
+
+        val fastestRoute = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = fastestRoutingOptions
+        )
+
+        assertTrue(fastestRoute.waypoints[1].distanceFromStart in 20001 downTo 14999) // uses highway
+        assertTrue(ecoRoute.waypoints[1].distanceFromStart in 14000 downTo 10999) // uses a shorter way
+        assertNotEquals(fastestRoute.maneuvers, ecoRoute.maneuvers) // we check that the maneuvers are different
+    }
+
 }
