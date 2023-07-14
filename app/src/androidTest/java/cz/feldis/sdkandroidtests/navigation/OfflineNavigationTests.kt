@@ -1,10 +1,18 @@
 package cz.feldis.sdkandroidtests.navigation
 
-import com.nhaarman.mockitokotlin2.*
+import com.nhaarman.mockitokotlin2.argThat
+import com.nhaarman.mockitokotlin2.argumentCaptor
+import com.nhaarman.mockitokotlin2.atMost
+import com.nhaarman.mockitokotlin2.doAnswer
+import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.timeout
+import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.incidents.SpeedCamera
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
+import com.sygic.sdk.navigation.routeeventnotifications.IncidentInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.PositionManagerProvider
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
@@ -13,11 +21,12 @@ import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.AdditionalMatchers
 import org.mockito.Mockito
 import timber.log.Timber
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class OfflineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -226,7 +235,6 @@ class OfflineNavigationTests : BaseTest() {
     }
 
     @Test
-    @Ignore("waiting for fix - https://jira.sygic.com/browse/SDC-9122")
     fun sectionCameraTest() {
         mapDownload.installAndLoadMap("sk")
         val navigation = NavigationManagerProvider.getInstance().get()
@@ -245,16 +253,21 @@ class OfflineNavigationTests : BaseTest() {
         simulator.setSpeedMultiplier(4F)
         simulator.start()
 
-        verify(listener, timeout(20_000L).atLeast(5)).onIncidentsInfoChanged(
-            argThat {
-                this.forEach {
-                    println("speedcam: $it")
-                    if (it.recommendedSpeed != -1)
-                        return@argThat true
-                }
-                false
+        val latch = CountDownLatch(5)
+        val captor = argumentCaptor<List<IncidentInfo>>()
+        val incidentsList = mutableListOf<IncidentInfo>()
+
+        doAnswer {
+            val args = captor.capture()
+            incidentsList.addAll(args)
+
+            val count = incidentsList.count { it.recommendedSpeed != -1 }
+            if (count >= 5) {
+                latch.countDown()
             }
-        )
+        }.`when`(listener).onIncidentsInfoChanged(captor.capture())
+
+        latch.await(20, TimeUnit.SECONDS)
     }
 
     @Test
