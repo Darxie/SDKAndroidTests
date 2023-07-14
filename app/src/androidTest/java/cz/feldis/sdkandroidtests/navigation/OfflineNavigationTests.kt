@@ -1,9 +1,7 @@
 package cz.feldis.sdkandroidtests.navigation
 
 import com.nhaarman.mockitokotlin2.argThat
-import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.atMost
-import com.nhaarman.mockitokotlin2.doAnswer
 import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.timeout
@@ -12,7 +10,6 @@ import com.sygic.sdk.incidents.SpeedCamera
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
-import com.sygic.sdk.navigation.routeeventnotifications.IncidentInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.PositionManagerProvider
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
@@ -25,8 +22,6 @@ import org.junit.Test
 import org.mockito.AdditionalMatchers
 import org.mockito.Mockito
 import timber.log.Timber
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 class OfflineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -58,15 +53,13 @@ class OfflineNavigationTests : BaseTest() {
         simulator.setSpeedMultiplier(4F)
 
         Mockito.verify(
-            listener,
-            Mockito.timeout(10_000L)
-        )
-            .onSharpCurveInfoChanged(argThat {
-                if (this.angle != 0.0) {
-                    return@argThat true
-                }
-                false
-            })
+            listener, Mockito.timeout(10_000L)
+        ).onSharpCurveInfoChanged(argThat {
+            if (this.angle != 0.0) {
+                return@argThat true
+            }
+            false
+        })
 
         simulator.stop()
         simulator.destroy()
@@ -87,11 +80,10 @@ class OfflineNavigationTests : BaseTest() {
         val directionListener: NavigationManager.OnDirectionListener = mock(verboseLogging = true)
         val navigation = NavigationManagerProvider.getInstance().get()
 
-        val route =
-            routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.132310, 17.114100),
-                GeoCoordinates(48.131733, 17.109952)
-            )
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.132310, 17.114100),
+            GeoCoordinates(48.131733, 17.109952)
+        )
 
         navigation.setRouteForNavigation(route)
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
@@ -99,16 +91,14 @@ class OfflineNavigationTests : BaseTest() {
         navigation.addOnDirectionListener(directionListener)
 
         Mockito.verify(
-            directionListener,
-            Mockito.timeout(15_000L)
-        )
-            .onDirectionInfoChanged(argThat {
-                if (this.primary.nextRoadName != "Einsteinova") {
-                    Timber.e("Primary road name is not equal to Einsteinova.")
-                    return@argThat false
-                }
-                true
-            })
+            directionListener, Mockito.timeout(15_000L)
+        ).onDirectionInfoChanged(argThat {
+            if (this.primary.nextRoadName != "Einsteinova") {
+                Timber.e("Primary road name is not equal to Einsteinova.")
+                return@argThat false
+            }
+            true
+        })
 
         navigation.removeOnDirectionListener(directionListener)
         navigation.stopNavigation()
@@ -129,11 +119,10 @@ class OfflineNavigationTests : BaseTest() {
         mapDownload.installAndLoadMap("sk")
         val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
         val navigation = NavigationManagerProvider.getInstance().get()
-        val route =
-            routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.14364765102184, 17.131080867348153),
-                GeoCoordinates(48.14852112743662, 17.13397077018316)
-            )
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.14364765102184, 17.131080867348153),
+            GeoCoordinates(48.14852112743662, 17.13397077018316)
+        )
 
         val logSimulator = NmeaLogSimulatorProvider.getInstance("$appDataPath/SVK-Kosicka.nmea").get()
         logSimulator.setSpeedMultiplier(2F)
@@ -142,10 +131,8 @@ class OfflineNavigationTests : BaseTest() {
         logSimulator.start()
 
         Mockito.verify(
-            listener,
-            Mockito.timeout(30_000L).atLeast(1)
-        )
-            .onRouteChanged(AdditionalMatchers.not(eq(route)), eq(NavigationManager.RouteUpdateStatus.Success))
+            listener, Mockito.timeout(30_000L).atLeast(1)
+        ).onRouteChanged(AdditionalMatchers.not(eq(route)), eq(NavigationManager.RouteUpdateStatus.Success))
 
 
         logSimulator.stop()
@@ -168,15 +155,11 @@ class OfflineNavigationTests : BaseTest() {
         navigation.addJunctionPassedListener(listener)
 
         verify(
-            listener,
-            timeout(60_000L).atLeast(2)
-        )
-            .onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
+            listener, timeout(60_000L).atLeast(2)
+        ).onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
         verify(
-            listener,
-            atMost(10)
-        )
-            .onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
+            listener, atMost(10)
+        ).onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
         verify(
             listener, timeout(60_000L).times(1)
         ).onJunctionPassed(
@@ -203,11 +186,10 @@ class OfflineNavigationTests : BaseTest() {
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnLaneListener = mock(verboseLogging = true)
 
-        val route =
-            routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.147682401781026, 17.14365655304184),
-                GeoCoordinates(48.15310362223699, 17.147190865317768)
-            )
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.147682401781026, 17.14365655304184),
+            GeoCoordinates(48.15310362223699, 17.147190865317768)
+        )
 
         navigation.setRouteForNavigation(route)
         navigation.addOnLaneListener(listener)
@@ -218,15 +200,13 @@ class OfflineNavigationTests : BaseTest() {
 
 
         Mockito.verify(
-            listener,
-            Mockito.timeout(30_000L)
-        )
-            .onLaneInfoChanged(argThat {
-                if (this.simpleLanesInfo?.lanes?.isNotEmpty() == true) {
-                    return@argThat true
-                }
-                false
-            })
+            listener, Mockito.timeout(30_000L)
+        ).onLaneInfoChanged(argThat {
+            if (this.simpleLanesInfo?.lanes?.isNotEmpty() == true) {
+                return@argThat true
+            }
+            false
+        })
 
         simulator.stop()
         simulator.destroy()
@@ -240,11 +220,10 @@ class OfflineNavigationTests : BaseTest() {
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
-        val route =
-            routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.212465230469, 17.03545199713536),
-                GeoCoordinates(48.18179480984319, 17.05224437941669)
-            )
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.212465230469, 17.03545199713536),
+            GeoCoordinates(48.18179480984319, 17.05224437941669)
+        )
 
         navigation.setRouteForNavigation(route)
         navigation.addOnIncidentListener(listener)
@@ -253,21 +232,20 @@ class OfflineNavigationTests : BaseTest() {
         simulator.setSpeedMultiplier(4F)
         simulator.start()
 
-        val latch = CountDownLatch(5)
-        val captor = argumentCaptor<List<IncidentInfo>>()
-        val incidentsList = mutableListOf<IncidentInfo>()
+        var countTest = 0
 
-        doAnswer {
-            val args = captor.capture()
-            incidentsList.addAll(args)
-
-            val count = incidentsList.count { it.recommendedSpeed != -1 }
-            if (count >= 5) {
-                latch.countDown()
+        verify(listener, timeout(20_000L).atLeastOnce()).onIncidentsInfoChanged(argThat {
+            this.forEach {
+                if (it.recommendedSpeed != -1) {
+                    countTest += 1
+                }
+                if (countTest >= 5)
+                    return@argThat true
             }
-        }.`when`(listener).onIncidentsInfoChanged(captor.capture())
+            false
+        })
 
-        latch.await(20, TimeUnit.SECONDS)
+
     }
 
     @Test
@@ -276,11 +254,9 @@ class OfflineNavigationTests : BaseTest() {
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
-        val route =
-            routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.649189548913924, 17.842829374576407),
-                GeoCoordinates(48.662019021892746, 17.869242810014157)
-            )
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.649189548913924, 17.842829374576407), GeoCoordinates(48.662019021892746, 17.869242810014157)
+        )
 
         navigation.setRouteForNavigation(route)
         navigation.addOnIncidentListener(listener)
@@ -289,17 +265,14 @@ class OfflineNavigationTests : BaseTest() {
         simulator.setSpeedMultiplier(4F)
         simulator.start()
 
-        verify(listener, timeout(20_000L)).onIncidentsInfoChanged(
-            argThat {
-                this.forEach {
-                    if (it.incident is SpeedCamera) {
-                        val expectedSpeedcam = it.incident as SpeedCamera
-                        if (expectedSpeedcam.speedLimit == 130)
-                            return@argThat true
-                    }
+        verify(listener, timeout(20_000L)).onIncidentsInfoChanged(argThat {
+            this.forEach {
+                if (it.incident is SpeedCamera) {
+                    val expectedSpeedcam = it.incident as SpeedCamera
+                    if (expectedSpeedcam.speedLimit == 130) return@argThat true
                 }
-                false
             }
-        )
+            false
+        })
     }
 }

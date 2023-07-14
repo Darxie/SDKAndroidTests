@@ -114,7 +114,7 @@ class CustomPlacesTests : BaseTest() {
 
     @Test
     fun testInstallCustomPlacesAndVerifyIndexing() {
-        val customPlacesSearchIndexingListener : CustomPlacesSearchIndexingListener = mock(verboseLogging = true)
+        val customPlacesSearchIndexingListener: CustomPlacesSearchIndexingListener = mock(verboseLogging = true)
         cpManager.addSearchIndexingListener(customPlacesSearchIndexingListener)
         installOfflinePlaces("sk")
         verify(customPlacesSearchIndexingListener, atLeastOnce()).onStarted()
