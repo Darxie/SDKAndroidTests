@@ -40,6 +40,7 @@ abstract class BaseTest {
     var isEngineInitialized = false
     private lateinit var appContext: Context
     lateinit var sygicContext: SygicContext
+    lateinit var appDataPath: String
     private lateinit var logConnector: LogConnector
 
     @get:Rule
@@ -74,6 +75,7 @@ abstract class BaseTest {
     open fun setUp() {
         appContext =
             androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        appDataPath = appContext.getExternalFilesDir(null).toString()
         val latch = CountDownLatch(1)
         this.isEngineInitialized = false
         val jsonConfig = buildUATConfig(true)
@@ -125,9 +127,7 @@ abstract class BaseTest {
     private fun buildUATConfig(onlineMaps: Boolean): String {
         defaultConfig.license(BuildConfig.LICENSE_KEY)
         defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(onlineMaps)
-
-        val path = appContext.getExternalFilesDir(null).toString()
-        defaultConfig.storageFolders().rootPath(path)
+        defaultConfig.storageFolders().rootPath(appDataPath)
 
         defaultConfig.mapReaderSettings()
             .startupPoiProvider(MapReaderSettings.StartupPoiProvider.CUSTOM_PLACES)

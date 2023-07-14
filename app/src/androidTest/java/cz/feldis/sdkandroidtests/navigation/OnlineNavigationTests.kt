@@ -248,6 +248,7 @@ class OnlineNavigationTests : BaseTest() {
 
         navigation.setRouteForNavigation(route)
         val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance("$appDataPath/SVK-Kosicka.nmea").get()
         logSimulator.start()
         navigation.addOnRouteChangedListener(listener)
         logSimulator.setSpeedMultiplier(2F)
@@ -481,7 +482,7 @@ class OnlineNavigationTests : BaseTest() {
 
         navigation.setRouteForNavigation(route)
         navigation.addOnRouteRecomputeProgressListener(listener)
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance("$appDataPath/SVK-Kosicka.nmea").get()
         logSimulator.start()
 
         Mockito.verify(

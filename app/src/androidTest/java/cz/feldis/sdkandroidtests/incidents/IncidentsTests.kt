@@ -310,7 +310,7 @@ class IncidentsTests : BaseTest() {
 
 
         navigation.addOnIncidentListener(listener)
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("logLovosice.nmea").get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance("$appDataPath/logLovosice.nmea").get()
         logSimulator.setSpeedMultiplier(2F)
         logSimulator.start()
 
@@ -357,7 +357,7 @@ class IncidentsTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         navigation.addOnIncidentListener(listener)
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("logLovosice.nmea").get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance("$appDataPath/logLovosice.nmea").get()
         logSimulator.setSpeedMultiplier(2F)
         logSimulator.start()
 
@@ -367,10 +367,6 @@ class IncidentsTests : BaseTest() {
         verify(listener, timeout(10_000L)).onIncidentsInfoChanged(argThat {
             this.find { it.roadPosition == GeoCoordinates(50.50351, 14.04214) } != null
         })
-
-//        verify(positionSimulatorListener, timeout(40_000L)).onSimulatedStateChanged(eq(SimulatorState.End))
-//
-//        verify(listener, never()).onIncidentsInfoChanged(argThat { isNotEmpty() })
 
         reset(listener)
         logSimulator.stop()
@@ -390,7 +386,7 @@ class IncidentsTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         navigation.addOnIncidentListener(listener)
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("logLovosice.nmea").get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance("$appDataPath/logLovosice.nmea").get()
         logSimulator.setSpeedMultiplier(2F)
         logSimulator.start()
 

@@ -126,7 +126,7 @@ class OfflineNavigationTests : BaseTest() {
                 GeoCoordinates(48.14852112743662, 17.13397077018316)
             )
 
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance("$appDataPath/SVK-Kosicka.nmea").get()
         logSimulator.setSpeedMultiplier(2F)
         navigation.setRouteForNavigation(route)
         navigation.addOnRouteChangedListener(listener)
@@ -152,7 +152,7 @@ class OfflineNavigationTests : BaseTest() {
         val navigation = NavigationManagerProvider.getInstance().get()
         PositionManagerProvider.getInstance().get().startPositionUpdating()
 
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("rovinka.nmea").get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance("$appDataPath/rovinka.nmea").get()
         Thread.sleep(3000)
         logSimulator.start()
 
