@@ -232,20 +232,18 @@ class OfflineNavigationTests : BaseTest() {
         simulator.setSpeedMultiplier(4F)
         simulator.start()
 
-        var countTest = 0
-
+        var count = 0
+        // verify that the callback has been called at least 5 times with value different than -1
         verify(listener, timeout(20_000L).atLeastOnce()).onIncidentsInfoChanged(argThat {
             this.forEach {
                 if (it.recommendedSpeed != -1) {
-                    countTest += 1
+                    count += 1
                 }
-                if (countTest >= 5)
+                if (count >= 5)
                     return@argThat true
             }
             false
         })
-
-
     }
 
     @Test
