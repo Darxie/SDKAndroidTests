@@ -112,8 +112,25 @@ class SearchHelper {
         return resultCaptor.firstValue
     }
 
-    fun onlineGeocode() {
+    fun onlineGeocode(searchRequest: SearchRequest): List<GeocodingResult> {
+        val geocodeResultListener: GeocodingResultsListener = mock(verboseLogging = true)
+        val createSearchListener: CreateSearchCallback<OnlineMapSearch> =
+            mock(verboseLogging = true)
+        val searchCaptor = argumentCaptor<OnlineMapSearch>()
+        val resultCaptor = argumentCaptor<List<GeocodingResult>>()
+        searchManager.createOnlineMapSearch(createSearchListener)
+        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
+        val search = searchCaptor.lastValue
 
+        val session = search.createSession()
+
+        session.geocode(searchRequest, geocodeResultListener)
+
+        verify(geocodeResultListener, timeout(10_000L)).onGeocodingResults(
+            resultCaptor.capture()
+        )
+        verify(geocodeResultListener, never()).onGeocodingResultsError(any())
+        return resultCaptor.firstValue
     }
 
     fun offlineReverseGeocode() {

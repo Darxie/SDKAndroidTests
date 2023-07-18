@@ -399,7 +399,7 @@ class OnlineNavigationTests : BaseTest() {
      * We verify that onIncidentInfoChanged was invoked.
      */
     @Test
-    fun onIncidentListenerTest() {
+    fun onIncidentListenerTestOnlineNavigation() {
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 

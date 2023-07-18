@@ -98,25 +98,10 @@ class SearchTests : BaseTest() {
     @Test
     fun onlineGeocodeTestLukoil() {
         val position = GeoCoordinates(48.100806, 17.234972)
-        val listener: GeocodingResultsListener = mock(verboseLogging = true)
-        val searchManager = SearchManagerProvider.getInstance().get()
 
         val request = SearchRequest("Lukoil pálenisko", position)
-        val session = SearchManagerProvider.getInstance().get().newOnlineSession()
-
-        session.geocode(request, listener)
-
-        verify(listener, timeout(10_000L)).onGeocodingResults(
-            argThat {
-                this.forEach {
-                    if (it.title == "LUKOIL Pálenisko")
-                        return@argThat true
-                }
-                false
-            }
-
-        )
-        searchManager.closeSession(session)
+        val results = searchHelper.onlineGeocode(request)
+        assertTrue(results.find { it.title == "LUKOIL Pálenisko" } != null)
     }
 
     /**

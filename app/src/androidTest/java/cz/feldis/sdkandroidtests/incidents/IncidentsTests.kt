@@ -158,7 +158,6 @@ class IncidentsTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnIncidentListener(listener)
         navigation.stopNavigation()
-        reset(listener)
     }
 
     @Test
