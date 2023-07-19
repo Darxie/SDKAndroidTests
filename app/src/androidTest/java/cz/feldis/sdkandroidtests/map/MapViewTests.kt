@@ -26,6 +26,7 @@ import com.sygic.sdk.position.GeoCoordinates
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.SygicActivity
 import cz.feldis.sdkandroidtests.TestMapFragment
+import cz.feldis.sdkandroidtests.utils.Repeat
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -58,7 +59,6 @@ class MapViewTests : BaseTest() {
         //mapFragment.getMapAsync( ... )
         //mapFragment.mapDataModel.addMapObject(...)
 
-        // tento delay tu mam len aby si videl mapu :D daj si prec a rob si co potrebujes
         delay(3000L)
 
         //close scenario & activity

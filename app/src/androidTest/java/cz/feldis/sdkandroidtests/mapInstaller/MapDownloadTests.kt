@@ -2,6 +2,7 @@ package cz.feldis.sdkandroidtests.mapInstaller
 
 import androidx.test.filters.RequiresDevice
 import com.nhaarman.mockitokotlin2.*
+import com.sygic.sdk.OperationStatus.Result.Success
 import com.sygic.sdk.map.CountryDetails
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
@@ -13,6 +14,7 @@ import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
 import org.junit.Assert.*
 import org.junit.Test
+import org.mockito.ArgumentMatchers.anyList
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -191,12 +193,21 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun setLocaleTest() {
+        // cache is cleared during setUp() and locale set to en-en
         val installer = MapInstallerProvider.getInstance().get()
         val listener: ResultListener = mock(verboseLogging = true)
-        mapDownloadHelper.installAndLoadMap("sk")
-        installer.setLocale("sk-def", listener)
+
+        installer.setLocale("sk-sk", listener)
         verify(listener, timeout(20_000L).times(1))
             .onResult(eq(MapInstaller.LoadResult.Success))
+
+        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        val detailsCaptor = argumentCaptor<CountryDetails>()
+
+        installer.getCountryDetails("sk", true, cdListener)
+        verify(cdListener, timeout(20_000L)).onCountryDetails(detailsCaptor.capture())
+        assertTrue(detailsCaptor.firstValue.name == "Slovensko")
+        assertTrue(detailsCaptor.firstValue.continentName == "Európa")
     }
 
     @Test
