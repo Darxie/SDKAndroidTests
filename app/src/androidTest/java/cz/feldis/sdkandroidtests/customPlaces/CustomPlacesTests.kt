@@ -4,7 +4,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.anyOrNull
-import com.nhaarman.mockitokotlin2.argThat
 import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.mock
@@ -21,7 +20,6 @@ import com.sygic.sdk.map.MapView.InjectSkinResultListener
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.places.CustomPlacesManager
 import com.sygic.sdk.places.CustomPlacesManagerProvider
-import com.sygic.sdk.places.data.InstalledDataset
 import com.sygic.sdk.places.listeners.CustomPlacesSearchIndexingListener
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.AutocompleteResult
@@ -46,6 +44,7 @@ import org.junit.runner.RunWith
 class CustomPlacesTests : BaseTest() {
     private lateinit var cpManager: CustomPlacesManager
     private lateinit var searchHelper: SearchHelper
+    private val defaultDataset = "bf19e514-487b-43c4-b0df-9073b2397dd1"
 
     override fun setUp() {
         super.setUp()
@@ -59,7 +58,7 @@ class CustomPlacesTests : BaseTest() {
         val customPlacesResultListener: CustomPlacesManager.InstallResultListener =
             mock(verboseLogging = true)
         cpManager.installOfflineDatasets(
-            listOf("bf19e514-487b-43c4-b0df-9073b2397dd1"),
+            listOf(defaultDataset),
             iso,
             customPlacesResultListener
         )
@@ -113,7 +112,7 @@ class CustomPlacesTests : BaseTest() {
         val customPlacesResultListener: CustomPlacesManager.InstallResultListener =
             mock(verboseLogging = true)
         cpManager.installOfflineDatasets(
-            listOf("bf19e514-487b-43c4-b0df-9073b2397dd1"),
+            listOf(defaultDataset),
             "sk",
             customPlacesResultListener
         )
@@ -140,15 +139,15 @@ class CustomPlacesTests : BaseTest() {
         verify(
             customPlacesSearchIndexingListener,
             timeout(10_000L).atLeastOnce()
-        ).onStarted(eq("bf19e514-487b-43c4-b0df-9073b2397dd1"))
+        ).onStarted(eq(defaultDataset))
         verify(
             customPlacesSearchIndexingListener,
             timeout(10_000L).atLeastOnce()
-        ).onSuccess(eq("bf19e514-487b-43c4-b0df-9073b2397dd1"))
+        ).onSuccess(eq(defaultDataset))
         verify(
             customPlacesSearchIndexingListener,
             never()
-        ).onError(eq("bf19e514-487b-43c4-b0df-9073b2397dd1"), any(), any())
+        ).onError(eq(defaultDataset), any(), any())
     }
 
     @Test
@@ -158,7 +157,7 @@ class CustomPlacesTests : BaseTest() {
         val installedDatasetListener: CustomPlacesManager.InstalledDatasetListener =
             mock(verboseLogging = true)
         cpManager.installOfflineDatasets(
-            listOf("bf19e514-487b-43c4-b0df-9073b2397dd1"),
+            listOf(defaultDataset),
             "es",
             customPlacesResultListener
         )
@@ -293,17 +292,12 @@ class CustomPlacesTests : BaseTest() {
     @Test
     fun testInstallPlacesAndAutocompleteInDatasetOffline() {
         installOfflinePlaces("sk")
-        cpManager.getInstalledDatasets(CustomPlacesManager.InstalledDatasetSourceFilter.Any, object: CustomPlacesManager.InstalledDatasetListener {
-            override fun onInstalledDatasets(installedDatasets: List<InstalledDataset>) {
-                installedDatasets[0].categories
-            }
-        })
         val searchRequest = SearchRequest(
             searchInput = "vyzlec sa",
             location = GeoCoordinates(48.2718, 17.7697),
         )
 
-        val autocompleteResult = searchHelper.offlineAutocompleteCustomPlacesWithDataset(searchRequest, "")[0]
+        val autocompleteResult = searchHelper.offlineAutocompleteCustomPlacesWithDataset(searchRequest, defaultDataset)[0]
         assertEquals("ibi maiga", autocompleteResult.subtitle)
         assertEquals("mojaSuperKategoria", autocompleteResult.categoryTags[0])
         assertEquals("vyzlec sa", autocompleteResult.title)

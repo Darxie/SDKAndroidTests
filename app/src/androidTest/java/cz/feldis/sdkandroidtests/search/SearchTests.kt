@@ -242,7 +242,6 @@ class SearchTests : BaseTest() {
                     })
             }
         }
-
     }
 
     @Test
