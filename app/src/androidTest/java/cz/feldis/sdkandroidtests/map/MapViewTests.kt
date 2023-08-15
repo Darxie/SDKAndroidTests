@@ -20,7 +20,11 @@ import com.sygic.sdk.map.*
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.map.listeners.RequestObjectCallback
 import com.sygic.sdk.map.`object`.MapIncident
+import com.sygic.sdk.map.`object`.MapObject
+import com.sygic.sdk.map.`object`.MapPlacesManager
+import com.sygic.sdk.map.`object`.MapPlacesManagerProvider
 import com.sygic.sdk.map.`object`.ViewObject
+import com.sygic.sdk.map.`object`.data.MapPlace
 import com.sygic.sdk.map.`object`.data.ViewObjectData
 import com.sygic.sdk.position.GeoCoordinates
 import cz.feldis.sdkandroidtests.BaseTest

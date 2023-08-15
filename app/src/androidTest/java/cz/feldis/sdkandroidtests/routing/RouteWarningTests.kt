@@ -1,6 +1,7 @@
 package cz.feldis.sdkandroidtests.routing
 
 import com.nhaarman.mockitokotlin2.*
+import com.sygic.sdk.Routing
 import com.sygic.sdk.online.OnlineManager
 import com.sygic.sdk.online.OnlineManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
@@ -365,6 +366,43 @@ class RouteWarningTests : BaseTest() {
         verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
             this.isNotEmpty()
         })
+    }
+
+    @Test
+    fun endInEmissionZoneTest() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.069192, 17.087216)
+        val destination = GeoCoordinates(48.081228, 17.043694)
+        val routingOptions = RoutingOptions().apply {
+            transportMode = TransportTruck
+            setUseEndpointProtection(true)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val captor = argumentCaptor<List<RouteWarning>>()
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedEmissionStandard } != null
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.isNotEmpty()
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(captor.capture())
+
+        val restriction1 =
+            captor.firstValue[0] as RouteWarning.SectionWarning.ZoneViolation.ViolatedEmissionStandard
+        assert(restriction1.limitValue == Routing.EmissionCategory.EURO2.ordinal)
     }
 
 }

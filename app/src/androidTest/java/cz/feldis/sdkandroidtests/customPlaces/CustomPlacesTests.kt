@@ -6,7 +6,6 @@ import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.anyOrNull
 import com.nhaarman.mockitokotlin2.argThat
 import com.nhaarman.mockitokotlin2.argumentCaptor
-import com.nhaarman.mockitokotlin2.atLeastOnce
 import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.never
@@ -22,6 +21,7 @@ import com.sygic.sdk.map.MapView.InjectSkinResultListener
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.places.CustomPlacesManager
 import com.sygic.sdk.places.CustomPlacesManagerProvider
+import com.sygic.sdk.places.data.InstalledDataset
 import com.sygic.sdk.places.listeners.CustomPlacesSearchIndexingListener
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.AutocompleteResult
@@ -56,15 +56,26 @@ class CustomPlacesTests : BaseTest() {
     }
 
     private fun installOfflinePlaces(iso: String) {
-        val customPlacesResultListener: CustomPlacesManager.InstallResultListener = mock(verboseLogging = true)
-        cpManager.installOfflinePlaces(iso, customPlacesResultListener)
-        verify(customPlacesResultListener, timeout(20_000L)).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
+        val customPlacesResultListener: CustomPlacesManager.InstallResultListener =
+            mock(verboseLogging = true)
+        cpManager.installOfflineDatasets(
+            listOf("bf19e514-487b-43c4-b0df-9073b2397dd1"),
+            iso,
+            customPlacesResultListener
+        )
+        verify(
+            customPlacesResultListener,
+            timeout(20_000L)
+        ).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
     }
 
     private fun uninstallOfflinePlaces(iso: String) {
         val resultListener: CustomPlacesManager.InstallResultListener = mock(verboseLogging = true)
-        cpManager.uninstallOfflinePlaces(iso, resultListener)
-        verify(resultListener, timeout(20_000L)).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
+        cpManager.uninstallOfflineDatasetsFromCountry(iso, resultListener)
+        verify(
+            resultListener,
+            timeout(20_000L)
+        ).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
     }
 
     private fun getInitialCameraState(): CameraState {
@@ -99,9 +110,17 @@ class CustomPlacesTests : BaseTest() {
 
     @Test
     fun testInstallPlaces() {
-        val customPlacesResultListener: CustomPlacesManager.InstallResultListener = mock(verboseLogging = true)
-        cpManager.installOfflinePlaces("sk", customPlacesResultListener)
-        verify(customPlacesResultListener, timeout(20_000L)).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
+        val customPlacesResultListener: CustomPlacesManager.InstallResultListener =
+            mock(verboseLogging = true)
+        cpManager.installOfflineDatasets(
+            listOf("bf19e514-487b-43c4-b0df-9073b2397dd1"),
+            "sk",
+            customPlacesResultListener
+        )
+        verify(
+            customPlacesResultListener,
+            timeout(20_000L)
+        ).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
     }
 
     @Test
@@ -114,35 +133,57 @@ class CustomPlacesTests : BaseTest() {
 
     @Test
     fun testInstallCustomPlacesAndVerifyIndexing() {
-        val customPlacesSearchIndexingListener: CustomPlacesSearchIndexingListener = mock(verboseLogging = true)
+        val customPlacesSearchIndexingListener: CustomPlacesSearchIndexingListener =
+            mock(verboseLogging = true)
         cpManager.addSearchIndexingListener(customPlacesSearchIndexingListener)
         installOfflinePlaces("sk")
-        verify(customPlacesSearchIndexingListener, timeout(10_000L).atLeastOnce()).onStarted()
-        verify(customPlacesSearchIndexingListener, timeout(10_000L).atLeastOnce()).onSuccess()
-        verify(customPlacesSearchIndexingListener, never()).onError(any(), any())
+        verify(
+            customPlacesSearchIndexingListener,
+            timeout(10_000L).atLeastOnce()
+        ).onStarted(eq("bf19e514-487b-43c4-b0df-9073b2397dd1"))
+        verify(
+            customPlacesSearchIndexingListener,
+            timeout(10_000L).atLeastOnce()
+        ).onSuccess(eq("bf19e514-487b-43c4-b0df-9073b2397dd1"))
+        verify(
+            customPlacesSearchIndexingListener,
+            never()
+        ).onError(eq("bf19e514-487b-43c4-b0df-9073b2397dd1"), any(), any())
     }
 
     @Test
     fun testInstallPlacesOfCountryWithNoPlaces() {
-        val customPlacesResultListener: CustomPlacesManager.InstallResultListener = mock(verboseLogging = true)
-        val installedCountriesListener: CustomPlacesManager.InstalledCountriesListener = mock(verboseLogging = true)
-        cpManager.installOfflinePlaces("es", customPlacesResultListener)
-        verify(customPlacesResultListener, timeout(20_000L)).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
-        cpManager.getInstalledCountries(installedCountriesListener)
-        verify(installedCountriesListener, timeout(5_000L)).onInstalledCountries(argThat {
-            this.find { it != "es" } == null
-        })
+        val customPlacesResultListener: CustomPlacesManager.InstallResultListener =
+            mock(verboseLogging = true)
+        val installedDatasetListener: CustomPlacesManager.InstalledDatasetListener =
+            mock(verboseLogging = true)
+        cpManager.installOfflineDatasets(
+            listOf("bf19e514-487b-43c4-b0df-9073b2397dd1"),
+            "es",
+            customPlacesResultListener
+        )
+        verify(
+            customPlacesResultListener,
+            timeout(20_000L)
+        ).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
+        cpManager.getInstalledDatasets(
+            CustomPlacesManager.InstalledDatasetSourceFilter.Any,
+            installedDatasetListener
+        )
+        verify(installedDatasetListener, timeout(5_000L)).onInstalledDatasets(emptyList())
     }
 
     @Test
     fun testInstallUninstallAndCheck() {
-        val installedCountriesListener: CustomPlacesManager.InstalledCountriesListener = mock(verboseLogging = true)
+        val installedDatasetListener: CustomPlacesManager.InstalledDatasetListener =
+            mock(verboseLogging = true)
         installOfflinePlaces("sk")
         uninstallOfflinePlaces("sk")
-        cpManager.getInstalledCountries(installedCountriesListener)
-        verify(installedCountriesListener, timeout(5_000L)).onInstalledCountries(argThat {
-            this.find { it != "sk" } == null
-        })
+        cpManager.getInstalledDatasets(
+            CustomPlacesManager.InstalledDatasetSourceFilter.Any,
+            installedDatasetListener
+        )
+        verify(installedDatasetListener, timeout(5_000L)).onInstalledDatasets(emptyList())
     }
 
     @Test
@@ -170,7 +211,10 @@ class CustomPlacesTests : BaseTest() {
         )
 
         // Verify that the skin injection result is successful.
-        verify(injectSkinResultListener, timeout(5_000L)).onResult(eq(MapView.InjectSkinResult.Success))
+        verify(
+            injectSkinResultListener,
+            timeout(5_000L)
+        ).onResult(eq(MapView.InjectSkinResult.Success))
 
         // Create a place request with location, category tags, radius, and language tag.
         val placeRequest = PlaceRequest(
@@ -211,7 +255,10 @@ class CustomPlacesTests : BaseTest() {
             readJson("skin_poi_custom.json"),
             injectSkinResultListener
         )
-        verify(injectSkinResultListener, timeout(5_000L)).onResult(eq(MapView.InjectSkinResult.Success))
+        verify(
+            injectSkinResultListener,
+            timeout(5_000L)
+        ).onResult(eq(MapView.InjectSkinResult.Success))
 
         // search for places
         val placeRequest = PlaceRequest(
@@ -238,6 +285,25 @@ class CustomPlacesTests : BaseTest() {
         )
 
         val autocompleteResult = searchHelper.offlineAutocompleteCustomPlaces(searchRequest)[0]
+        assertEquals("ibi maiga", autocompleteResult.subtitle)
+        assertEquals("mojaSuperKategoria", autocompleteResult.categoryTags[0])
+        assertEquals("vyzlec sa", autocompleteResult.title)
+    }
+
+    @Test
+    fun testInstallPlacesAndAutocompleteInDatasetOffline() {
+        installOfflinePlaces("sk")
+        cpManager.getInstalledDatasets(CustomPlacesManager.InstalledDatasetSourceFilter.Any, object: CustomPlacesManager.InstalledDatasetListener {
+            override fun onInstalledDatasets(installedDatasets: List<InstalledDataset>) {
+                installedDatasets[0].categories
+            }
+        })
+        val searchRequest = SearchRequest(
+            searchInput = "vyzlec sa",
+            location = GeoCoordinates(48.2718, 17.7697),
+        )
+
+        val autocompleteResult = searchHelper.offlineAutocompleteCustomPlacesWithDataset(searchRequest, "")[0]
         assertEquals("ibi maiga", autocompleteResult.subtitle)
         assertEquals("mojaSuperKategoria", autocompleteResult.categoryTags[0])
         assertEquals("vyzlec sa", autocompleteResult.title)
