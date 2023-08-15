@@ -8,8 +8,10 @@ import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.GeoPolyline
 import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.RoutingOptions
+import com.sygic.sdk.route.RoutingOptions.EuropeanEmissionStandard
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.TransportMode.TransportTruck
+import com.sygic.sdk.route.RoutingOptions.VehicleFuelType
 import com.sygic.sdk.route.RoutingOptions.VehicleRestrictions
 import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.vehicletraits.HazmatSettings
@@ -372,15 +374,18 @@ class RouteWarningTests : BaseTest() {
     fun endInEmissionZoneTest() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("at")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.069192, 17.087216)
         val destination = GeoCoordinates(48.081228, 17.043694)
         val routingOptions = RoutingOptions().apply {
+            vehicleFuelType = VehicleFuelType.Diesel
             transportMode = TransportTruck
             setUseEndpointProtection(true)
             napStrategy = NearestAccessiblePointStrategy.Disabled
+            emissionStandard = EuropeanEmissionStandard.Euro1
         }
 
         val route = routeComputeHelper.offlineRouteCompute(
