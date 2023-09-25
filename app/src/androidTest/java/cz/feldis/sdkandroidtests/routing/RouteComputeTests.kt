@@ -763,18 +763,19 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun serializedRouteRequestVerifyFirstWPPassed() {
-        val routeRequest : RouteRequest = runBlocking {
-            getRouteRequest("routeFirstWPPassed.rt")
+    fun serializedRouteRequestVerifyFirstWPPassed() = runBlocking {
+        val routeRequest = getRouteRequest("routeFirstWPPassed.rt")
+        val (firstViaPoint, secondViaPoint) = routeRequest.getViaPoints()
+
+        with(firstViaPoint) {
+            assertEquals(status, Waypoint.Status.Reached)
+            assertEquals(originalPosition, GeoCoordinates(48.14228, 17.12758))
         }
 
-        val viaPoints = routeRequest.getViaPoints()
-        val firstViaPoint = viaPoints[0]
-        assertEquals(firstViaPoint.status, Waypoint.Status.Reached)
-        assertEquals(firstViaPoint.originalPosition, GeoCoordinates(48.14228, 17.12758))
-        val secondViaPoint = viaPoints[1]
-        assertEquals(secondViaPoint.status, Waypoint.Status.Ahead)
-        assertEquals(secondViaPoint.originalPosition, GeoCoordinates(48.14374, 17.13119))
+        with(secondViaPoint) {
+            assertEquals(status, Waypoint.Status.Ahead)
+            assertEquals(originalPosition, GeoCoordinates(48.14374, 17.13119))
+        }
     }
 
     private suspend fun getRouteRequest(path: String): RouteRequest = suspendCoroutine { continuation ->
