@@ -2,7 +2,9 @@ package cz.feldis.sdkandroidtests.navigation
 
 import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.navigation.NavigationManager
+import com.sygic.sdk.navigation.NavigationManager.OnRouteProgressListener
 import com.sygic.sdk.navigation.NavigationManagerProvider
+import com.sygic.sdk.navigation.RouteProgress
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
@@ -40,6 +42,23 @@ class OnlineNavigationTests : BaseTest() {
         assertNotNull(
             NavigationManagerProvider.getInstance().get().routeProgress
         )
+    }
+
+    @Test
+    fun testGetRouteProgressAsync() {
+        val listener : OnRouteProgressListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.101936, 17.233684)
+        val destination = GeoCoordinates(48.145644, 17.127011)
+        val routeCompute = RouteComputeHelper()
+        val route = routeCompute.onlineComputeRoute(start, destination)
+        NavigationManagerProvider.getInstance().get().setRouteForNavigation(route)
+
+        NavigationManagerProvider.getInstance().get().getRouteProgress(
+            listener
+        )
+
+        verify(listener, timeout(5_000)).onRouteProgress(any())
     }
 
     /**
@@ -596,6 +615,28 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.stopNavigation()
         navigation.removeOnPlaceListener(listener)
+    }
+
+    @Test
+    fun testGetCurrentRouteWaypointsAsync() {
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnWaypointsListener = mock(verboseLogging = true)
+
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.457323, 17.739210),
+            GeoCoordinates(48.448209, 17.738767),
+            GeoCoordinates(48.123,17.723)
+        )
+
+        navigation.setRouteForNavigation(route)
+        navigation.getCurrentRouteWaypoints(listener)
+
+        verify(listener, timeout(5_000)).onWaypoints(argThat {
+            if (this.isNotEmpty()) {
+                return@argThat true
+            }
+            false
+        })
     }
 
     companion object {

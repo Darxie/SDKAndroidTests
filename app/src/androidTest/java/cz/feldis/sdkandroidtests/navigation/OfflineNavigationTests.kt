@@ -146,7 +146,6 @@ class OfflineNavigationTests : BaseTest() {
         mapDownload.installAndLoadMap("sk")
         val listener: NavigationManager.JunctionPassedListener = mock(verboseLogging = true)
         val navigation = NavigationManagerProvider.getInstance().get()
-        PositionManagerProvider.getInstance().get().startPositionUpdating()
 
         val logSimulator = NmeaLogSimulatorProvider.getInstance("$appDataPath/rovinka.nmea").get()
         Thread.sleep(3000)
