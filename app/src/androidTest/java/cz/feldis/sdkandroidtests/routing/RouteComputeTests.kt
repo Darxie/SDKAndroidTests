@@ -12,6 +12,7 @@ import com.sygic.sdk.route.listeners.*
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import junit.framework.Assert.assertNotNull
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -21,6 +22,8 @@ import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
 import timber.log.Timber
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 class RouteComputeTests : BaseTest() {
     private lateinit var mapDownloadHelper: MapDownloadHelper
@@ -759,4 +762,33 @@ class RouteComputeTests : BaseTest() {
         assertNotEquals(fastestRoute.maneuvers, ecoRoute.maneuvers) // we check that the maneuvers are different
     }
 
+    @Test
+    fun serializedRouteRequestVerifyFirstWPPassed() {
+        val routeRequest : RouteRequest = runBlocking {
+            getRouteRequest("routeFirstWPPassed.rt")
+        }
+
+        val viaPoints = routeRequest.getViaPoints()
+        val firstViaPoint = viaPoints[0]
+        assertEquals(firstViaPoint.status, Waypoint.Status.Reached)
+        assertEquals(firstViaPoint.originalPosition, GeoCoordinates(48.14228, 17.12758))
+        val secondViaPoint = viaPoints[1]
+        assertEquals(secondViaPoint.status, Waypoint.Status.Ahead)
+        assertEquals(secondViaPoint.originalPosition, GeoCoordinates(48.14374, 17.13119))
+    }
+
+    private suspend fun getRouteRequest(path: String): RouteRequest = suspendCoroutine { continuation ->
+        RouteRequest.createRouteRequestFromJSONString(
+            readJson(path),
+            object : RouteRequestDeserializedListener {
+                override fun onError(error: RouteDeserializerError) {
+                    Assert.fail("Deserialization error: $error")
+                }
+
+                override fun onSuccess(routeRequest: RouteRequest) {
+                    continuation.resume(routeRequest)
+                }
+            }
+        )
+    }
 }
