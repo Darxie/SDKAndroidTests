@@ -778,6 +778,40 @@ class RouteComputeTests : BaseTest() {
         }
     }
 
+    @Test
+    fun getStateOfChargeAtWaypoint() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+        val routeCompute = RouteComputeHelper()
+
+        val evProfile = routeCompute.createEVProfile()
+
+        val evPreferences = routeCompute.newEVPreferencesTruck()
+        val start = GeoCoordinates(48.24135577878832, 16.99083981234057)
+        val destination = GeoCoordinates(49.06008227080942, 20.315811448409608)
+
+        val options = RoutingOptions().apply {
+            transportMode = TransportMode.TransportTruck
+            setUseEndpointProtection(true)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeCompute.evRouteCompute(
+            start,
+            destination,
+            evProfile = evProfile,
+            evPreferences = evPreferences,
+            routingOptions = options
+        )
+
+        route.waypoints.forEach {
+            if (it is ChargingWaypoint) {
+                assertTrue(it.stateOfCharge > 0.1)
+                assertTrue(it.chargingTime > 0)
+            }
+        }
+    }
+
     private suspend fun getRouteRequest(path: String): RouteRequest = suspendCoroutine { continuation ->
         RouteRequest.createRouteRequestFromJSONString(
             readJson(path),
@@ -792,4 +826,6 @@ class RouteComputeTests : BaseTest() {
             }
         )
     }
+
+
 }
