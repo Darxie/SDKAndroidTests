@@ -410,6 +410,33 @@ class RouteWarningTests : BaseTest() {
         assert(restriction1.limitValue == Routing.EmissionCategory.EURO2.ordinal)
     }
 
+    @Test
+    fun possiblyUnsuitableUnpavedRoadWarningTest() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("is")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(63.568, -19.8009)
+        val destination = GeoCoordinates(63.57023, -19.79725)
+        val routingOptions = RoutingOptions().apply {
+            isUnpavedRoadAvoided = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            setUseEndpointProtection(true)
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableUnpavedRoad } != null
+                    && this.find { it is RouteWarning.SectionWarning.PossiblyUnsuitableSection.UnpavedSection } != null
+        })
+    }
 }
 
 fun checkFirstTwoDigits(num: Double, expected: String): Boolean {
