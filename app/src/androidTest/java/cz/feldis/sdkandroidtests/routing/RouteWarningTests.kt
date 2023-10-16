@@ -437,6 +437,60 @@ class RouteWarningTests : BaseTest() {
                     && this.find { it is RouteWarning.SectionWarning.PossiblyUnsuitableSection.UnpavedSection } != null
         })
     }
+
+    @Test
+    fun ipmBlockWarningTest() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.22710485629786, 17.001576996478246)
+        val destination = GeoCoordinates(48.236941358263444, 16.98775721434121)
+        val routingOptions = RoutingOptions().apply {
+            isUnpavedRoadAvoided = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            setUseEndpointProtection(true)
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedZone } != null
+        })
+    }
+
+    @Test
+    fun ipmBlockWarningTestNegative() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.22710485629786, 17.001576996478246)
+        val destination = GeoCoordinates(48.22724113173217, 16.997684137165376)
+        val routingOptions = RoutingOptions().apply {
+            isUnpavedRoadAvoided = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            setUseEndpointProtection(true)
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedZone } == null
+        })
+    }
 }
 
 fun checkFirstTwoDigits(num: Double, expected: String): Boolean {

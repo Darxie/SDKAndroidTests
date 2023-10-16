@@ -49,7 +49,8 @@ abstract class BaseTest {
 
     @get:Rule
     var mGrantPermissionRule: GrantPermissionRule = GrantPermissionRule.grant(
-        Manifest.permission.WRITE_EXTERNAL_STORAGE
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.ACCESS_FINE_LOCATION
     )
 
     @get:Rule
@@ -122,7 +123,7 @@ abstract class BaseTest {
 
     @After
     open fun tearDown() {
-        //sygicContext.destroy()
+        sygicContext.destroy()
     }
 
     private fun buildUATConfig(onlineMaps: Boolean): String {
