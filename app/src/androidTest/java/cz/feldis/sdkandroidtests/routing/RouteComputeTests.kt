@@ -95,7 +95,6 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    @Ignore("Crashes - https://jira.sygic.com/browse/SDC-9295")
     fun computeNextDurationsTestOffline() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
@@ -516,7 +515,6 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    @Ignore("returns FR, lol - SDC-8884")
     fun onlineRoutingGetLastManeuverCountry() {
         val start = GeoCoordinates(48.13204503419638, 17.09786238379282)
         val destination = GeoCoordinates(51.491340, -0.102940)

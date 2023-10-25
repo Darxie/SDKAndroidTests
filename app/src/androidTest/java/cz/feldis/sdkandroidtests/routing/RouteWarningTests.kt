@@ -19,6 +19,7 @@ import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Ignore
 import org.junit.Test
 
 class RouteWarningTests : BaseTest() {
@@ -30,6 +31,7 @@ class RouteWarningTests : BaseTest() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
+        disableOnlineMaps()
     }
 
     @Test
@@ -54,7 +56,6 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun tollRoadAvoidWarningTest() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -82,7 +83,6 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun tollRoadAvoidWarningTestNegative() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -103,7 +103,6 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun heightExceededTest() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -142,7 +141,6 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun heightExceededTestPolylineCheck() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -180,7 +178,6 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun heightExceededTestNegative() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -208,7 +205,6 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun hazmatAndTunnelViolationTest() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -260,7 +256,6 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun startAndEndInViolationCheckValues() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -303,7 +298,6 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun startAndEndInViolationCheckValues2() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -346,7 +340,7 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun tollRoadAvoidWarningTestOnline() {
-
+        enableOnlineMaps()
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.07473125945471, 17.121696472685443)
@@ -372,7 +366,6 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun endInEmissionZoneTest() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
         mapDownloadHelper.installAndLoadMap("at")
 
@@ -412,7 +405,6 @@ class RouteWarningTests : BaseTest() {
 
     @Test
     fun possiblyUnsuitableUnpavedRoadWarningTest() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("is")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -439,8 +431,8 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
+    @Ignore("Will be functional in the next feature/BC version, probably SDK26")
     fun ipmBlockWarningTest() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -466,8 +458,8 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
+    @Ignore("Will be functional in the next feature/BC version, probably SDK26")
     fun ipmBlockWarningTestNegative() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)

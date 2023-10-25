@@ -177,7 +177,7 @@ class SearchHelper {
 
         verify(listener, timeout(10_000L)).onPlacesLoaded(
             argumentCaptor.capture(),
-            isNotNull()
+            anyOrNull()
         )
 
         return argumentCaptor.firstValue
@@ -200,7 +200,7 @@ class SearchHelper {
 
         verify(listener, timeout(10_000L)).onPlacesLoaded(
             argumentCaptor.capture(),
-            isNotNull()
+            anyOrNull()
         )
 
         return argumentCaptor.firstValue

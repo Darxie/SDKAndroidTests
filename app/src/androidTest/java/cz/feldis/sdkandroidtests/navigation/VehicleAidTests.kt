@@ -46,7 +46,6 @@ class VehicleAidTests: BaseTest() {
     }
 
     @Test
-    @Ignore("SDC-9730 fixes this")
     fun vehicleAidMaxHeight() {
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
         // create test scenario with activity & map fragment

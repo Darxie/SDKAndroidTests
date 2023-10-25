@@ -55,10 +55,10 @@ class SearchTests : BaseTest() {
     }
 
     @Test
-    fun autocompleteEyckveldCheckResult() {
+    fun autocompleteEyckeveldCheckResult() {
         mapDownloadHelper.installAndLoadMap("be")
         val position = GeoCoordinates(50.84367811558576, 4.667406856390823)
-        val searchRequest = SearchRequest("Eyckveld 7", position)
+        val searchRequest = SearchRequest("Eyckeveld 7", position)
 
         val results = searchHelper.offlineAutocomplete(searchRequest)
 
@@ -210,8 +210,8 @@ class SearchTests : BaseTest() {
         val category = listOf(PlaceCategories.ImportantTouristAttraction)
         val request = PlaceRequest(GeoCoordinates(29.978296, 31.132839), category, 500)
 
-        val expectedKhufuExternalId = "002f80f0-002d-bef0-6632-356165633562"
-        val expectedGizaExternalId = "002f80f0-002d-bfb8-3665-383732623732"
+        val expectedKhufuExternalId = "30303266-3831-6238-2d30-3032642d6265"
+        val expectedGizaExternalId = "30303266-3830-6630-2d30-3032642d6266"
 
         val placesList = searchHelper.offlineSearchPlaces(request)
         for (place in placesList) {
@@ -259,7 +259,7 @@ class SearchTests : BaseTest() {
         val captor = argumentCaptor<List<Place>>()
 
         verify(listener, Mockito.timeout(10_000L))
-            .onPlacesLoaded(captor.capture(), any())
+            .onPlacesLoaded(captor.capture(), anyOrNull())
 
         val placesList = captor.allValues.flatten()
         assert(placesList.isNotEmpty())

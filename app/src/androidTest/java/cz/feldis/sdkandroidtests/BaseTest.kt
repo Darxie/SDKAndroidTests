@@ -6,7 +6,9 @@ import android.util.Log
 import androidx.annotation.CallSuper
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.rule.GrantPermissionRule
+import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.never
 import com.nhaarman.mockitokotlin2.timeout
 import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.LoggingSettings
@@ -185,18 +187,20 @@ abstract class BaseTest {
     }
 
     open fun disableOnlineMaps() {
-        if (!OnlineManagerProvider.getInstance().get().isOnlineMapStreamingEnabled()) {
-            val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
-            OnlineManagerProvider.getInstance().get().enableOnlineMapStreaming(listener)
-            verify(listener, timeout(5_000L))
-                .onSuccess()
-        }
-
-        val listener2: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
-
-        OnlineManagerProvider.getInstance().get().disableOnlineMapStreaming(listener2)
-
-        verify(listener2, timeout(5_000L))
+        val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+        OnlineManagerProvider.getInstance().get().disableOnlineMapStreaming(listener)
+        verify(listener, timeout(5_000L))
             .onSuccess()
+        verify(listener, never())
+            .onError(any())
+    }
+
+    open fun enableOnlineMaps() {
+        val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+        OnlineManagerProvider.getInstance().get().enableOnlineMapStreaming(listener)
+        verify(listener, timeout(5_000L))
+            .onSuccess()
+        verify(listener, never())
+            .onError(any())
     }
 }

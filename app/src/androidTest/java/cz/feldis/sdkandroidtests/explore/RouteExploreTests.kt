@@ -61,7 +61,6 @@ class RouteExploreTests : BaseTest() {
         verify(listener, Mockito.timeout(5_000L))
             .onExploreTrafficError(TrafficManager.ErrorCode.SERVICE_DISABLED)
 
-        TrafficManagerProvider.getInstance().get().disableTrafficService()
     }
 
     /**
