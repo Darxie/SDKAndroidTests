@@ -19,19 +19,25 @@ import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.position.GeoPosition
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingService
 import com.sygic.sdk.route.RoutingOptions.TransportMode
 import com.sygic.sdk.route.RoutingOptions.VehicleRestrictions
+import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
+import com.sygic.sdk.route.simulator.PositionSimulator
+import com.sygic.sdk.route.simulator.PositionSimulator.PositionSimulatorListener
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.SygicActivity
 import cz.feldis.sdkandroidtests.TestMapFragment
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
+import junit.framework.TestCase.assertTrue
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
+import timber.log.Timber
 
 class VehicleAidTests: BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -63,6 +69,7 @@ class VehicleAidTests: BaseTest() {
         logisticInfoSettings.maximumHeight = 8000
         logisticInfoSettings.vehicleType = LogisticInfoSettings.VehicleType.Truck
         mapView.setLogisticInfoSettings(logisticInfoSettings)
+        mapView.cameraModel.position = GeoCoordinates( 48.7703, 18.6136)
 
         val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
 
@@ -77,9 +84,9 @@ class VehicleAidTests: BaseTest() {
                 napStrategy = NearestAccessiblePointStrategy.Disabled
             }
         )
+
         NavigationManagerProvider.getInstance().get().setRouteForNavigation(route)
         NavigationManagerProvider.getInstance().get().addOnVehicleAidListener(listener)
-
 
         verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
             for (vehicleAidInfo in this) {
@@ -91,6 +98,60 @@ class VehicleAidTests: BaseTest() {
             return@argThat false
         })
 
+        NavigationManagerProvider.getInstance().get().removeOnVehicleAidListener(listener)
+        NavigationManagerProvider.getInstance().get().stopNavigation()
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    @Test
+    fun vehicleAidMaxHeightCheckRestrictedRoad() {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        mapDownload.installAndLoadMap("sk")
+
+        val mapView = getMapView(mapFragment)
+        val logisticInfoSettings = LogisticInfoSettings()
+        logisticInfoSettings.maximumHeight = 8000
+        logisticInfoSettings.vehicleType = LogisticInfoSettings.VehicleType.Truck
+        mapView.setLogisticInfoSettings(logisticInfoSettings)
+        mapView.cameraModel.position = GeoCoordinates( 48.113, 17.2198)
+
+        val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            start = GeoCoordinates(48.113, 17.2198),
+            destination = GeoCoordinates( 48.1153, 17.2172),
+            routingOptions = RoutingOptions().apply {
+                transportMode = TransportMode.TransportTruck
+                addDimensionalRestriction(VehicleRestrictions.Height, 8000)
+                routingService = RoutingService.Offline
+                setUseEndpointProtection(true)
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        NavigationManagerProvider.getInstance().get().setRouteForNavigation(route)
+        NavigationManagerProvider.getInstance().get().addOnVehicleAidListener(listener)
+
+        verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
+            for (vehicleAidInfo in this) {
+                if (vehicleAidInfo.restriction.type == RestrictionInfo.RestrictionType.DimensionalHeightMax) {
+                    if (vehicleAidInfo.restrictedRoad)
+                        return@argThat true
+                }
+            }
+            return@argThat false
+        })
+
+        NavigationManagerProvider.getInstance().get().removeOnVehicleAidListener(listener)
+        NavigationManagerProvider.getInstance().get().stopNavigation()
         scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 

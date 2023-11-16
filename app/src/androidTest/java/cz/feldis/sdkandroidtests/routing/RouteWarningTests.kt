@@ -364,6 +364,31 @@ class RouteWarningTests : BaseTest() {
         })
     }
 
+    fun tollRoadCountryAvoidWarningTestOnline() {
+        enableOnlineMaps()
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.1083, 17.2206)
+        val destination = GeoCoordinates(51.9035, -0.47722)
+        val routingOptions = RoutingOptions().apply {
+            setHighwayAvoided("gb", true)
+        }
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableHighway } != null
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.isNotEmpty()
+        })
+    }
+
     @Test
     fun endInEmissionZoneTest() {
         mapDownloadHelper.installAndLoadMap("sk")
