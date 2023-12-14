@@ -810,6 +810,30 @@ class RouteComputeTests : BaseTest() {
         }
     }
 
+    /**
+     * https://jira.sygic.com/browse/SDC-4695
+     * Test Case TC643
+     * Start: 3227 N Oconto Avenue, Chicago, IL
+     * Destination: 5815 S Maryland Avenue, Chicago, IL
+     *
+     * In this test case, we only check that the route is computed as there was a problem with graph levels in the past.
+     */
+    @Test
+    fun testIllinoisOcontoToMaryland() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("us-il")
+
+        val start = GeoCoordinates(41.93884551765079, -87.80773891426024)
+        val destination = GeoCoordinates(41.78921314499593, -87.60408102443468)
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.offlineRouteCompute(
+            start,
+            destination
+        )
+        assertNotNull(route)
+    }
+
     private suspend fun getRouteRequest(path: String): RouteRequest = suspendCoroutine { continuation ->
         RouteRequest.createRouteRequestFromJSONString(
             readJson(path),
