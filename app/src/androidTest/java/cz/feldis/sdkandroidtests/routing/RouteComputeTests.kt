@@ -131,46 +131,6 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun computeNextDurationsForAlternatives() {
-        val durationsListener: RouteDurationListener = mock(verboseLogging = true)
-
-        val start = GeoCoordinates(48.145718, 17.118669)
-        val destination = GeoCoordinates(48.190322, 16.401080)
-
-        val listener: RouteComputeListener = mock(verboseLogging = true)
-        val alternative1Listener: RouteComputeListener = mock(verboseLogging = true)
-        val alternative2Listener: RouteComputeListener = mock(verboseLogging = true)
-        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
-
-        val options = RoutingOptions()
-
-        val routeRequest = RouteRequest()
-        routeRequest.apply {
-            setStart(start)
-            setDestination(destination)
-            routingOptions = options
-        }
-
-        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val alternativeRouteRequest = AlternativeRouteRequest(AlternativeRouteRequest.RouteAlternativeType.Avoid, alternative1Listener)
-        val alternativeRouteRequest2 = AlternativeRouteRequest(AlternativeRouteRequest.RouteAlternativeType.Avoid, alternative2Listener)
-        val router = RouterProvider.getInstance().get()
-
-        router.computeRouteWithAlternatives(primaryRouteRequest, listOf(alternativeRouteRequest, alternativeRouteRequest2), routeComputeFinishedListener)
-
-        verify(listener, timeout(10_000L)).onComputeFinished(
-            isNotNull(),
-            argThat { this == Router.RouteComputeStatus.Success }
-        )
-        verify(alternative1Listener, timeout(10_000L)).onComputeFinished(
-            isNotNull(),
-            argThat {  }
-        )
-
-
-    }
-
-    @Test
     fun getRouteElementsIcelandOnline() {
         val elementsListener: RouteElementsListener = mock(verboseLogging = true)
         val routeCompute = RouteComputeHelper()
