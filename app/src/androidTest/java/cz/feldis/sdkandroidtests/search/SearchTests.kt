@@ -1,19 +1,36 @@
 package cz.feldis.sdkandroidtests.search
 
-import com.nhaarman.mockitokotlin2.*
-import com.sygic.sdk.places.*
+import com.nhaarman.mockitokotlin2.any
+import com.nhaarman.mockitokotlin2.anyOrNull
+import com.nhaarman.mockitokotlin2.argThat
+import com.nhaarman.mockitokotlin2.argumentCaptor
+import com.nhaarman.mockitokotlin2.isNotNull
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.never
+import com.nhaarman.mockitokotlin2.timeout
+import com.nhaarman.mockitokotlin2.verify
+import com.sygic.sdk.places.Place
+import com.sygic.sdk.places.PlaceCategories
+import com.sygic.sdk.places.PlacesManager
+import com.sygic.sdk.places.PlacesManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
-import com.sygic.sdk.search.*
+import com.sygic.sdk.search.CreateSearchCallback
+import com.sygic.sdk.search.HouseNumberResult
+import com.sygic.sdk.search.OnlineMapSearch
+import com.sygic.sdk.search.PlaceRequest
+import com.sygic.sdk.search.PlacesListener
+import com.sygic.sdk.search.ReverseGeocoder
+import com.sygic.sdk.search.ReverseGeocoderProvider
+import com.sygic.sdk.search.SearchManagerProvider
+import com.sygic.sdk.search.SearchRequest
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
 import timber.log.Timber
-import java.util.*
 import java.util.concurrent.TimeUnit
 
 class SearchTests : BaseTest() {
@@ -139,7 +156,7 @@ class SearchTests : BaseTest() {
 
         val resultList = argumentCaptor.firstValue
         for (bank in resultList) {
-        assertNotNull(resultList)
+            assertNotNull(resultList)
             assertFalse(bank.link.name.isEmpty())
             assertFalse(bank.details.isEmpty())
             assertTrue(bank.link.category == PlaceCategories.Bank)
@@ -204,8 +221,8 @@ class SearchTests : BaseTest() {
         mapDownloadHelper.installAndLoadMap("eg")
         val placesManager = PlacesManagerProvider.getInstance().get()
 
-        val listenerExternalIdKhufu : PlacesManager.PlaceExternalIdListener = mock(verboseLogging = true)
-        val listenerExternalIdGiza : PlacesManager.PlaceExternalIdListener = mock(verboseLogging = true)
+        val listenerExternalIdKhufu: PlacesManager.PlaceExternalIdListener = mock(verboseLogging = true)
+        val listenerExternalIdGiza: PlacesManager.PlaceExternalIdListener = mock(verboseLogging = true)
 
         val category = listOf(PlaceCategories.ImportantTouristAttraction)
         val request = PlaceRequest(GeoCoordinates(29.978296, 31.132839), category, 500)
@@ -304,6 +321,20 @@ class SearchTests : BaseTest() {
         // local time in Bratiska is always later, but no more than 2 hours (summer time)
         assertTrue(timestampCaptor.lastValue > utcUnixTimestamp)
         assertTrue(timestampCaptor.lastValue - utcUnixTimestamp <= TimeUnit.HOURS.toMillis(2))
+    }
+
+    @Test
+    fun testSearchSoutocico() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("pt")
+        val searchHelper = SearchHelper()
+        val searchRequest = SearchRequest(
+            searchInput = "soutocico",
+            location = GeoCoordinates(48.144334505339934, 17.136729455651594)
+        )
+        val result = searchHelper.offlineAutocomplete(searchRequest)
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue("The result should contain an item with the title 'Soutocico'", result.any { it.title == "Soutocico" })
     }
 
 }
