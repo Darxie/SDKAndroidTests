@@ -1,20 +1,19 @@
 package cz.feldis.sdkandroidtests.routing
 
 import com.nhaarman.mockitokotlin2.*
-import com.sygic.sdk.Routing
-import com.sygic.sdk.online.OnlineManager
-import com.sygic.sdk.online.OnlineManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.GeoPolyline
 import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.RoutingOptions
-import com.sygic.sdk.route.RoutingOptions.EuropeanEmissionStandard
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
-import com.sygic.sdk.route.RoutingOptions.TransportMode.TransportTruck
-import com.sygic.sdk.route.RoutingOptions.VehicleFuelType
-import com.sygic.sdk.route.RoutingOptions.VehicleRestrictions
 import com.sygic.sdk.route.listeners.RouteWarningsListener
-import com.sygic.sdk.vehicletraits.HazmatSettings
+import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
+import com.sygic.sdk.vehicletraits.general.VehicleType
+import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
+import com.sygic.sdk.vehicletraits.hazmat.TunnelCategory
+import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
+import com.sygic.sdk.vehicletraits.powertrain.FuelType
+import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import org.junit.Assert.assertEquals
@@ -110,8 +109,12 @@ class RouteWarningTests : BaseTest() {
         val start = GeoCoordinates(48.1435, 17.19)
         val destination = GeoCoordinates(48.1505, 17.1704)
         val routingOptions = RoutingOptions().apply {
-            transportMode = TransportTruck
-            addDimensionalRestriction(VehicleRestrictions.Height, 5000)
+            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalHeight = 5000
+                }
+            }
             setUseEndpointProtection(true)
             napStrategy = NearestAccessiblePointStrategy.Disabled
         }
@@ -148,8 +151,12 @@ class RouteWarningTests : BaseTest() {
         val start = GeoCoordinates(48.1435, 17.19)
         val destination = GeoCoordinates(48.1505, 17.1704)
         val routingOptions = RoutingOptions().apply {
-            transportMode = TransportTruck
-            addDimensionalRestriction(VehicleRestrictions.Height, 5000)
+            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalHeight = 5000
+                }
+            }
             setUseEndpointProtection(true)
             napStrategy = NearestAccessiblePointStrategy.Disabled
         }
@@ -185,8 +192,12 @@ class RouteWarningTests : BaseTest() {
         val start = GeoCoordinates(48.1435, 17.19)
         val destination = GeoCoordinates(48.1505, 17.1704)
         val routingOptions = RoutingOptions().apply {
-            transportMode = TransportTruck
-            addDimensionalRestriction(VehicleRestrictions.Height, 4000)
+            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalHeight = 4000
+                }
+            }
             setUseEndpointProtection(true)
             napStrategy = NearestAccessiblePointStrategy.Disabled
         }
@@ -212,13 +223,9 @@ class RouteWarningTests : BaseTest() {
         val start = GeoCoordinates(48.1586, 17.0763)
         val destination = GeoCoordinates(48.1661, 17.0698)
         val routingOptions = RoutingOptions().apply {
-            transportMode = TransportTruck
-            this.hazmatSettings = HazmatSettings( // sitina has genhazmat and tunnel E
-                isGeneralHazardousMaterial = true,
-                isExplosiveMaterial = false,
-                isGoodsHarmfulToWater = false
-            ).apply {
-                this.tunnelCategory = HazmatSettings.HazmatTunnelCategory.E
+            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                hazmatTraits = HazmatTraits(HazmatTraits.GeneralHazardousMaterialClasses, TunnelCategory.E)
             }
             setUseEndpointProtection(true)
             napStrategy = NearestAccessiblePointStrategy.Disabled
@@ -249,8 +256,8 @@ class RouteWarningTests : BaseTest() {
         }
         restriction?.let {
             val tun = it as RouteWarning.SectionWarning.ZoneViolation.ViolatedTunnelRestriction
-            assertTrue(tun.limitValue == HazmatSettings.HazmatTunnelCategory.E)
-            assertTrue(tun.realValue == HazmatSettings.HazmatTunnelCategory.E)
+            assertTrue(tun.limitValue == TunnelCategory.E)
+            assertTrue(tun.realValue == TunnelCategory.E)
         }
     }
 
@@ -263,8 +270,12 @@ class RouteWarningTests : BaseTest() {
         val start = GeoCoordinates(48.1422, 17.1271)
         val destination = GeoCoordinates(48.142, 17.1278)
         val routingOptions = RoutingOptions().apply {
-            transportMode = TransportTruck
-            addDimensionalRestriction(VehicleRestrictions.Height, 5000)
+            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalHeight = 5000
+                }
+            }
             setUseEndpointProtection(true)
             napStrategy = NearestAccessiblePointStrategy.Disabled
         }
@@ -305,8 +316,12 @@ class RouteWarningTests : BaseTest() {
         val start = GeoCoordinates(48.1652, 17.162)
         val destination = GeoCoordinates(48.1598, 17.1806)
         val routingOptions = RoutingOptions().apply {
-            transportMode = TransportTruck
-            addDimensionalRestriction(VehicleRestrictions.Height, 5000)
+            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalHeight = 5000
+                }
+            }
             setUseEndpointProtection(true)
             napStrategy = NearestAccessiblePointStrategy.Disabled
         }
@@ -364,6 +379,7 @@ class RouteWarningTests : BaseTest() {
         })
     }
 
+    @Test
     fun tollRoadCountryAvoidWarningTestOnline() {
         enableOnlineMaps()
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -399,11 +415,18 @@ class RouteWarningTests : BaseTest() {
         val start = GeoCoordinates(48.069192, 17.087216)
         val destination = GeoCoordinates(48.081228, 17.043694)
         val routingOptions = RoutingOptions().apply {
-            vehicleFuelType = VehicleFuelType.Diesel
-            transportMode = TransportTruck
+            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                powertrainTraits = PowertrainTraits.InternalCombustionPowertrain(
+                    FuelType.Diesel, EuropeanEmissionStandard.Euro1, null
+                )
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalHeight = 5000
+                }
+            }
             setUseEndpointProtection(true)
             napStrategy = NearestAccessiblePointStrategy.Disabled
-            emissionStandard = EuropeanEmissionStandard.Euro1
+
         }
 
         val route = routeComputeHelper.offlineRouteCompute(
@@ -425,7 +448,7 @@ class RouteWarningTests : BaseTest() {
 
         val restriction1 =
             captor.firstValue[0] as RouteWarning.SectionWarning.ZoneViolation.ViolatedEmissionStandard
-        assert(restriction1.limitValue == Routing.EmissionCategory.EURO2.ordinal)
+        assert(restriction1.limitValue == EuropeanEmissionStandard.Euro1)
     }
 
     @Test
