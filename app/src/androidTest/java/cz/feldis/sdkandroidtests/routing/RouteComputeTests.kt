@@ -720,6 +720,7 @@ class RouteComputeTests : BaseTest() {
         val start = GeoCoordinates(48.14548507020328, 17.126529723864405)
         val destination = GeoCoordinates(49.00162457306762, 22.157874201012863)
 
+        // ToDo re-write so that evRouteCompute is not necessary
         val route = routeComputeHelper.evRouteCompute(
             start,
             destination,
@@ -812,6 +813,7 @@ class RouteComputeTests : BaseTest() {
             napStrategy = NearestAccessiblePointStrategy.Disabled
         }
 
+        // ToDo re-write so that evRouteCompute is not necessary
         val route = routeComputeHelper.evRouteCompute(
             start,
             destination,
