@@ -1,0 +1,43 @@
+{
+  "skin": {
+    "poi_categories": {
+      "custom":
+      {
+        "groups":
+        {
+          "CustomGroup" :
+          {
+            "enabled": true,
+            "priority": 0,
+            "showWithoutText": true,
+            "zoomLevel": 12,
+            "importance": "Major"
+          }
+        },
+        "categories":
+        {
+          "SYTruckPetrolStation" :
+          {
+            "groupId": "CustomGroup",
+            "enabled": true,
+            "icon": "0xE346",
+            "color": "0x651FFFFF",
+            "priority": 0,
+            "zoomLevel": 14,
+            "importance": "Major"
+          },
+          "SYTruckRestArea" :
+          {
+            "groupId": "CustomGroup",
+            "enabled": true,
+            "icon": "0xE33C",
+            "color": "0x651FFFFF",
+            "priority": 0,
+            "zoomLevel": 14,
+            "importance": "Major"
+          }
+        }
+      }
+    }
+  }
+}

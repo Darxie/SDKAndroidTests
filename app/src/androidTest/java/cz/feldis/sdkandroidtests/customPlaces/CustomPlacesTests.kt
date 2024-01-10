@@ -1,5 +1,6 @@
 package cz.feldis.sdkandroidtests.customPlaces
 
+import android.R
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import com.nhaarman.mockitokotlin2.any
@@ -18,8 +19,14 @@ import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.MapView.InjectSkinResultListener
 import com.sygic.sdk.map.listeners.OnMapInitListener
+import com.sygic.sdk.map.listeners.RequestObjectCallback
+import com.sygic.sdk.map.`object`.ProxyObjectManager
+import com.sygic.sdk.map.`object`.ProxyPlace
+import com.sygic.sdk.map.`object`.ViewObject
+import com.sygic.sdk.map.`object`.data.ViewObjectData
 import com.sygic.sdk.places.CustomPlacesManager
 import com.sygic.sdk.places.CustomPlacesManagerProvider
+import com.sygic.sdk.places.PlaceLink
 import com.sygic.sdk.places.listeners.CustomPlacesSearchIndexingListener
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.AutocompleteResult
@@ -36,6 +43,8 @@ import cz.feldis.sdkandroidtests.TestMapFragment
 import cz.feldis.sdkandroidtests.search.SearchHelper
 import cz.feldis.sdkandroidtests.utils.AdvancedRunner
 import cz.feldis.sdkandroidtests.utils.Repeat
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -154,6 +163,71 @@ class CustomPlacesTests : BaseTest() {
             customPlacesSearchIndexingListener,
             never()
         ).onError(eq(defaultDataset), any(), any())
+    }
+
+    @Test
+    fun testCustomPlacesFromJsonWithUpperCaseIsoCode(): Unit = runBlocking {
+        val customPlacesResultListener: CustomPlacesManager.InstallResultListener =
+            mock(verboseLogging = true)
+        val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
+        val placeLinkListener: ProxyObjectManager.PlaceLinkListener = mock(verboseLogging = true)
+
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+
+        mapView.injectSkinDefinition(
+            readJson("skin_poi_truck.json"),
+            injectSkinResultListener
+        )
+
+        verify(
+            injectSkinResultListener,
+            timeout(5_000L)
+        ).onResult(eq(MapView.InjectSkinResult.Success))
+
+        cpManager.installOfflinePlacesFromJson(
+            readJson("svk_custom_places.json"), customPlacesResultListener
+        )
+
+        verify(customPlacesResultListener, timeout(5_000L)).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), any())
+
+        mapView.cameraModel.position = GeoCoordinates(48.2587, 17.75712)
+        mapView.cameraModel.zoomLevel = 22F
+        mapView.cameraModel.tilt = 0F
+        delay(3000) // it takes around 1,5s until the custom place is shown on map
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        val view = requireNotNull(mapView.view)
+
+        val x: Float = view.width / 2F
+        val y: Float = view.height / 2F
+        val id = mapView.requestObjectsAtPoint(x, y, callback) // click in the middle of the screen
+
+        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(id))
+
+        val proxyPlace = (captor.firstValue[0] as ProxyPlace)
+        val placeLinkCaptor = argumentCaptor<PlaceLink>()
+
+        ProxyObjectManager.loadPlaceLink(proxyPlace, placeLinkListener)
+        verify(placeLinkListener, never()).onPlaceLinkError(any())
+        verify(placeLinkListener, timeout(5_000L)).onPlaceLinkLoaded(placeLinkCaptor.capture())
+
+        val placeLink = placeLinkCaptor.firstValue
+
+        assertEquals(placeLink.name, "Odpočívadlo Horná Dolná")
+        assertEquals(placeLink.category, "SYTruckRestArea")
+
+        //close scenario & activity
+        scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
     @Test

@@ -1,0 +1,36 @@
+{
+  "add_or_update": [
+    {
+      "id": "00000000-0000-0000-0000-000020e90001",
+      "iso": "sk",
+      "location": "48.25835,17.75454",
+      "category": "SYTruckPetrolStation",
+      "search_priority": 15,
+      "display_name": [
+        {
+          "title": "OMV",
+          "subtitle": "925 63 Dolna Streda",
+          "lng": "sk",
+          "search_tokens": [{ "index": "925 63 Dolna Streda Dolná Streda OMV" }]
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000020e90003",
+      "iso": "SK",
+      "location": "48.2587,17.75712",
+      "category": "SYTruckRestArea",
+      "search_priority": 15,
+      "display_name": [
+        {
+          "title": "Odpočívadlo Horná Dolná",
+          "subtitle": "925 63 Dolna Streda",
+          "lng": "sk",
+          "search_tokens": [
+            { "index": "925 63 Dolna Streda Dolná Streda Odpočívadlo" }
+          ]
+        }
+      ]
+    }
+  ]
+}
