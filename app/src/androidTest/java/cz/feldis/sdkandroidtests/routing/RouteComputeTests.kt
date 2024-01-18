@@ -853,6 +853,35 @@ class RouteComputeTests : BaseTest() {
         assertNotNull(route)
     }
 
+    /**
+     * https://jira.sygic.com/browse/SDC-10680
+     * There was a problem that the route shape was evaluated as a U-Turn so
+     * the routing tried to avoid it. Most of the trucks can turn left here, so
+     * we need to check that the route only has three maneuvers.
+     */
+    @Test
+    fun testNotUturnDirection() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("de-07")
+
+        val start = GeoCoordinates(49.064409322443794, 8.290126424786548)
+        val destination = GeoCoordinates(49.06390230789947, 8.293707382366419)
+
+        val options = createDefaultTruckRoutingOptions().apply {
+            this.vehicleProfile?.dimensionalTraits = DimensionalTraits().apply {
+                totalLength = 16500
+            }
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = options
+        )
+
+        assertEquals(3, route.maneuvers.size)
+    }
+
     private suspend fun getRouteRequest(path: String): RouteRequest = suspendCoroutine { continuation ->
         RouteRequest.createRouteRequestFromJSONString(
             readJson(path),
@@ -868,5 +897,13 @@ class RouteComputeTests : BaseTest() {
         )
     }
 
-
+    private fun createDefaultTruckRoutingOptions(): RoutingOptions {
+        return RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+            }
+            setUseEndpointProtection(true)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+    }
 }
