@@ -1,6 +1,10 @@
 package cz.feldis.sdkandroidtests.routing
 
 import com.nhaarman.mockitokotlin2.*
+import com.sygic.sdk.navigation.NavigationManager.OnSetVehicleProfile
+import com.sygic.sdk.navigation.NavigationManager.OnVehicleZoneListener
+import com.sygic.sdk.navigation.NavigationManagerProvider
+import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.GeoPolyline
 import com.sygic.sdk.route.RouteWarning
@@ -11,12 +15,14 @@ import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
 import com.sygic.sdk.vehicletraits.hazmat.TunnelCategory
+import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
 import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
 import com.sygic.sdk.vehicletraits.powertrain.FuelType
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
@@ -418,7 +424,7 @@ class RouteWarningTests : BaseTest() {
             vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
                 powertrainTraits = PowertrainTraits.InternalCombustionPowertrain(
-                    FuelType.Diesel, EuropeanEmissionStandard.Euro1, null
+                    FuelType.Diesel, EuropeanEmissionStandard.Euro1, ConsumptionData()
                 )
                 dimensionalTraits = DimensionalTraits().apply {
                     totalHeight = 5000
@@ -530,6 +536,49 @@ class RouteWarningTests : BaseTest() {
         verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
             this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedZone } == null
         })
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-10811
+     *
+     * In this test a route is computed through a tunnel and it is expected
+     * that vehicle zone restriction information is passed through the NavigationManager.
+     */
+    @Test
+    fun testVehicleZonesBranisko() {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val setVehicleProfileListener: OnSetVehicleProfile = mock(verboseLogging = true)
+        val vehicleZoneListener: OnVehicleZoneListener = mock(verboseLogging = true)
+
+        val vehProf = routeComputeHelper.newDefaultVehicleProfile().apply {
+            generalVehicleTraits.vehicleType = VehicleType.Truck
+            hazmatTraits = HazmatTraits(emptySet(), TunnelCategory.E)
+        }
+        NavigationManagerProvider.getInstance().get().setVehicleProfile(vehProf, setVehicleProfileListener)
+
+        val start = GeoCoordinates( 49.0093, 20.8322)
+        val destination = GeoCoordinates(49.0086, 20.8657)
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = vehProf
+            setUseEndpointProtection(true)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        assertNotNull(route)
+        NavigationManagerProvider.getInstance().get().setRouteForNavigation(route)
+
+        NavigationManagerProvider.getInstance().get().addOnVehicleZoneListener(vehicleZoneListener)
+        verify(vehicleZoneListener, timeout(10_000L)).onVehicleZoneInfo(argThat {
+            this.find { it.restriction.type == RestrictionInfo.RestrictionType.CargoTunnel } != null
+        })
+
     }
 }
 

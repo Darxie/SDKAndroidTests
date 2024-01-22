@@ -25,6 +25,7 @@ import com.sygic.sdk.vehicletraits.general.SpecializedVehicleAttributes
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import com.sygic.sdk.vehicletraits.powertrain.ChargingCurrent
 import com.sygic.sdk.vehicletraits.powertrain.ConnectorType
+import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
 import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
 import com.sygic.sdk.vehicletraits.powertrain.FuelType
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
@@ -185,7 +186,7 @@ class RouteComputeHelper : BaseTest() {
         val internalCombustionPowertrain = PowertrainTraits.InternalCombustionPowertrain(
             fuelType = FuelType.Petrol,
             europeanEmissionStandard = EuropeanEmissionStandard.Euro5,
-            consumptionData = null
+            consumptionData = ConsumptionData()
         )
         return VehicleProfile(
             generalVehicleTraits = GeneralVehicleTraits(
