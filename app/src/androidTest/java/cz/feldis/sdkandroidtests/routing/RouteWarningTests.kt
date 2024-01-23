@@ -389,6 +389,38 @@ class RouteWarningTests : BaseTest() {
         })
     }
 
+    /**
+     * https://jira.sygic.com/browse/SDC-10869
+     *
+     * We want to avoid country "sk" but make a route in that country.
+     * We then check that there is an UnavoidableCountry warning that contains the iso.
+     */
+    @Test
+    fun unavoidableCountryWarningContainsIso() {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+        val start = GeoCoordinates(48.11964833044328, 17.211256171240564)
+        val destination = GeoCoordinates(48.12286230190469, 17.201664587844974)
+        val routingOptions = RoutingOptions().apply {
+            setCountryAvoided("sk", true)
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val captor = argumentCaptor<List<RouteWarning>>()
+        route.getRouteWarnings(routeWarningsListener)
+
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(captor.capture())
+
+        val iso = (captor.firstValue[0] as RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableCountry).iso
+
+        assertEquals("sk", iso)
+    }
+
     @Test
     fun endInEmissionZoneTest() {
         mapDownloadHelper.installAndLoadMap("sk")

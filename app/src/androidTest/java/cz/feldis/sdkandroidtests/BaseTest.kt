@@ -187,6 +187,9 @@ abstract class BaseTest {
     }
 
     open fun disableOnlineMaps() {
+        if (!OnlineManagerProvider.getInstance().get().isOnlineMapStreamingEnabled()) {
+            return
+        }
         val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
         OnlineManagerProvider.getInstance().get().disableOnlineMapStreaming(listener)
         verify(listener, timeout(5_000L))
@@ -196,6 +199,9 @@ abstract class BaseTest {
     }
 
     open fun enableOnlineMaps() {
+        if (OnlineManagerProvider.getInstance().get().isOnlineMapStreamingEnabled()) {
+            return
+        }
         val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
         OnlineManagerProvider.getInstance().get().enableOnlineMapStreaming(listener)
         verify(listener, timeout(5_000L))
