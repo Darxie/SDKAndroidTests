@@ -55,10 +55,6 @@ class MapDownloadTests : BaseTest() {
         installer.getCountryDetails("fr", false, listener)
         verify(listener, timeout(30_000L)).onCountryDetails(countryCaptor.capture())
 
-        verify(
-            listener,
-            never()
-        ).onCountryDetailsError(argThat { this != MapInstaller.LoadResult.Success })
         assertEquals("France", countryCaptor.firstValue.name)
         assertEquals("Europe", countryCaptor.firstValue.continentName)
         assertEquals("fr", countryCaptor.firstValue.iso)

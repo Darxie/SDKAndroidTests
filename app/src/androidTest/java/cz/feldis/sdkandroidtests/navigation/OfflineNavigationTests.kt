@@ -65,6 +65,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnSharpCurveListener(listener)
         navigation.stopNavigation()
+        PositionManagerProvider.getInstance().get().stopPositionUpdating()
     }
 
     /**
@@ -104,7 +105,6 @@ class OfflineNavigationTests : BaseTest() {
         navigation.stopNavigation()
         simulator.stop()
         simulator.destroy()
-        mapDownload.uninstallMap("sk")
     }
 
     /**
@@ -139,6 +139,7 @@ class OfflineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeOnRouteChangedListener(listener)
         navigation.stopNavigation()
+        PositionManagerProvider.getInstance().get().stopPositionUpdating()
     }
 
     @Test
@@ -211,17 +212,18 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnLaneListener(listener)
         navigation.stopNavigation()
+        PositionManagerProvider.getInstance().get().stopPositionUpdating()
     }
 
     @Test
     fun sectionCameraTest() {
-        mapDownload.installAndLoadMap("sk")
+        mapDownload.installAndLoadMap("be")
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route = routeCompute.offlineRouteCompute(
-            GeoCoordinates(48.212465230469, 17.03545199713536),
-            GeoCoordinates(48.18179480984319, 17.05224437941669)
+            GeoCoordinates(51.007530,3.175810),
+            GeoCoordinates(51.001320,3.203420)
         )
 
         navigation.setRouteForNavigation(route)
@@ -243,6 +245,12 @@ class OfflineNavigationTests : BaseTest() {
             }
             false
         })
+
+        simulator.stop()
+        simulator.destroy()
+        navigation.removeOnIncidentListener(listener)
+        navigation.stopNavigation()
+        PositionManagerProvider.getInstance().get().stopPositionUpdating()
     }
 
     @Test
@@ -252,7 +260,8 @@ class OfflineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route = routeCompute.offlineRouteCompute(
-            GeoCoordinates(48.649189548913924, 17.842829374576407), GeoCoordinates(48.662019021892746, 17.869242810014157)
+            GeoCoordinates(48.7429, 17.8603),
+            GeoCoordinates(48.7457, 17.86)
         )
 
         navigation.setRouteForNavigation(route)
@@ -271,5 +280,11 @@ class OfflineNavigationTests : BaseTest() {
             }
             false
         })
+
+        simulator.stop()
+        simulator.destroy()
+        navigation.removeOnIncidentListener(listener)
+        navigation.stopNavigation()
+        PositionManagerProvider.getInstance().get().stopPositionUpdating()
     }
 }
