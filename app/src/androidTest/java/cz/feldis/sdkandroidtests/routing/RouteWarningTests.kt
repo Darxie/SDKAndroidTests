@@ -364,6 +364,7 @@ class RouteWarningTests : BaseTest() {
         })
     }
 
+    @Test
     fun tollRoadCountryAvoidWarningTestOnline() {
         enableOnlineMaps()
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
