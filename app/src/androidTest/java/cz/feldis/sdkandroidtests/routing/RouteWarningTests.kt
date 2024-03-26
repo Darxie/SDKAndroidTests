@@ -82,6 +82,46 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
+    fun tollRoadAvoidWarningTwoCountriesTest() {
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("at")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.069028686812096, 17.08606355787871)
+        val destination = GeoCoordinates(48.082140106027985, 17.03615405945805)
+        val routingOptions = RoutingOptions().apply {
+            isTollRoadAvoided = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            setUseEndpointProtection(true)
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val captor = argumentCaptor<List<RouteWarning>>()
+        route.getRouteWarnings(routeWarningsListener)
+
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } != null
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.isNotEmpty()
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(captor.capture())
+        val restrictions = captor.allValues.flatten()
+        val restriction1 =
+            restrictions[0] as RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad
+        val restriction2 =
+            restrictions[1] as RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad
+        assertTrue(restriction1.iso == "sk")
+        assertTrue(restriction2.iso == "at")
+    }
+
+    @Test
     fun tollRoadAvoidWarningTestNegative() {
         mapDownloadHelper.installAndLoadMap("sk")
 
@@ -137,6 +177,7 @@ class RouteWarningTests : BaseTest() {
             captor.firstValue[0] as RouteWarning.SectionWarning.DimensionalRestriction.ExceededHeight
         assertTrue(restriction.limitValue == 4600F)
         assertTrue(restriction.realValue == 5000F)
+        assertTrue(restriction.iso == "sk")
     }
 
     @Test
@@ -381,13 +422,19 @@ class RouteWarningTests : BaseTest() {
             routingOptions = routingOptions
         )
 
+        val captor = argumentCaptor<List<RouteWarning>>()
         route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(captor.capture())
+
         verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
             this.find { it is RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableHighway } != null
         })
         verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
             this.isNotEmpty()
         })
+
+        val restriction = captor.allValues.flatten().first() as RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableHighway
+        assertTrue(restriction.iso == "gb")
     }
 
     /**
@@ -459,6 +506,7 @@ class RouteWarningTests : BaseTest() {
         val restriction1 =
             captor.firstValue[0] as RouteWarning.SectionWarning.ZoneViolation.ViolatedEmissionStandard
         assert(restriction1.limitValue == Routing.EmissionCategory.EURO2.ordinal)
+        assertTrue(restriction1.iso == "at")
     }
 
     @Test
@@ -481,11 +529,19 @@ class RouteWarningTests : BaseTest() {
             routingOptions = routingOptions
         )
 
+        val captor = argumentCaptor<List<RouteWarning>>()
         route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(captor.capture())
         verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
             this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableUnpavedRoad } != null
                     && this.find { it is RouteWarning.SectionWarning.PossiblyUnsuitableSection.UnpavedSection } != null
         })
+        val restriction1 =
+            captor.firstValue[0] as RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableUnpavedRoad
+        val restriction2 =
+            captor.firstValue[1] as RouteWarning.SectionWarning.PossiblyUnsuitableSection.UnpavedSection
+        assertTrue(restriction1.iso == "is")
+        assertTrue(restriction2.iso == "is")
     }
 
     @Test
