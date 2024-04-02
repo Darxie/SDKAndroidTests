@@ -1,12 +1,23 @@
 package cz.feldis.sdkandroidtests.navigation
 
+import androidx.lifecycle.Lifecycle
+import androidx.test.core.app.ActivityScenario
 import com.nhaarman.mockitokotlin2.argThat
+import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.atMost
 import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.timeout
 import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.incidents.SpeedCamera
+import com.sygic.sdk.map.Camera
+import com.sygic.sdk.map.CameraState
+import com.sygic.sdk.map.LogisticInfoSettings
+import com.sygic.sdk.map.MapAnimation
+import com.sygic.sdk.map.MapCenter
+import com.sygic.sdk.map.MapCenterSettings
+import com.sygic.sdk.map.MapView
+import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
@@ -15,6 +26,8 @@ import com.sygic.sdk.position.PositionManagerProvider
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
+import cz.feldis.sdkandroidtests.SygicActivity
+import cz.feldis.sdkandroidtests.TestMapFragment
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Before
@@ -286,5 +299,87 @@ class OfflineNavigationTests : BaseTest() {
         navigation.removeOnIncidentListener(listener)
         navigation.stopNavigation()
         PositionManagerProvider.getInstance().get().stopPositionUpdating()
+    }
+
+    @Test
+    fun changeMaxSpeedAndCheckSpeedLimit() {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState(
+            GeoCoordinates(48.18180777150043, 17.05352048126561))
+        )
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+
+        val logisticSettings = LogisticInfoSettings()
+        logisticSettings.specialSpeedRestriction = 80
+
+        mapView.setLogisticInfoSettings(logisticSettings)
+
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnSpeedLimitListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.18180777150043, 17.05352048126561),
+            GeoCoordinates(48.18417452255745, 17.04909691425327),
+        )
+
+        navigation.setRouteForNavigation(route)
+        navigation.addOnSpeedLimitListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        simulator.setSpeedMultiplier(1F)
+        simulator.start()
+
+        verify(listener, timeout(20_000L)).onSpeedLimitInfoChanged(
+            argThat {
+                return@argThat this.nextSpeedLimit == 80.0f
+            }
+        )
+
+        simulator.stop()
+        simulator.destroy()
+        navigation.removeOnSpeedLimitListener(listener)
+        navigation.stopNavigation()
+        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+
+        //close scenario & activity
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    private fun getInitialCameraState(coordinates: GeoCoordinates): CameraState {
+        return CameraState.Builder().apply {
+            setPosition(coordinates)
+            setMapCenterSettings(
+                MapCenterSettings(
+                    MapCenter(0.5f, 0.5f),
+                    MapCenter(0.5f, 0.5f),
+                    MapAnimation.NONE, MapAnimation.NONE
+                )
+            )
+            setMapPadding(0.0f, 0.0f, 0.0f, 0.0f)
+            setRotation(0f)
+            setZoomLevel(14F)
+            setMovementMode(Camera.MovementMode.Free)
+            setRotationMode(Camera.RotationMode.Free)
+            setTilt(0f)
+        }.build()
+    }
+
+    private fun getMapView(mapFragment: TestMapFragment): MapView {
+        val mapInitListener : OnMapInitListener = mock(verboseLogging = true)
+        val mapViewCaptor = argumentCaptor<MapView>()
+
+        mapFragment.getMapAsync(mapInitListener)
+        verify(mapInitListener, timeout(5_000L)).onMapReady(
+            mapViewCaptor.capture()
+        )
+        return mapViewCaptor.firstValue
     }
 }
