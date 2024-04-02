@@ -6,6 +6,7 @@ import com.nhaarman.mockitokotlin2.argThat
 import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.atMost
 import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.inOrder
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.timeout
 import com.nhaarman.mockitokotlin2.verify
@@ -23,6 +24,7 @@ import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.PositionManagerProvider
+import com.sygic.sdk.route.Waypoint
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
@@ -33,6 +35,7 @@ import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Before
 import org.junit.Test
 import org.mockito.AdditionalMatchers
+import org.mockito.InOrder
 import org.mockito.Mockito
 import timber.log.Timber
 
@@ -351,6 +354,40 @@ class OfflineNavigationTests : BaseTest() {
 
         //close scenario & activity
         scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    @Test
+    fun onWaypointAndFinishReached() {
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.10044188518012, 17.24304412091042),
+            GeoCoordinates(48.100524472993364, 17.243852076060037),
+            GeoCoordinates(48.10047492032134, 17.24460232012754)
+        )
+
+        navigation.setRouteForNavigation(route)
+        navigation.addOnWaypointPassListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        simulator.setSpeedMultiplier(2F)
+        simulator.start()
+
+        val inOrder: InOrder = inOrder(listener)
+
+        inOrder.verify(listener, timeout(60_000L)).onWaypointPassed(argThat {
+            return@argThat this.type == Waypoint.Type.Via
+        })
+
+        inOrder.verify(listener, timeout(60_000L)).onFinishReached()
+
+        simulator.stop()
+        simulator.destroy()
+        navigation.removeOnWaypointPassListener(listener)
+        navigation.stopNavigation()
+        PositionManagerProvider.getInstance().get().stopPositionUpdating()
     }
 
     private fun getInitialCameraState(coordinates: GeoCoordinates): CameraState {
