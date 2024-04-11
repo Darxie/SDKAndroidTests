@@ -7,6 +7,7 @@ import com.sygic.sdk.route.*
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingType
 import com.sygic.sdk.route.RoutingOptions.TransportMode
+import com.sygic.sdk.route.RoutingOptions.TransportMode.Pedestrian
 import com.sygic.sdk.route.RoutingOptions.VehicleRestrictions
 import com.sygic.sdk.route.listeners.*
 import cz.feldis.sdkandroidtests.BaseTest
@@ -830,6 +831,29 @@ class RouteComputeTests : BaseTest() {
         val route = routeCompute.offlineRouteCompute(
             start,
             destination
+        )
+        assertNotNull(route)
+    }
+
+    /**
+     * Brief test to test if pedestrian routing doesn't fail
+     */
+    @Test
+    fun testPedestrianRouting() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val start = GeoCoordinates(48.139, 17.0761)
+        val destination = GeoCoordinates(48.1533, 17.1375)
+        val routeCompute = RouteComputeHelper()
+        val options = RoutingOptions().apply {
+            transportMode = Pedestrian
+        }
+
+        val route = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = options
         )
         assertNotNull(route)
     }
