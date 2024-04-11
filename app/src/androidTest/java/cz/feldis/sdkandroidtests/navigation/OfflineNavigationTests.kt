@@ -390,6 +390,50 @@ class OfflineNavigationTests : BaseTest() {
         PositionManagerProvider.getInstance().get().stopPositionUpdating()
     }
 
+    /**
+     * Navigation test on highway exit
+     *
+     * In this test we compute route and set it for navigation.
+     * Via simulator provider we set this route and start demonstrate navigation.
+     * We verify that onHighwayExitInfoChanged was invoked with a non-null list.
+     */
+    @Test
+    fun onHighwayExitTest() {
+        mapDownload.installAndLoadMap("sk")
+        disableOnlineMaps()
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnHighwayExitListener = mock(verboseLogging = true)
+        val route =
+            routeCompute.offlineRouteCompute(
+                GeoCoordinates(48.1581, 17.1822),
+                GeoCoordinates(48.1647, 17.1837)
+            )
+
+        navigation.setRouteForNavigation(route)
+        navigation.addOnHighwayExitListener(listener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        simulator.start()
+
+        Mockito.verify(
+            listener,
+            Mockito.timeout(10_000L)
+        )
+            .onHighwayExitInfoChanged(argThat {
+                for (exit in this){
+                    if (exit.exitNumber == "10" && exit.exitSide == 1) {
+                        return@argThat true
+                    }
+                }
+                false
+            })
+
+        simulator.stop()
+        simulator.destroy()
+        navigation.stopNavigation()
+        navigation.removeOnHighwayExitListener(listener)
+        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+    }
+
     private fun getInitialCameraState(coordinates: GeoCoordinates): CameraState {
         return CameraState.Builder().apply {
             setPosition(coordinates)

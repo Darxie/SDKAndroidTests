@@ -239,8 +239,8 @@ class OnlineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnHighwayExitListener = mock(verboseLogging = true)
         val route =
             routeCompute.onlineComputeRoute(
-                GeoCoordinates(48.143110, 17.175367),
-                GeoCoordinates(48.146051, 17.186027)
+                GeoCoordinates(48.1581, 17.1822),
+                GeoCoordinates(48.1647, 17.1837)
             )
 
         navigation.setRouteForNavigation(route)
@@ -252,12 +252,19 @@ class OnlineNavigationTests : BaseTest() {
             listener,
             Mockito.timeout(STATUS_TIMEOUT)
         )
-            .onHighwayExitInfoChanged(anyList())
+            .onHighwayExitInfoChanged(argThat {
+                for (exit in this){
+                    if (exit.exitNumber == "10" && exit.exitSide == 1) {
+                        return@argThat true
+                    }
+                }
+                false
+            })
 
         simulator.stop()
         simulator.destroy()
-        navigation.removeOnHighwayExitListener(listener)
         navigation.stopNavigation()
+        navigation.removeOnHighwayExitListener(listener)
         PositionManagerProvider.getInstance().get().stopPositionUpdating()
     }
 
