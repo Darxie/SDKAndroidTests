@@ -24,6 +24,7 @@ import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.PositionManagerProvider
+import com.sygic.sdk.route.RouteManeuver
 import com.sygic.sdk.route.Waypoint
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
@@ -32,7 +33,9 @@ import cz.feldis.sdkandroidtests.SygicActivity
 import cz.feldis.sdkandroidtests.TestMapFragment
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
+import junit.framework.TestCase.assertEquals
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.mockito.AdditionalMatchers
 import org.mockito.InOrder
@@ -400,7 +403,6 @@ class OfflineNavigationTests : BaseTest() {
     @Test
     fun onHighwayExitTest() {
         mapDownload.installAndLoadMap("sk")
-        disableOnlineMaps()
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnHighwayExitListener = mock(verboseLogging = true)
         val route =
@@ -432,6 +434,18 @@ class OfflineNavigationTests : BaseTest() {
         navigation.stopNavigation()
         navigation.removeOnHighwayExitListener(listener)
         PositionManagerProvider.getInstance().get().stopPositionUpdating()
+    }
+
+    @Test
+    @Ignore("Prototype - doesnt apply to TomTom maps")
+    fun correctUTurnInstructionBajkalska() {
+        mapDownload.installAndLoadMap("sk")
+        val route =
+            routeCompute.offlineRouteCompute(
+                GeoCoordinates(48.147260,17.150520),
+                GeoCoordinates(48.147230,17.150120)
+            )
+        assertEquals(route.maneuvers[0].type, RouteManeuver.Type.UTurnLeft)
     }
 
     private fun getInitialCameraState(coordinates: GeoCoordinates): CameraState {

@@ -1,11 +1,19 @@
 package cz.feldis.sdkandroidtests.explore
 
-import com.nhaarman.mockitokotlin2.*
+import com.nhaarman.mockitokotlin2.any
+import com.nhaarman.mockitokotlin2.argThat
+import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.never
+import com.nhaarman.mockitokotlin2.verify
+import com.sygic.sdk.navigation.NavigationManager
+import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.explorer.RouteExplorer
 import com.sygic.sdk.navigation.traffic.TrafficManager
 import com.sygic.sdk.navigation.traffic.TrafficManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
 import cz.feldis.sdkandroidtests.BaseTest
+import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
@@ -112,4 +120,39 @@ class RouteExploreTests : BaseTest() {
             .onExploreIncidentsError(any())
     }
 
+    @Test
+    fun explorePlacesOnRouteLongRoutePerformance() {
+        disableOnlineMaps()
+        val listener: NavigationManager.OnPlaceListener = mock(verboseLogging = true)
+
+        val mapDownloadHelper = MapDownloadHelper()
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("at")
+        mapDownloadHelper.installAndLoadMap("it")
+
+        val route =
+            routeCompute.offlineRouteCompute(
+                GeoCoordinates(48.15343979881289, 17.13600525926161),
+                GeoCoordinates(40.74965825876095, 14.504129256547257) // pompeje
+            )
+
+        NavigationManagerProvider.getInstance().get().addOnPlaceListener(listener)
+        NavigationManagerProvider.getInstance().get().setRouteForNavigation(route)
+
+        val startTime = System.currentTimeMillis()
+
+        verify(
+            listener,
+            Mockito.timeout(50_000L)
+        )
+            .onPlaceInfoChanged(argThat {
+                val isNonEmpty = this.isNotEmpty()
+                if (isNonEmpty) {
+                    // Calculate elapsed time
+                    val elapsedTime = System.currentTimeMillis() - startTime
+                    println("Time elapsed: $elapsedTime ms")
+                }
+                return@argThat isNonEmpty
+            })
+    }
 }
