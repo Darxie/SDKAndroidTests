@@ -91,7 +91,6 @@ abstract class BaseTest {
         val contextInitRequest = SygicContextInitRequest(
             jsonConfig,
             appContext,
-            tracking = null,
             logConnector = logConnector,
             loadMaps = true,
             clearOnlineCache = false
@@ -125,7 +124,9 @@ abstract class BaseTest {
 
     @After
     open fun tearDown() {
-        sygicContext.destroy()
+        if (isEngineInitialized){
+            sygicContext.destroy()
+        }
     }
 
     private fun buildUATConfig(onlineMaps: Boolean): String {
