@@ -1,15 +1,45 @@
 package cz.feldis.sdkandroidtests.routing
 
-import com.nhaarman.mockitokotlin2.*
+import com.nhaarman.mockitokotlin2.any
+import com.nhaarman.mockitokotlin2.argThat
+import com.nhaarman.mockitokotlin2.argumentCaptor
+import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.isNotNull
+import com.nhaarman.mockitokotlin2.isNull
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.never
+import com.nhaarman.mockitokotlin2.timeout
+import com.nhaarman.mockitokotlin2.verify
+import com.nhaarman.mockitokotlin2.withSettings
 import com.sygic.sdk.places.EVConnector
 import com.sygic.sdk.position.GeoCoordinates
-import com.sygic.sdk.route.*
+import com.sygic.sdk.route.BatteryProfile
+import com.sygic.sdk.route.ChargingWaypoint
+import com.sygic.sdk.route.EVProfile
+import com.sygic.sdk.route.GuidedRouteProfile
+import com.sygic.sdk.route.PrimaryRouteRequest
+import com.sygic.sdk.route.Route
+import com.sygic.sdk.route.RouteDeserializerError
+import com.sygic.sdk.route.RouteRequest
+import com.sygic.sdk.route.RouteWarning
+import com.sygic.sdk.route.Router
+import com.sygic.sdk.route.RouterProvider
+import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingType
 import com.sygic.sdk.route.RoutingOptions.TransportMode
 import com.sygic.sdk.route.RoutingOptions.TransportMode.Pedestrian
 import com.sygic.sdk.route.RoutingOptions.VehicleRestrictions
-import com.sygic.sdk.route.listeners.*
+import com.sygic.sdk.route.TransitCountryInfo
+import com.sygic.sdk.route.Waypoint
+import com.sygic.sdk.route.listeners.GeometryListener
+import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
+import com.sygic.sdk.route.listeners.RouteComputeListener
+import com.sygic.sdk.route.listeners.RouteDurationListener
+import com.sygic.sdk.route.listeners.RouteElementsListener
+import com.sygic.sdk.route.listeners.RouteRequestDeserializedListener
+import com.sygic.sdk.route.listeners.RouteWarningsListener
+import com.sygic.sdk.route.listeners.TransitCountriesInfoListener
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import junit.framework.Assert.assertNotNull
@@ -758,7 +788,10 @@ class RouteComputeTests : BaseTest() {
 
         assertTrue(fastestRoute.waypoints[1].distanceFromStart in 20001 downTo 14999) // uses highway
         assertTrue(ecoRoute.waypoints[1].distanceFromStart in 14000 downTo 10999) // uses a shorter way
-        assertNotEquals(fastestRoute.maneuvers, ecoRoute.maneuvers) // we check that the maneuvers are different
+        assertNotEquals(
+            fastestRoute.maneuvers,
+            ecoRoute.maneuvers
+        ) // we check that the maneuvers are different
     }
 
     @Test
@@ -858,20 +891,79 @@ class RouteComputeTests : BaseTest() {
         assertNotNull(route)
     }
 
-    private suspend fun getRouteRequest(path: String): RouteRequest = suspendCoroutine { continuation ->
-        RouteRequest.createRouteRequestFromJSONString(
-            readJson(path),
-            object : RouteRequestDeserializedListener {
-                override fun onError(error: RouteDeserializerError) {
-                    Assert.fail("Deserialization error: $error")
-                }
+    /**
+     * https://jira.sygic.com/browse/SDC-6686
+     * Test Case TC641
+     * Start: Tovarenska, Bratislava, Slovakia
+     * Destination: Vienna International Airport, Austria
+     *
+     * In this test case, we set a global Toll Road avoid and check whether the route is
+     * computed correctly without avoiding any toll road avoids.
+     */
+    @Test
+    fun testBratislavaToSchwechatAvoidTolls() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("at")
 
-                override fun onSuccess(routeRequest: RouteRequest) {
-                    continuation.resume(routeRequest)
-                }
-            }
+        val start = GeoCoordinates(48.0935, 17.1165)
+        val destination = GeoCoordinates(48.1209, 16.5627)
+        val options = RoutingOptions().apply {
+            transportMode = TransportMode.Car
+            isTollRoadAvoided = true
+        }
+
+        val request = RouteRequest().apply {
+            this.setStart(start)
+            this.setDestination(destination)
+            this.routingOptions = options
+        }
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
+        val primaryRouteRequest = PrimaryRouteRequest(request, listener)
+
+        val captor = argumentCaptor<Route>()
+        val captorWarnings = argumentCaptor<List<RouteWarning>>()
+
+        RouterProvider.getInstance().get().computeRouteWithAlternatives(
+            primaryRouteRequest,
+            null,
+            routeComputeFinishedListener
         )
+        verify(listener, timeout(10_000L)).onComputeFinished(
+            captor.capture(), argThat {
+                return@argThat (this == Router.RouteComputeStatus.SuccessWithWarnings || this == Router.RouteComputeStatus.Success)
+            })
+
+        val route = captor.firstValue
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(10_000L)).onRouteWarnings(captorWarnings.capture())
+
+        // assert if there is a GlobalAvoidViolation.UnavoidableTollRoad
+        for (warnings in captorWarnings.allValues) {
+            for (warning in warnings) {
+                assertFalse(warning is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad)
+            }
+        }
     }
+
+    private suspend fun getRouteRequest(path: String): RouteRequest =
+        suspendCoroutine { continuation ->
+            RouteRequest.createRouteRequestFromJSONString(
+                readJson(path),
+                object : RouteRequestDeserializedListener {
+                    override fun onError(error: RouteDeserializerError) {
+                        Assert.fail("Deserialization error: $error")
+                    }
+
+                    override fun onSuccess(routeRequest: RouteRequest) {
+                        continuation.resume(routeRequest)
+                    }
+                }
+            )
+        }
 
 
 }

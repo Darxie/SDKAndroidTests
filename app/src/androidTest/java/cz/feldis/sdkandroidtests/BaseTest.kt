@@ -124,9 +124,7 @@ abstract class BaseTest {
 
     @After
     open fun tearDown() {
-        if (isEngineInitialized){
-            sygicContext.destroy()
-        }
+        sygicContext.destroy()
     }
 
     private fun buildUATConfig(onlineMaps: Boolean): String {

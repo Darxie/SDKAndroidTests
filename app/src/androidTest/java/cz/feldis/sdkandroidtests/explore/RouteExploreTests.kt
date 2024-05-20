@@ -12,12 +12,14 @@ import com.sygic.sdk.navigation.explorer.RouteExplorer
 import com.sygic.sdk.navigation.traffic.TrafficManager
 import com.sygic.sdk.navigation.traffic.TrafficManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.Mockito
+import timber.log.Timber
 
 class RouteExploreTests : BaseTest() {
 
@@ -139,6 +141,9 @@ class RouteExploreTests : BaseTest() {
         NavigationManagerProvider.getInstance().get().addOnPlaceListener(listener)
         NavigationManagerProvider.getInstance().get().setRouteForNavigation(route)
 
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        simulator.start()
+
         val startTime = System.currentTimeMillis()
 
         verify(
@@ -150,7 +155,8 @@ class RouteExploreTests : BaseTest() {
                 if (isNonEmpty) {
                     // Calculate elapsed time
                     val elapsedTime = System.currentTimeMillis() - startTime
-                    println("Time elapsed: $elapsedTime ms")
+                    Timber.i("Time elapsed waiting for PoR: $elapsedTime ms")
+                    simulator.stop()
                 }
                 return@argThat isNonEmpty
             })
