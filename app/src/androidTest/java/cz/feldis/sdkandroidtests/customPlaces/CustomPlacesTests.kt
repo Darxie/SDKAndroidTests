@@ -432,6 +432,7 @@ class CustomPlacesTests : BaseTest() {
             resultCaptor.capture()
         )
         assertEquals("ja som POI", resultCaptor.firstValue[0].title)
+        session.close()
     }
 
     @Test

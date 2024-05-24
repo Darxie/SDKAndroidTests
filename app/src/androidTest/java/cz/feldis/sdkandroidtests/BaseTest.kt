@@ -155,9 +155,15 @@ abstract class BaseTest {
                 .format("%levshort %datetime %msg\n")
                 .level(LoggingSettings.LoggingItem.AppenderItem.LogLevel.TRACE)
                 .time("%y/%m/%d %H:%M:%S")
+        val diagnosticsAppender =
+            LoggingSettings.LoggingItem.AppenderItem.DiagnosticsAppender.Builder()
+                .format("%levshort %datetime %msg\n")
+                .level(LoggingSettings.LoggingItem.AppenderItem.LogLevel.DEBUG)
+                .time("%y/%m/%d %H:%M:%S")
         val loggingItemBuilder = LoggingSettings.LoggingItem.Builder()
             .name("logger")
             .addAppender(consoleAppenderBuilder)
+            .addAppender(diagnosticsAppender)
         defaultConfig.logging {
             addLoggingItem(loggingItemBuilder)
         }
