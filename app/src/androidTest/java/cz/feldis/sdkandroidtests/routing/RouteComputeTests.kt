@@ -1,15 +1,42 @@
 package cz.feldis.sdkandroidtests.routing
 
-import com.nhaarman.mockitokotlin2.*
+import com.nhaarman.mockitokotlin2.any
+import com.nhaarman.mockitokotlin2.argThat
+import com.nhaarman.mockitokotlin2.argumentCaptor
+import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.isNotNull
+import com.nhaarman.mockitokotlin2.isNull
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.never
+import com.nhaarman.mockitokotlin2.timeout
+import com.nhaarman.mockitokotlin2.verify
+import com.nhaarman.mockitokotlin2.withSettings
 import com.sygic.sdk.position.GeoCoordinates
-import com.sygic.sdk.route.*
+import com.sygic.sdk.route.ChargingWaypoint
+import com.sygic.sdk.route.GuidedRouteProfile
+import com.sygic.sdk.route.PrimaryRouteRequest
+import com.sygic.sdk.route.Route
+import com.sygic.sdk.route.RouteAvoids
+import com.sygic.sdk.route.RouteDeserializerError
+import com.sygic.sdk.route.RouteRequest
+import com.sygic.sdk.route.RouteWarning
+import com.sygic.sdk.route.Router
+import com.sygic.sdk.route.RouterProvider
+import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingType
-import com.sygic.sdk.route.listeners.*
+import com.sygic.sdk.route.TransitCountryInfo
+import com.sygic.sdk.route.Waypoint
+import com.sygic.sdk.route.listeners.GeometryListener
+import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
+import com.sygic.sdk.route.listeners.RouteComputeListener
+import com.sygic.sdk.route.listeners.RouteDurationListener
+import com.sygic.sdk.route.listeners.RouteElementsListener
+import com.sygic.sdk.route.listeners.RouteRequestDeserializedListener
+import com.sygic.sdk.route.listeners.RouteWarningsListener
+import com.sygic.sdk.route.listeners.TransitCountriesInfoListener
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
-import com.sygic.sdk.vehicletraits.powertrain.ChargingCurrent
-import com.sygic.sdk.vehicletraits.powertrain.ConnectorType
 import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
 import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
 import com.sygic.sdk.vehicletraits.powertrain.FuelType
@@ -38,32 +65,6 @@ class RouteComputeTests : BaseTest() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
-    }
-
-    private fun newEvProfile(remainingCapacity: Float): EVProfile {
-        return EVProfile(
-            batteryProfile = BatteryProfile(
-                batteryCapacity = 30f,
-                remainingCapacity = remainingCapacity,
-                batteryChargingThreshold = .2f,
-                batteryFullChargeThreshold = .8f,
-                batteryMinimumReserveThreshold = .05f
-            ),
-            chargingMaxPower = 100,
-            connector = setOf(ConnectorType.Type2Any),
-            power = setOf(ChargingCurrent.DC, ChargingCurrent.AC),
-            weight = 1600.0,
-            frontalArea = 2.5,
-            coefAD = .25,
-            coefRR = .015,
-            nee1 = .85,
-            nee2 = .8,
-            Ka = .28,
-            V1 = -1.0,
-            Kv1 = -1.0,
-            V2 = -1.0,
-            Kv2 = -1.0
-        )
     }
 
     @Ignore("Does not work")
@@ -178,7 +179,6 @@ class RouteComputeTests : BaseTest() {
                 true
             }
         )
-        mapDownloadHelper.uninstallMap("is")
     }
 
     @Test
@@ -190,7 +190,7 @@ class RouteComputeTests : BaseTest() {
         val routeComputeFinishedListener = Mockito.mock(RouteComputeFinishedListener::class.java)
         val options = RoutingOptions()
         options.apply {
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile()
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
             routingService = RoutingOptions.RoutingService.Online
             napStrategy = NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
         }
@@ -224,7 +224,7 @@ class RouteComputeTests : BaseTest() {
         val start = GeoCoordinates(64.114341, -21.871153)
         val destination = GeoCoordinates(63.417836, -19.002209)
         val routingOptions = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile()
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
         }
 
         val route = routeComputeHelper.offlineRouteCompute(
@@ -243,7 +243,7 @@ class RouteComputeTests : BaseTest() {
         val start = GeoCoordinates(64.114341, -21.871153)
         val destination = GeoCoordinates(63.417836, -19.002209)
         val routingOptions = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile()
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
         }
 
         val route = routeComputeHelper.offlineRouteCompute(
@@ -291,8 +291,8 @@ class RouteComputeTests : BaseTest() {
 
         val options = RoutingOptions()
         options.apply {
-            isUnpavedRoadAvoided = true
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
                 dimensionalTraits = DimensionalTraits().apply {
                     totalWeight = 50_000F
@@ -334,12 +334,12 @@ class RouteComputeTests : BaseTest() {
 
         val options = RoutingOptions()
         options.apply {
-            isUnpavedRoadAvoided = true
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile()
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
             routingService = RoutingOptions.RoutingService.Offline
 
             napStrategy = NearestAccessiblePointStrategy.Disabled
-            setUseSpeedProfiles(true)
+            useSpeedProfiles = true
         }
 
         val routeRequest = RouteRequest()
@@ -372,6 +372,8 @@ class RouteComputeTests : BaseTest() {
         val options = RoutingOptions()
         options.apply {
             routingService = RoutingOptions.RoutingService.Online
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
         }
 
         val routeRequest = RouteRequest()
@@ -463,7 +465,6 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    @Ignore("Crashes - SDC-8559")
     fun computeGuidedRouteWithEmptyPolyline() {
         val polyline = mutableListOf<GeoCoordinates>()
         val listener: RouteComputeListener = mock(verboseLogging = true)
@@ -477,8 +478,8 @@ class RouteComputeTests : BaseTest() {
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
         verify(listener, timeout(10_000L)).onComputeFinished(
-            null,
-            eq(Router.RouteComputeStatus.UnspecifiedFault)
+            eq(null),
+            eq(Router.RouteComputeStatus.PathNotFound)
         )
     }
 
@@ -489,7 +490,7 @@ class RouteComputeTests : BaseTest() {
         val destination = GeoCoordinates(49.05314733520812, 18.325403607220828)
         val routeCompute = RouteComputeHelper()
         val routingOptions = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
                 generalVehicleTraits.maximalSpeed = 90
             }
@@ -504,7 +505,7 @@ class RouteComputeTests : BaseTest() {
         val timeToEndTruck = routeTruck.routeInfo.waypointDurations.last().withSpeedProfiles
 
         routingOptions.apply {
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
                 generalVehicleTraits.specializedVehicleAttributes.isCamper = true
                 generalVehicleTraits.maximalSpeed = 130
@@ -535,7 +536,7 @@ class RouteComputeTests : BaseTest() {
         )
 
         val maneuvers = route.maneuvers
-        assertEquals("gb", maneuvers.last().toIso)
+        assertEquals("gb", maneuvers.last().nextIso)
     }
 
     @Test
@@ -605,14 +606,14 @@ class RouteComputeTests : BaseTest() {
         val waypoint = GeoCoordinates(48.19136102846576, 17.226362460836786)
         val destination = GeoCoordinates(48.19159237577265, 17.22143784412721)
         val routingOptions = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
                 dimensionalTraits = DimensionalTraits().apply {
                     totalWeight = 50_000F
                 }
             }
             napStrategy = NearestAccessiblePointStrategy.Disabled
-            useEndpointProtection()
+            useEndpointProtection = true
             routingService = RoutingOptions.RoutingService.Offline
         }
         val request = RouteRequest().apply {
@@ -667,14 +668,14 @@ class RouteComputeTests : BaseTest() {
         val waypoint = GeoCoordinates(48.19136102846576, 17.226362460836786)
         val destination = GeoCoordinates(48.19159237577265, 17.22143784412721)
         val routingOptions = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
                 dimensionalTraits = DimensionalTraits().apply {
                     totalWeight = 50_000F
                 }
             }
             napStrategy = NearestAccessiblePointStrategy.Disabled
-            useEndpointProtection()
+            useEndpointProtection = true
             routingService = RoutingOptions.RoutingService.Offline
         }
         val request = RouteRequest().apply {
@@ -715,17 +716,19 @@ class RouteComputeTests : BaseTest() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
-        val evProfile = newEvProfile(20f)
-        val evPreferences = routeComputeHelper.newEVPreferencesHighChargeRange()
+
         val start = GeoCoordinates(48.14548507020328, 17.126529723864405)
         val destination = GeoCoordinates(49.00162457306762, 22.157874201012863)
+        val options = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createElectricVehicleProfileForPreferenceViolation(30f, 20f)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+        }
 
-        // ToDo re-write so that evRouteCompute is not necessary
-        val route = routeComputeHelper.evRouteCompute(
+        val route = routeComputeHelper.offlineRouteCompute(
             start,
             destination,
-            evProfile = evProfile,
-            evPreferences = evPreferences
+            routingOptions = options
         )
 
         route.getRouteWarnings(routeWarningsListener)
@@ -749,7 +752,7 @@ class RouteComputeTests : BaseTest() {
         val destination = GeoCoordinates(48.145628357674845, 17.12695279400835)
 
         val ecoRoutingOptions = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 powertrainTraits = PowertrainTraits.InternalCombustionPowertrain(
                     FuelType.Petrol, EuropeanEmissionStandard.Euro5, ConsumptionData(consumptionCurve, weightFactors)
                 )
@@ -799,26 +802,18 @@ class RouteComputeTests : BaseTest() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
-        val evProfile = routeComputeHelper.createEVProfile()
-
-        val evPreferences = routeComputeHelper.newEVPreferencesTruck()
         val start = GeoCoordinates(48.24135577878832, 16.99083981234057)
         val destination = GeoCoordinates(49.06008227080942, 20.315811448409608)
 
         val options = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
-                generalVehicleTraits.vehicleType = VehicleType.Truck
-            }
-            setUseEndpointProtection(true)
+            vehicleProfile = routeComputeHelper.createElectricVehicleProfileTruck(350f, 100f)
+            useEndpointProtection = true
             napStrategy = NearestAccessiblePointStrategy.Disabled
         }
 
-        // ToDo re-write so that evRouteCompute is not necessary
-        val route = routeComputeHelper.evRouteCompute(
+        val route = routeComputeHelper.offlineRouteCompute(
             start,
             destination,
-            evProfile = evProfile,
-            evPreferences = evPreferences,
             routingOptions = options
         )
 
@@ -899,10 +894,10 @@ class RouteComputeTests : BaseTest() {
 
     private fun createDefaultTruckRoutingOptions(): RoutingOptions {
         return RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.newDefaultVehicleProfile().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
             }
-            setUseEndpointProtection(true)
+            useEndpointProtection = true
             napStrategy = NearestAccessiblePointStrategy.Disabled
         }
     }

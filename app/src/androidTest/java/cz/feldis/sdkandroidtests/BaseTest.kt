@@ -42,7 +42,7 @@ abstract class BaseTest {
     var isEngineInitialized = false
     private lateinit var appContext: Context
     lateinit var sygicContext: SygicContext
-    lateinit var appDataPath: String
+    private lateinit var appDataPath: String
     private lateinit var logConnector: LogConnector
 
     @get:Rule
@@ -106,7 +106,7 @@ abstract class BaseTest {
                 isEngineInitialized = true
                 sygicContext = instance
                 SygicEngine.openGpsConnection()
-                PositionManagerProvider.getInstance().get().startPositionUpdating()
+                PositionManagerProvider.getInstance().get().startPositionUpdating({ })
                 OnlineManagerProvider.getInstance().get().setActiveMapProvider(
                     MapProvider("ta"), object : SetActiveMapProviderListener {
                         override fun onActiveProviderSet() {
