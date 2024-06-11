@@ -44,6 +44,7 @@ class MyAuthLibWrapper (authConfig: AuthConfig, authStorage: Storage, authHttp: 
             ErrorCode.TokenExpired -> com.sygic.sdk.auth.ErrorCode.TokenExpired
             ErrorCode.ServerError -> com.sygic.sdk.auth.ErrorCode.ServerError
             ErrorCode.UnrecognizedResponseError -> com.sygic.sdk.auth.ErrorCode.UnrecognizedResponseError
+            ErrorCode.TokenNotFound -> com.sygic.sdk.auth.ErrorCode.TokenNotFound
         }
     }
 
