@@ -718,9 +718,9 @@ class RouteComputeTests : BaseTest() {
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.14548507020328, 17.126529723864405)
-        val destination = GeoCoordinates(49.00162457306762, 22.157874201012863)
+        val destination = GeoCoordinates(48.217657544377715, 17.406051728312903)
         val options = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.createElectricVehicleProfileForPreferenceViolation(30f, 20f)
+            vehicleProfile = routeComputeHelper.createElectricVehicleProfileForPreferenceViolation(50f, 5f)
             napStrategy = NearestAccessiblePointStrategy.Disabled
             useEndpointProtection = true
         }

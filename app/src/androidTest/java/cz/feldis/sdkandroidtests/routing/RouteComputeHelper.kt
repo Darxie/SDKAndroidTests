@@ -167,9 +167,9 @@ class RouteComputeHelper : BaseTest() {
         val chargingPreferences = ChargingPreferences(
             fullChargeThreshold = 0.9F,
             chargingThreshold = 0.8F,
-            reserveThreshold = 0.25F,
+            reserveThreshold = 0.05F,
             batteryMinimumDestinationThreshold = 0.3F,
-            powerRange = EnforceableAttribute(PowerRange(500F, 600F), true)
+            powerRange = EnforceableAttribute(PowerRange(999F, 1000F), false)
         )
         val consumptionData = ConsumptionData(
             consumptionCurve = mapOf(1.0 to 1.0, 100.0 to 1.0),
@@ -199,7 +199,7 @@ class RouteComputeHelper : BaseTest() {
             chargingThreshold = 0.2F,
             reserveThreshold = 0.05F,
             batteryMinimumDestinationThreshold = 0.3F,
-            powerRange = EnforceableAttribute(PowerRange(100F, 600F), true)
+            powerRange = EnforceableAttribute(PowerRange(100F, 600F), false)
         )
         val consumptionData = ConsumptionData(
             consumptionCurve = mapOf(1.0 to 1.0, 100.0 to 1.0),
