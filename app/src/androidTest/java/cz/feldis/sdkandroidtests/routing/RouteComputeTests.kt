@@ -877,6 +877,93 @@ class RouteComputeTests : BaseTest() {
         assertEquals(3, route.maneuvers.size)
     }
 
+    /**
+     * https://jira.sygic.com/browse/SDC-6686
+     * Test Case TC641
+     * Start: Tovarenska, Bratislava, Slovakia
+     * Destination: Vienna International Airport, Austria
+     *
+     * In this test case, we set a global Toll Road avoid and check whether the route is
+     * computed correctly without avoiding any toll road avoids.
+     */
+    @Test
+    fun testBratislavaToSchwechatAvoidTolls() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("at")
+
+        val start = GeoCoordinates(48.0935, 17.1165)
+        val destination = GeoCoordinates(48.1209, 16.5627)
+        val options = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
+        }
+
+        val request = RouteRequest().apply {
+            this.setStart(start)
+            this.setDestination(destination)
+            this.routingOptions = options
+        }
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
+        val primaryRouteRequest = PrimaryRouteRequest(request, listener)
+
+        val captor = argumentCaptor<Route>()
+        val captorWarnings = argumentCaptor<List<RouteWarning>>()
+
+        RouterProvider.getInstance().get().computeRouteWithAlternatives(
+            primaryRouteRequest,
+            null,
+            routeComputeFinishedListener
+        )
+        verify(listener, timeout(10_000L)).onComputeFinished(
+            captor.capture(), argThat {
+                return@argThat (this == Router.RouteComputeStatus.SuccessWithWarnings || this == Router.RouteComputeStatus.Success)
+            })
+
+        val route = captor.firstValue
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(10_000L)).onRouteWarnings(captorWarnings.capture())
+
+        // assert if there is a GlobalAvoidViolation.UnavoidableTollRoad
+        for (warnings in captorWarnings.allValues) {
+            for (warning in warnings) {
+                assertFalse(warning is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad)
+            }
+        }
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-4444
+     * Test Case TC177
+     * Start: Leichendorf, Germany
+     * Destination: Zirndorf, Germany
+     *
+     * In this test case, we compute a route from Leichendorf to Zirndorf, expecting that
+     * the route will not pass through residential areas where the speed limit is too low.
+     */
+    @Test
+    fun leichendorfToZirndorf() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("de-02")
+
+        val start = GeoCoordinates(49.4339, 10.9345)
+        val destination = GeoCoordinates(49.4425, 10.9459)
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+        )
+
+        assertEquals(7, route.maneuvers.size) // 7 maneuvers in March 2023 maps
+        for (maneuver in route.maneuvers) {
+            assertFalse(maneuver.roadName == "Thomas-Mann-Straße")
+        }
+    }
+
     private suspend fun getRouteRequest(path: String): RouteRequest = suspendCoroutine { continuation ->
         RouteRequest.createRouteRequestFromJSONString(
             readJson(path),
