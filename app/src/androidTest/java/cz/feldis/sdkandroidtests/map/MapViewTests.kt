@@ -16,24 +16,26 @@ import com.sygic.sdk.incidents.IncidentsManager
 import com.sygic.sdk.incidents.IncidentsManagerProvider
 import com.sygic.sdk.incidents.IncidentsResultListener
 import com.sygic.sdk.incidents.SpeedCamera
-import com.sygic.sdk.map.*
+import com.sygic.sdk.map.Camera
+import com.sygic.sdk.map.CameraState
+import com.sygic.sdk.map.MapAnimation
+import com.sygic.sdk.map.MapCenter
+import com.sygic.sdk.map.MapCenterSettings
+import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.map.listeners.RequestObjectCallback
 import com.sygic.sdk.map.`object`.MapIncident
-import com.sygic.sdk.map.`object`.MapObject
-import com.sygic.sdk.map.`object`.MapPlacesManager
-import com.sygic.sdk.map.`object`.MapPlacesManagerProvider
 import com.sygic.sdk.map.`object`.ViewObject
-import com.sygic.sdk.map.`object`.data.MapPlace
 import com.sygic.sdk.map.`object`.data.ViewObjectData
 import com.sygic.sdk.position.GeoCoordinates
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.SygicActivity
 import cz.feldis.sdkandroidtests.TestMapFragment
-import cz.feldis.sdkandroidtests.utils.Repeat
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.junit.MockitoJUnitRunner
@@ -116,7 +118,7 @@ class MapViewTests : BaseTest() {
         val importedSpeedCam = getMockSpeedCam()
         val importedIncidentData = IncidentData(importedSpeedCam, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
         verify(listener, never()).onError(any())
 
         mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
@@ -134,8 +136,16 @@ class MapViewTests : BaseTest() {
 
         verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(id))
 
-        val resultSpeedCam = (captor.firstValue[0] as MapIncident).data.incident as SpeedCamera
-        assertEquals(resultSpeedCam.category, IncidentType.RadarMobileSpeed)
+        val firstValue = captor.firstValue[0]
+        if (firstValue is MapIncident) {
+            val resultSpeedCam = firstValue.data.incident as? SpeedCamera
+            assertNotNull(resultSpeedCam)  // Ensure that the cast to SpeedCamera is successful
+            assertEquals(IncidentType.RadarMobileSpeed, resultSpeedCam?.category)
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Expected a MapIncident, but got ${firstValue::class.simpleName}")
+        }
 
         //close scenario & activity
         scenario.moveToState(Lifecycle.State.DESTROYED)
@@ -158,7 +168,7 @@ class MapViewTests : BaseTest() {
         val importedSpeedCam = getMockSpeedCamCustomCategory()
         val importedIncidentData = IncidentData(importedSpeedCam, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
         verify(listener, never()).onError(any())
 
         mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
@@ -176,8 +186,16 @@ class MapViewTests : BaseTest() {
 
         verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(id))
 
-        val resultSpeedCam = (captor.firstValue[0] as MapIncident).data.incident as SpeedCamera
-        assertEquals(resultSpeedCam.category, "custom_incident_category")
+        val firstValue = captor.firstValue[0]
+        if (firstValue is MapIncident) {
+            val resultSpeedCam = firstValue.data.incident as? SpeedCamera
+            assertNotNull(resultSpeedCam)  // Ensure that the cast to SpeedCamera is successful
+            assertEquals(resultSpeedCam?.category, "custom_incident_category")
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Expected a MapIncident, but got ${firstValue::class.simpleName}")
+        }
 
         //close scenario & activity
         scenario.moveToState(Lifecycle.State.DESTROYED)
@@ -216,13 +234,14 @@ class MapViewTests : BaseTest() {
     companion object {
 
         private val audioNotificationParams = IncidentsManager.AudioNotificationParameters(5, 10)
-        private const val Timeout = 3000L
+        private const val TIMEOUT = 3000L
+        private const val VALID_TO_TIMESTAMP = 1904969474L // 14.5.2030
         private fun getMockSpeedCam(): SpeedCamera {
             return SpeedCamera(
                 IncidentId("26a69832-7f72-42ba-8f1d-394811376579"),
                 GeoCoordinates(48.10095535808773, 17.234824479529344),
                 IncidentType.RadarMobileSpeed,
-                1713510440, // 19.4.2024
+                VALID_TO_TIMESTAMP,
                 359F,
                 true,
                 80
@@ -234,7 +253,7 @@ class MapViewTests : BaseTest() {
                 IncidentId("26a69832-7f72-42ba-8f1d-a94811376579"),
                 GeoCoordinates(48.10095535808773, 17.234824479529344),
                 "custom_incident_category",
-                1713510440, // 19.4.2024
+                VALID_TO_TIMESTAMP,
                 0F,
                 false,
                 120

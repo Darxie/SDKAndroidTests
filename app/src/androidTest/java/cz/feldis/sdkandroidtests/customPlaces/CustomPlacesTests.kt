@@ -46,6 +46,7 @@ import cz.feldis.sdkandroidtests.utils.Repeat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -214,20 +215,25 @@ class CustomPlacesTests : BaseTest() {
 
         verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(id))
 
-        val proxyPlace = (captor.firstValue[0] as ProxyPlace)
-        val placeLinkCaptor = argumentCaptor<PlaceLink>()
+        val capturedObjects = captor.firstValue
 
-        ProxyObjectManager.loadPlaceLink(proxyPlace, placeLinkListener)
-        verify(placeLinkListener, never()).onPlaceLinkError(any())
-        verify(placeLinkListener, timeout(5_000L)).onPlaceLinkLoaded(placeLinkCaptor.capture())
+        if (capturedObjects.isNotEmpty() && capturedObjects[0] is ProxyPlace) {
+            val proxyPlace = capturedObjects[0] as ProxyPlace
+            val placeLinkCaptor = argumentCaptor<PlaceLink>()
 
-        val placeLink = placeLinkCaptor.firstValue
+            ProxyObjectManager.loadPlaceLink(proxyPlace, placeLinkListener)
+            verify(placeLinkListener, never()).onPlaceLinkError(any())
+            verify(placeLinkListener, timeout(5_000L)).onPlaceLinkLoaded(placeLinkCaptor.capture())
 
-        assertEquals(placeLink.name, "Odpočívadlo Horná Dolná")
-        assertEquals(placeLink.category, "SYTruckRestArea")
+            val placeLink = placeLinkCaptor.firstValue
 
-        //close scenario & activity
-        scenario.moveToState(Lifecycle.State.DESTROYED)
+            assertEquals(placeLink.name, "Odpočívadlo Horná Dolná")
+            assertEquals(placeLink.category, "SYTruckRestArea")
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Expected object of type ProxyPlace, but found: ${capturedObjects[0]::class.java}")
+        }
     }
 
     @Test
@@ -425,6 +431,7 @@ class CustomPlacesTests : BaseTest() {
             resultCaptor.capture()
         )
         assertEquals("ja som POI", resultCaptor.firstValue[0].title)
+        session.close()
     }
 
     @Test

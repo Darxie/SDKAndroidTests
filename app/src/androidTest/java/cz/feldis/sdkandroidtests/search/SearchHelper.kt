@@ -109,6 +109,7 @@ class SearchHelper {
         )
         verify(autocompleteResultListener, never()).onAutocompleteError(any())
         assert(resultCaptor.firstValue[0].type == ResultType.CUSTOM_PLACE) // fail here already
+        session.close()
         return resultCaptor.firstValue
     }
 
