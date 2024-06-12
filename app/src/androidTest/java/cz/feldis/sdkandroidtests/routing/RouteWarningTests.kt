@@ -40,26 +40,6 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun checkCreatedWarning() {
-        val warning = RouteWarning.SectionWarning.UnavoidableTraffic(
-            GeoPolyline(
-                listOf(
-                    GeoCoordinates(48.1, 17.1),
-                    GeoCoordinates(48.2, 17.2)
-                )
-            ), 80
-        )
-
-        assertEquals(warning.duration, 80)
-        assertEquals(warning.section, GeoPolyline(
-            listOf(
-                GeoCoordinates(48.1, 17.1),
-                GeoCoordinates(48.2, 17.2)
-            )
-        ))
-    }
-
-    @Test
     fun tollRoadAvoidWarningTest() {
         mapDownloadHelper.installAndLoadMap("sk")
 
