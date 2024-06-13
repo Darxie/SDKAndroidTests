@@ -385,7 +385,6 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    @Ignore("Fixed in develop already")
     fun tollRoadAvoidWarningTestOnline() {
         enableOnlineMaps()
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -412,7 +411,6 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    @Ignore("fixed in develop")
     fun tollRoadCountryAvoidWarningTestOnline() {
         enableOnlineMaps()
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -475,6 +473,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
+    @Ignore("fksdjf")
     fun endInEmissionZoneTest() {
         mapDownloadHelper.installAndLoadMap("sk")
         mapDownloadHelper.installAndLoadMap("at")

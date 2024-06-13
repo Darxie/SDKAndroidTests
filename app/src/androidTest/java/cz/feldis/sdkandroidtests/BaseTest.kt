@@ -40,9 +40,9 @@ import java.util.concurrent.TimeUnit
 abstract class BaseTest {
     private val defaultConfig = SygicEngine.JsonConfigBuilder()
     var isEngineInitialized = false
-    private lateinit var appContext: Context
+    open lateinit var appContext: Context
     lateinit var sygicContext: SygicContext
-    private lateinit var appDataPath: String
+    open lateinit var appDataPath: String
     private lateinit var logConnector: LogConnector
 
     @get:Rule
