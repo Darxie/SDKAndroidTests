@@ -506,7 +506,7 @@ class RouteComputeTests : BaseTest() {
 
         routingOptions.apply {
             vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
-                generalVehicleTraits.vehicleType = VehicleType.Truck
+                generalVehicleTraits.vehicleType = VehicleType.Car
                 generalVehicleTraits.specializedVehicleAttributes.isCamper = true
                 generalVehicleTraits.maximalSpeed = 130
             }
