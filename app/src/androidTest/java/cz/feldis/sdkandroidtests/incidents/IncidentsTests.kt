@@ -31,7 +31,6 @@ class IncidentsTests : BaseTest() {
     private lateinit var incidentsManager: IncidentsManager
     private val listener: IncidentsResultListener = mock()
     private val navigationManagerKtx = NavigationManagerKtx()
-    private val positionManagerKtx = PositionManagerKtx()
 
 
     override fun setUp() {

@@ -2,8 +2,6 @@ package cz.feldis.sdkandroidtests.ktx
 
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.route.Route
-import com.sygic.sdk.route.simulator.NmeaLogSimulator
-import com.sygic.sdk.route.simulator.RouteDemonstrateSimulator
 import cz.feldis.sdkandroidtests.utils.Simulator
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
