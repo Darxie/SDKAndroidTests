@@ -115,7 +115,6 @@ class RouteComputeHelper : BaseTest() {
                 VehicleType.Car,
                 SpecializedVehicleAttributes(
                     isTaxi = false,
-                    isEmergencyVehicle = false,
                     isHighOccupancyVehicle = false,
                     isCamper = false
                 )

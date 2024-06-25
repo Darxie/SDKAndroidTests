@@ -22,8 +22,8 @@ import com.sygic.sdk.diagnostics.LogConnector
 import com.sygic.sdk.map.data.MapProvider
 import com.sygic.sdk.online.OnlineManager
 import com.sygic.sdk.online.OnlineManagerProvider
-import com.sygic.sdk.online.data.MapProviderError
 import com.sygic.sdk.online.listeners.SetActiveMapProviderListener
+import com.sygic.sdk.position.PositionManager
 import com.sygic.sdk.position.PositionManagerProvider
 import org.junit.After
 import org.junit.Assert
@@ -96,6 +96,8 @@ abstract class BaseTest {
             loadMaps = true,
             clearOnlineCache = false
         )
+
+        val listener: PositionManager.OnOperationComplete = mock(verboseLogging = true)
         initialize(contextInitRequest, object : SygicEngine.OnInitCallback {
             override fun onError(error: CoreInitException) {
                 latch.countDown()
@@ -106,17 +108,9 @@ abstract class BaseTest {
                 isEngineInitialized = true
                 sygicContext = instance
                 SygicEngine.openGpsConnection()
-                PositionManagerProvider.getInstance().get().startPositionUpdating({ })
-                OnlineManagerProvider.getInstance().get().setActiveMapProvider(
-                    MapProvider("ta"), object : SetActiveMapProviderListener {
-                        override fun onActiveProviderSet() {
-                        }
+                PositionManagerProvider.getInstance().get().startPositionUpdating(listener)
+                verify(listener, timeout(5_000L)).onComplete()
 
-                        override fun onError(error: MapProviderError) {
-                            assert(true)
-                        }
-                    }
-                )
                 latch.countDown()
             }
         })
@@ -215,4 +209,15 @@ abstract class BaseTest {
         verify(listener, never())
             .onError(any())
     }
+
+    fun setActiveMapProvider(providerName: String) {
+        val listener: SetActiveMapProviderListener = mock(verboseLogging = true)
+        OnlineManagerProvider.getInstance().get().setActiveMapProvider(MapProvider(providerName), listener)
+        verify(listener, timeout(5_000L))
+            .onActiveProviderSet()
+        verify(listener, never())
+            .onError(any())
+    }
+
+
 }
