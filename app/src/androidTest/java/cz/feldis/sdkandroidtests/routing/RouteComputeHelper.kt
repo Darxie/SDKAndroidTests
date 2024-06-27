@@ -116,7 +116,6 @@ class RouteComputeHelper : BaseTest() {
                 SpecializedVehicleAttributes(
                     isTaxi = false,
                     isHighOccupancyVehicle = false,
-                    isCamper = false
                 )
             ),
             hazmatTraits = null,

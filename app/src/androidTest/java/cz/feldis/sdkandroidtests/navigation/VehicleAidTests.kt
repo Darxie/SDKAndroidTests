@@ -134,11 +134,11 @@ class VehicleAidTests : BaseTest() {
             this.dimensionalTraits = DimensionalTraits().apply {
                 this.totalHeight = 8000
                 this.trailers = listOf(
-                    Trailer(1000, listOf(Axle(2, 500F, 2))),
-                    Trailer(1000, listOf(Axle(2, 500F, 2))),
-                    Trailer(1000, listOf(Axle(2, 500F, 2))),
-                    Trailer(1000, listOf(Axle(2, 500F, 2))),
-                    Trailer(1000, listOf(Axle(2, 500F, 2)))
+                    Trailer(1000, false, listOf(Axle(2, 500F, 2))),
+                    Trailer(1000, false, listOf(Axle(2, 500F, 2))),
+                    Trailer(1000, false, listOf(Axle(2, 500F, 2))),
+                    Trailer(1000, false, listOf(Axle(2, 500F, 2))),
+                    Trailer(1000, false, listOf(Axle(2, 500F, 2)))
                 )
             }
             this.generalVehicleTraits = GeneralVehicleTraits().apply {

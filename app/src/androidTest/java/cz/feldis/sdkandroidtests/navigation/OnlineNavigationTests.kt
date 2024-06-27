@@ -45,6 +45,7 @@ class OnlineNavigationTests : BaseTest() {
         mapDownload = MapDownloadHelper()
         mapDownload.ensureMapNotInstalled("sk")
         navigation = NavigationManagerProvider.getInstance().get()
+        startPositionUpdating()
     }
 
     @Test

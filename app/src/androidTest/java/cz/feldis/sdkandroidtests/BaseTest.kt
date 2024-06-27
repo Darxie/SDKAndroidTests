@@ -97,7 +97,6 @@ abstract class BaseTest {
             clearOnlineCache = false
         )
 
-        val listener: PositionManager.OnOperationComplete = mock(verboseLogging = true)
         initialize(contextInitRequest, object : SygicEngine.OnInitCallback {
             override fun onError(error: CoreInitException) {
                 latch.countDown()
@@ -108,9 +107,6 @@ abstract class BaseTest {
                 isEngineInitialized = true
                 sygicContext = instance
                 SygicEngine.openGpsConnection()
-                PositionManagerProvider.getInstance().get().startPositionUpdating(listener)
-                verify(listener, timeout(5_000L)).onComplete()
-
                 latch.countDown()
             }
         })
@@ -217,6 +213,12 @@ abstract class BaseTest {
             .onActiveProviderSet()
         verify(listener, never())
             .onError(any())
+    }
+
+    open fun startPositionUpdating() {
+        val listener: PositionManager.OnOperationComplete = mock(verboseLogging = true)
+        PositionManagerProvider.getInstance().get().startPositionUpdating(listener)
+        verify(listener, timeout(5_000L)).onComplete()
     }
 
 

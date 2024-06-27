@@ -35,7 +35,9 @@ import com.sygic.sdk.route.listeners.RouteElementsListener
 import com.sygic.sdk.route.listeners.RouteRequestDeserializedListener
 import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.route.listeners.TransitCountriesInfoListener
+import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
+import com.sygic.sdk.vehicletraits.dimensional.Trailer
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
 import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
@@ -507,8 +509,12 @@ class RouteComputeTests : BaseTest() {
         routingOptions.apply {
             vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Car
-                generalVehicleTraits.specializedVehicleAttributes.isCamper = true
                 generalVehicleTraits.maximalSpeed = 130
+                dimensionalTraits?.trailers = listOf(
+                    Trailer(1000, true, listOf(
+                        Axle(4, 250F, 4)
+                    ))
+                )
             }
         }
 
