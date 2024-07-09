@@ -221,8 +221,10 @@ class SearchTests : BaseTest() {
         mapDownloadHelper.installAndLoadMap("eg")
         val placesManager = PlacesManagerProvider.getInstance().get()
 
-        val listenerExternalIdKhufu: PlacesManager.PlaceExternalIdListener = mock(verboseLogging = true)
-        val listenerExternalIdGiza: PlacesManager.PlaceExternalIdListener = mock(verboseLogging = true)
+        val listenerExternalIdKhufu: PlacesManager.PlaceExternalIdListener =
+            mock(verboseLogging = true)
+        val listenerExternalIdGiza: PlacesManager.PlaceExternalIdListener =
+            mock(verboseLogging = true)
 
         val category = listOf(PlaceCategories.ImportantTouristAttraction)
         val request = PlaceRequest(GeoCoordinates(29.978296, 31.132839), category, 500)
@@ -334,7 +336,26 @@ class SearchTests : BaseTest() {
         )
         val result = searchHelper.offlineAutocomplete(searchRequest)
         assertTrue("Search found no results, empty list", result.isNotEmpty())
-        assertTrue("The result should contain an item with the title 'Soutocico'", result.any { it.title == "Soutocico" })
+        assertTrue(
+            "The result should contain an item with the title 'Soutocico'",
+            result.any { it.title == "Soutocico" })
     }
 
+    @Test
+    fun reverseGeoNewYork() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("us-ny")
+        val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
+            mock(verboseLogging = true)
+
+        ReverseGeocoderProvider.getInstance().get()
+            .reverseGeocode(GeoCoordinates(40.7456, -73.9888), emptySet(), reverseGeoListener)
+        verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
+            this.forEach {
+                if ((it.names.houseNumber == "1187") && (it.names.street == "Broadway"))
+                    return@argThat true
+            }
+            return@argThat false
+        })
+    }
 }
