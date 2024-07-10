@@ -57,7 +57,7 @@ class VehicleAidTests : BaseTest() {
         val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
 
         val route = routeCompute.offlineRouteCompute(
-            start = GeoCoordinates(48.76948041613606, 18.617953844571446),
+            start = GeoCoordinates(48.7708, 18.6103),
             destination = GeoCoordinates(48.7703, 18.6136),
             routingOptions = RoutingOptions().apply {
                 this.vehicleProfile = vehicleProfile
