@@ -358,4 +358,36 @@ class SearchTests : BaseTest() {
             return@argThat false
         })
     }
+
+    @Test
+    fun reverseGeoSlovakia() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+        val reverseGeoListener : ReverseGeocoder.ReverseGeocodingResultListener = mock(verboseLogging = true)
+
+        ReverseGeocoderProvider.getInstance().get().reverseGeocode(GeoCoordinates(48.1476,17.1046), emptySet(), reverseGeoListener)
+        verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
+            this.forEach {
+                if ((it.names.houseNumber == "6504/4") && (it.names.street == "Lýcejná"))
+                    return@argThat true
+            }
+            return@argThat false
+        })
+    }
+
+    @Test
+    fun reverseGeoVriezewegNetherlands() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("nl")
+        val reverseGeoListener : ReverseGeocoder.ReverseGeocodingResultListener = mock(verboseLogging = true)
+
+        ReverseGeocoderProvider.getInstance().get().reverseGeocode(GeoCoordinates(51.8889,5.66974), emptySet(), reverseGeoListener)
+        verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
+            this.forEach {
+                if ((it.names.houseNumber == "63") && (it.names.street == "Vriezeweg"))
+                    return@argThat true
+            }
+            return@argThat false
+        })
+    }
 }
