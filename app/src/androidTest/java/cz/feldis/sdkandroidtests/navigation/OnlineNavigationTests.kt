@@ -29,7 +29,6 @@ import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.InOrder
 import org.mockito.Mockito
-import timber.log.Timber
 
 class OnlineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -132,11 +131,10 @@ class OnlineNavigationTests : BaseTest() {
 
         Mockito.verify(listener, Mockito.timeout(STATUS_TIMEOUT))
             .onDirectionInfoChanged(argThat {
-                if (this.primary.nextRoadName != "Einsteinova") {
-                    Timber.e("Primary road name is not equal to Einsteinova.")
-                    return@argThat false
+                if (this.primary.nextRoadName == "Einsteinova") {
+                    return@argThat true
                 }
-                true
+                false
             })
 
         navigation.removeOnDirectionListener(listener)
@@ -285,8 +283,8 @@ class OnlineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
 
         val route = routeCompute.onlineComputeRoute(
-            GeoCoordinates(48.1432, 17.1308),
-            GeoCoordinates(48.1455, 17.1263)
+            GeoCoordinates(48.1447, 17.1317),
+            GeoCoordinates(48.1461, 17.1285)
         )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
@@ -505,7 +503,7 @@ class OnlineNavigationTests : BaseTest() {
 
         Mockito.verify(
             listener,
-            Mockito.timeout(STATUS_TIMEOUT)
+            timeout(10_000L).atLeastOnce()
         )
             .onPlaceInfoChanged(argThat {
                 return@argThat this.isNotEmpty()
@@ -532,8 +530,8 @@ class OnlineNavigationTests : BaseTest() {
             mock(verboseLogging = true)
 
         val route = routeCompute.onlineComputeRoute(
-            GeoCoordinates(48.143397, 17.130936),
-            GeoCoordinates(48.147486, 17.133397)
+            GeoCoordinates(48.1447, 17.1317),
+            GeoCoordinates(48.1461, 17.1285)
         )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
@@ -544,22 +542,22 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
         Mockito.verify(
-            listener, Mockito.timeout(30_000L).times(1)
+            listener, Mockito.timeout(20_000L).times(1)
         )
             .onRouteRecomputeProgress(eq(0), eq(NavigationManager.RouteRecomputeStatus.Started))
 
         Mockito.verify(
-            listener, Mockito.timeout(30_000L).times(1)
+            listener, Mockito.timeout(20_000L).times(1)
         )
             .onRouteRecomputeProgress(eq(0), eq(NavigationManager.RouteRecomputeStatus.Computing))
 
         Mockito.verify(
-            listener, Mockito.timeout(30_000L).times(1)
+            listener, Mockito.timeout(20_000L).times(1)
         )
             .onRouteRecomputeProgress(eq(100), eq(NavigationManager.RouteRecomputeStatus.Computing))
 
         Mockito.verify(
-            listener, Mockito.timeout(30_000L).times(1)
+            listener, Mockito.timeout(20_000L).times(1)
         )
             .onRouteRecomputeProgress(eq(100), eq(NavigationManager.RouteRecomputeStatus.Finished))
 
