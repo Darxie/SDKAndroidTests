@@ -1,5 +1,6 @@
 package cz.feldis.sdkandroidtests.position
 
+import androidx.test.filters.RequiresDevice
 import com.nhaarman.mockitokotlin2.argThat
 import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.mock
@@ -16,6 +17,7 @@ import org.junit.Test
 class PositionManagerTests: BaseTest() {
 
     @Test
+    @RequiresDevice
     fun getLastValidLocationTest() {
         val positionListener : PositionManager.OnLastKnownPositionListener = mock(verboseLogging = true)
 
