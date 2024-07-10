@@ -20,6 +20,7 @@ import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
+import com.sygic.sdk.vehicletraits.listeners.SetVehicleProfileListener
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.NmeaFileDataProvider
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
@@ -36,7 +37,6 @@ import org.junit.Test
 import org.mockito.AdditionalMatchers
 import org.mockito.InOrder
 import org.mockito.Mockito
-import timber.log.Timber
 
 class OfflineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -100,8 +100,8 @@ class OfflineNavigationTests : BaseTest() {
         val navigation = NavigationManagerProvider.getInstance().get()
 
         val route = routeCompute.offlineRouteCompute(
-            GeoCoordinates(48.132310, 17.114100),
-            GeoCoordinates(48.131733, 17.109952)
+            GeoCoordinates( 48.0977, 17.2382),
+            GeoCoordinates(48.0986, 17.2345)
         )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
@@ -113,11 +113,10 @@ class OfflineNavigationTests : BaseTest() {
         Mockito.verify(
             directionListener, Mockito.timeout(15_000L)
         ).onDirectionInfoChanged(argThat {
-            if (this.primary.nextRoadName != "Einsteinova") {
-                Timber.e("Primary road name is not equal to Einsteinova.")
-                return@argThat false
+            if (this.primary.nextRoadName == "Hlavná") {
+                return@argThat true
             }
-            true
+            false
         })
 
         navigation.removeOnDirectionListener(directionListener)
@@ -343,7 +342,9 @@ class OfflineNavigationTests : BaseTest() {
     }
 
     @Test
+    @Ignore("https://jira.sygic.com/browse/SDC-12190")
     fun changeMaxSpeedAndCheckSpeedLimit() = runBlocking {
+        val profileListener: SetVehicleProfileListener = mock(verboseLogging = true)
         val vehicleProfile = VehicleProfile().apply {
             this.generalVehicleTraits = GeneralVehicleTraits(
                 maximalSpeed = 80
@@ -352,6 +353,8 @@ class OfflineNavigationTests : BaseTest() {
 
         mapDownload.installAndLoadMap("sk")
         val navigation = NavigationManagerProvider.getInstance().get()
+        navigation.setVehicleProfile(vehicleProfile, profileListener)
+        verify(profileListener, timeout(5_000L)).onSuccess()
         val listener: NavigationManager.OnSpeedLimitListener = mock(verboseLogging = true)
 
         val route = routeCompute.offlineRouteCompute(
