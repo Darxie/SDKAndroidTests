@@ -180,8 +180,8 @@ class OfflineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
         val navigation = NavigationManagerProvider.getInstance().get()
         val route = routeCompute.offlineRouteCompute(
-            GeoCoordinates(48.14364765102184, 17.131080867348153),
-            GeoCoordinates(48.14852112743662, 17.13397077018316)
+            GeoCoordinates(48.1447, 17.1317),
+            GeoCoordinates(48.1461, 17.1285)
         )
 
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
