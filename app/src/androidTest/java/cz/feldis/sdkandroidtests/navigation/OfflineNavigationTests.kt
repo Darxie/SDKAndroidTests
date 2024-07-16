@@ -342,7 +342,6 @@ class OfflineNavigationTests : BaseTest() {
     }
 
     @Test
-    @Ignore("https://jira.sygic.com/browse/SDC-12190")
     fun changeMaxSpeedAndCheckSpeedLimit() = runBlocking {
         val profileListener: SetVehicleProfileListener = mock(verboseLogging = true)
         val vehicleProfile = VehicleProfile().apply {

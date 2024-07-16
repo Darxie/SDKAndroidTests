@@ -473,7 +473,6 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    @Ignore("fksdjf")
     fun endInEmissionZoneTest() {
         mapDownloadHelper.installAndLoadMap("sk")
         mapDownloadHelper.installAndLoadMap("at")
