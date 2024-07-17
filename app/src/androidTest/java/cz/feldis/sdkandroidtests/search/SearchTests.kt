@@ -19,6 +19,7 @@ import com.sygic.sdk.search.HouseNumberResult
 import com.sygic.sdk.search.OnlineMapSearch
 import com.sygic.sdk.search.PlaceRequest
 import com.sygic.sdk.search.PlacesListener
+import com.sygic.sdk.search.ResultType
 import com.sygic.sdk.search.ReverseGeocoder
 import com.sygic.sdk.search.ReverseGeocoderProvider
 import com.sygic.sdk.search.SearchManagerProvider
@@ -389,5 +390,60 @@ class SearchTests : BaseTest() {
             }
             return@argThat false
         })
+    }
+
+    @Test
+    fun searchPostalUK() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("gb")
+        val searchHelper = SearchHelper()
+        val searchRequest = SearchRequest(
+            searchInput = "MK22RU",
+            location = GeoCoordinates(51.141742277855585, -1.012316722312827)
+        )
+        val result = searchHelper.offlineAutocomplete(searchRequest)
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue("The result should contain an item with the title 'MK2 2RU'", result.any { it.title == "MK2 2RU" })
+    }
+
+    @Test
+    fun searchPostalUK2() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("gb")
+        val searchHelper = SearchHelper()
+        val searchRequest = SearchRequest(
+            searchInput = "rg213hz",
+            location = GeoCoordinates(51.141742277855585, -1.012316722312827)
+        )
+        val result = searchHelper.offlineAutocomplete(searchRequest)
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue(
+            "The result should contain an item with the title 'RG21 3HZ'",
+            result.any { it.title == "RG21 3HZ" })
+        assertTrue(
+            "The type of the result is not 'POSTAL_CODE'",
+            result.any { it.type == ResultType.POSTAL_CODE })
+    }
+
+    @Test
+    fun searchPostalSK() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+        val searchHelper = SearchHelper()
+        val searchRequest = SearchRequest(
+            searchInput = "91501",
+            location = GeoCoordinates(48.74409946027763, 17.887561142146495)
+        )
+        val result = searchHelper.offlineAutocomplete(searchRequest)
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue(
+            "The result should contain an item with the title '91501'",
+            result.any { it.title == "91501" })
+        assertTrue(
+            "The type of the result is not 'POSTAL_CODE'",
+            result.any { it.type == ResultType.POSTAL_CODE })
+        assertTrue(
+            "The subtitle is not 'Nové Mesto nad Váhom, Slovensko'",
+            result.any { it.subtitle == "Nové Mesto nad Váhom, Slovensko" })
     }
 }
