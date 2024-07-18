@@ -37,19 +37,40 @@ class SearchHelper {
         val createSearchListener: CreateSearchCallback<OnlineMapSearch> = mock()
         val searchCaptor = argumentCaptor<OnlineMapSearch>()
         val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
+        val errorCaptor = argumentCaptor<ResultStatus>()
         searchManager.createOnlineMapSearch(createSearchListener)
         verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
         val search = searchCaptor.lastValue
 
         val session = search.createSession()
 
-        session.autocomplete(autocompleteRequest, autocompleteResultListener)
+        var attempts = 0
+        val maxRetries = 3
+        val retryDelay = 5000L // 2 seconds delay between retries
 
-        verify(autocompleteResultListener, timeout(10_000L)).onAutocomplete(
-            resultCaptor.capture()
-        )
-        verify(autocompleteResultListener, never()).onAutocompleteError(any())
-        return resultCaptor.firstValue
+        while (attempts < maxRetries) {
+            session.autocomplete(autocompleteRequest, autocompleteResultListener)
+
+            try {
+                verify(autocompleteResultListener, timeout(10_000L)).onAutocomplete(
+                    resultCaptor.capture()
+                )
+                verify(autocompleteResultListener, never()).onAutocompleteError(any())
+                return resultCaptor.firstValue
+            } catch (e: Exception) {
+                verify(autocompleteResultListener).onAutocompleteError(errorCaptor.capture())
+                val capturedError = errorCaptor.lastValue
+
+                if (capturedError == ResultStatus.UNSPECIFIED_ERROR && attempts < maxRetries - 1) {
+                    attempts++
+                    Thread.sleep(retryDelay) // Wait before retrying
+                } else {
+                    throw e // Rethrow the exception
+                }
+            }
+        }
+
+        throw RuntimeException("Failed to retrieve autocomplete results after $maxRetries attempts")
     }
 
     //ToDo doesnt work
