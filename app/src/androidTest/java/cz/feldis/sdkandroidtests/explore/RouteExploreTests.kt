@@ -1,5 +1,6 @@
 package cz.feldis.sdkandroidtests.explore
 
+import androidx.test.filters.RequiresDevice
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argThat
 import com.nhaarman.mockitokotlin2.eq
@@ -135,7 +136,7 @@ class RouteExploreTests : BaseTest() {
     }
 
     @Test
-    @Ignore("takes too long on simulator in debug")
+    @RequiresDevice
     fun explorePlacesOnRouteLongRoutePerformance() = runBlocking {
         disableOnlineMaps()
         val listener: NavigationManager.OnPlaceListener = mock(verboseLogging = true)

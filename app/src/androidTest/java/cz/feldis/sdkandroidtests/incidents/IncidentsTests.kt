@@ -424,7 +424,7 @@ class IncidentsTests : BaseTest() {
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "pristavnaOppositeRoadTraceIncident.nmea")
         val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
-        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 4F)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 8F)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
         val positionSimulatorListener: PositionSimulatorListener = mock(verboseLogging = true)
