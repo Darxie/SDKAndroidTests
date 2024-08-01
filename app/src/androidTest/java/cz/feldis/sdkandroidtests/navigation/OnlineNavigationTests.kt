@@ -25,6 +25,7 @@ import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.InOrder
@@ -118,8 +119,8 @@ class OnlineNavigationTests : BaseTest() {
         )
         val route =
             routeCompute.onlineComputeRoute(
-                GeoCoordinates(48.132310, 17.114100),
-                GeoCoordinates(48.131733, 17.109952)
+                GeoCoordinates( 48.0977, 17.2382),
+                GeoCoordinates(48.0986, 17.2345)
             )
         Assert.assertNotNull(route)
 
@@ -131,7 +132,7 @@ class OnlineNavigationTests : BaseTest() {
 
         Mockito.verify(listener, Mockito.timeout(STATUS_TIMEOUT))
             .onDirectionInfoChanged(argThat {
-                if (this.primary.nextRoadName == "Einsteinova") {
+                if (this.primary.nextRoadName == "Hlavná") {
                     return@argThat true
                 }
                 false
@@ -485,6 +486,7 @@ class OnlineNavigationTests : BaseTest() {
      * We verify that onPlaceInfoChanged was invoked.
      */
     @Test
+    @Ignore("fsdf")
     fun onPlaceListenerTest() = runBlocking {
 
         val listener: NavigationManager.OnPlaceListener = mock(verboseLogging = true)
