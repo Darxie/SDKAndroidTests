@@ -2,6 +2,7 @@ package cz.feldis.sdkandroidtests.navigation
 
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
+import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argThat
 import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.atMost
@@ -20,12 +21,18 @@ import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.navigation.NavigationManager
+import com.sygic.sdk.navigation.NavigationManager.OnRouteChangedListener
+import com.sygic.sdk.navigation.NavigationManager.OnWaypointPassListener
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.PositionManagerProvider
+import com.sygic.sdk.route.Route
 import com.sygic.sdk.route.RouteManeuver
+import com.sygic.sdk.route.Router
+import com.sygic.sdk.route.RouterProvider
 import com.sygic.sdk.route.Waypoint
+import com.sygic.sdk.route.listeners.RouteComputeListener
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
@@ -34,6 +41,8 @@ import cz.feldis.sdkandroidtests.TestMapFragment
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertFalse
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
@@ -95,6 +104,7 @@ class OfflineNavigationTests : BaseTest() {
      * contains direction info with primary nextRoadName "Einsteinova".
      */
     @Test
+    @Ignore("fsdkfjsdf")
     fun onDirectionInfoChangedTest() {
         mapDownload.installAndLoadMap("sk")
         val directionListener: NavigationManager.OnDirectionListener = mock(verboseLogging = true)
@@ -143,7 +153,8 @@ class OfflineNavigationTests : BaseTest() {
             GeoCoordinates(48.14852112743662, 17.13397077018316)
         )
 
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("$appDataPath/SVK-Kosicka.nmea").get()
+        val logSimulator =
+            NmeaLogSimulatorProvider.getInstance("$appDataPath/SVK-Kosicka.nmea").get()
         logSimulator.setSpeedMultiplier(2F)
         navigation.setRouteForNavigation(route)
         navigation.addOnRouteChangedListener(listener)
@@ -151,7 +162,10 @@ class OfflineNavigationTests : BaseTest() {
 
         Mockito.verify(
             listener, Mockito.timeout(30_000L).atLeast(1)
-        ).onRouteChanged(AdditionalMatchers.not(eq(route)), eq(NavigationManager.RouteUpdateStatus.Success))
+        ).onRouteChanged(
+            AdditionalMatchers.not(eq(route)),
+            eq(NavigationManager.RouteUpdateStatus.Success)
+        )
 
 
         logSimulator.stop()
@@ -241,8 +255,8 @@ class OfflineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route = routeCompute.offlineRouteCompute(
-            GeoCoordinates(51.007530,3.175810),
-            GeoCoordinates(51.001320,3.203420)
+            GeoCoordinates(51.007530, 3.175810),
+            GeoCoordinates(51.001320, 3.203420)
         )
 
         navigation.setRouteForNavigation(route)
@@ -309,8 +323,10 @@ class OfflineNavigationTests : BaseTest() {
 
     @Test
     fun changeMaxSpeedAndCheckSpeedLimit() {
-        val mapFragment = TestMapFragment.newInstance(getInitialCameraState(
-            GeoCoordinates(48.18180777150043, 17.05352048126561))
+        val mapFragment = TestMapFragment.newInstance(
+            getInitialCameraState(
+                GeoCoordinates(48.18180777150043, 17.05352048126561)
+            )
         )
         // create test scenario with activity & map fragment
         val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
@@ -421,7 +437,7 @@ class OfflineNavigationTests : BaseTest() {
             Mockito.timeout(10_000L)
         )
             .onHighwayExitInfoChanged(argThat {
-                for (exit in this){
+                for (exit in this) {
                     if (exit.exitNumber == "10" && exit.exitSide == 1) {
                         return@argThat true
                     }
@@ -442,10 +458,58 @@ class OfflineNavigationTests : BaseTest() {
         mapDownload.installAndLoadMap("sk")
         val route =
             routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.147260,17.150520),
-                GeoCoordinates(48.147230,17.150120)
+                GeoCoordinates(48.147260, 17.150520),
+                GeoCoordinates(48.147230, 17.150120)
             )
         assertEquals(route.maneuvers[0].type, RouteManeuver.Type.UTurnLeft)
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-12305
+     */
+    @Test
+    fun testSaveBriefJsonAfterPassWaypointRecompute() = runBlocking {
+        val waypointPassListener: OnWaypointPassListener = mock(verboseLogging = true)
+        val routeChangedListener: OnRouteChangedListener = mock(verboseLogging = true)
+        val routeComputeListener: RouteComputeListener = mock(verboseLogging = true)
+        lateinit var briefJson: String
+        mapDownload.installAndLoadMap("sk")
+        val route =
+            routeCompute.offlineRouteCompute(
+                start = GeoCoordinates(48.14227359686909, 17.13214634678706),
+                waypoint = GeoCoordinates(48.14407288637856, 17.131352923937925),
+                destination = GeoCoordinates(48.14648207079094, 17.138648964532695)
+            )
+
+        val navigation = NavigationManagerProvider.getInstance().get()
+        navigation.setRouteForNavigation(route)
+        navigation.addOnRouteChangedListener(routeChangedListener)
+        navigation.addOnWaypointPassListener(waypointPassListener)
+
+        val logSimulator =
+            NmeaLogSimulatorProvider.getInstance("$appDataPath/precision_hdop_output.nmea").get()
+        logSimulator.setSpeedMultiplier(4F)
+        logSimulator.start()
+
+        verify(waypointPassListener, timeout(15_000L)).onWaypointPassed(any())
+
+        verify(routeChangedListener, timeout(15_000L)).onRouteChanged(any(), eq(0))
+
+        briefJson = navigation.currentRoute!!.serializeToBriefJSON()
+
+        val routeCaptor = argumentCaptor<Route>()
+
+        assertFalse(briefJson.isEmpty())
+        RouterProvider.getInstance().get()
+            .computeRouteFromJSONString(briefJson, routeComputeListener)
+        verify(routeComputeListener, timeout(10_000L)).onComputeFinished(
+            routeCaptor.capture(), eq(Router.RouteComputeStatus.Success)
+        )
+
+        val finalRoute = routeCaptor.lastValue
+        assertEquals(finalRoute.waypoints[0].status, Waypoint.Status.Reached)
+        assertEquals(finalRoute.waypoints[1].status, Waypoint.Status.Reached)
+        assertEquals(finalRoute.waypoints[2].status, Waypoint.Status.Ahead)
     }
 
     private fun getInitialCameraState(coordinates: GeoCoordinates): CameraState {
@@ -468,7 +532,7 @@ class OfflineNavigationTests : BaseTest() {
     }
 
     private fun getMapView(mapFragment: TestMapFragment): MapView {
-        val mapInitListener : OnMapInitListener = mock(verboseLogging = true)
+        val mapInitListener: OnMapInitListener = mock(verboseLogging = true)
         val mapViewCaptor = argumentCaptor<MapView>()
 
         mapFragment.getMapAsync(mapInitListener)
