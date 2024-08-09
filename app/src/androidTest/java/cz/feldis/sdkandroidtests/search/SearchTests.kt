@@ -443,7 +443,7 @@ class SearchTests : BaseTest() {
             "The type of the result is not 'POSTAL_CODE'",
             result.any { it.type == ResultType.POSTAL_CODE })
         assertTrue(
-            "The subtitle is not 'Nové Mesto nad Váhom, Slovensko'",
+            "The subtitle is not 'Nové Mesto nad Váhom, Slovensko', but is ${result.first().subtitle}",
             result.any { it.subtitle == "Nové Mesto nad Váhom, Slovensko" })
     }
 }

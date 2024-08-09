@@ -118,7 +118,7 @@ class SearchHelper {
         val searchCaptor = argumentCaptor<CustomPlacesSearch>()
         val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
         searchManager.createCustomPlacesSearch(createSearchListener)
-        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
+        verify(createSearchListener, timeout(5_000L)).onSuccess(searchCaptor.capture())
         val search = searchCaptor.lastValue
 
         val session = search.createSession()
@@ -141,7 +141,7 @@ class SearchHelper {
         val searchCaptor = argumentCaptor<CustomPlacesSearch>()
         val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
         searchManager.createCustomPlacesSearchForDataset(dataset, createSearchListener)
-        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
+        verify(createSearchListener, timeout(5_000L)).onSuccess(searchCaptor.capture())
         val search = searchCaptor.lastValue
 
         val session = search.createSession()

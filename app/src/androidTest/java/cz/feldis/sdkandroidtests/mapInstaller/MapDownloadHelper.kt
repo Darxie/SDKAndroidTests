@@ -4,10 +4,13 @@ import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
 import com.sygic.sdk.map.listeners.MapInstallProgressListener
+import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.MapStatusListener
+import com.sygic.sdk.map.listeners.MapsResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
+import org.mockito.ArgumentMatchers.anyList
 
 class MapDownloadHelper : BaseTest() {
 
@@ -58,5 +61,19 @@ class MapDownloadHelper : BaseTest() {
         val listener : ResultListener = mock(verboseLogging = true)
         installer.clearCache(listener)
         verify(listener, timeout(20_000L)).onResult(eq(MapInstaller.LoadResult.Success))
+    }
+
+    fun unloadAllMaps() {
+        val listener: MapsResultListener = mock(verboseLogging = true)
+        installer.getAvailableCountries(
+            installed=true,
+            object: MapListResultListener {
+                override fun onMapListResult(mapIsos: List<String>, result: MapInstaller.LoadResult) {
+                    installer.unloadMaps(mapIsos, listener)
+                }
+            }
+        )
+        verify(listener, timeout(10_000L)).onMapsResult(anyList(), eq(MapInstaller.LoadResult.Success))
+
     }
 }

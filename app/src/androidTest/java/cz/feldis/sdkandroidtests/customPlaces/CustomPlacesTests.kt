@@ -249,7 +249,7 @@ class CustomPlacesTests : BaseTest() {
         )
         verify(
             customPlacesResultListener,
-            timeout(20_000L)
+            timeout(10_000L)
         ).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
         cpManager.getInstalledDatasets(
             CustomPlacesManager.InstalledDatasetSourceFilter.Any,
@@ -282,7 +282,7 @@ class CustomPlacesTests : BaseTest() {
         val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
             it.supportFragmentManager
                 .beginTransaction()
-                .add(android.R.id.content, mapFragment)
+                .add(R.id.content, mapFragment)
                 .commitNow()
         }
 
@@ -330,7 +330,7 @@ class CustomPlacesTests : BaseTest() {
         val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
             it.supportFragmentManager
                 .beginTransaction()
-                .add(android.R.id.content, mapFragment)
+                .add(R.id.content, mapFragment)
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)

@@ -1,7 +1,9 @@
 package cz.feldis.sdkandroidtests.navigation
 
 import android.graphics.Color
+import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argThat
+import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.atMost
 import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.inOrder
@@ -13,9 +15,13 @@ import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.route.Route
 import com.sygic.sdk.route.RouteManeuver
+import com.sygic.sdk.route.Router
+import com.sygic.sdk.route.RouterProvider
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.Waypoint
+import com.sygic.sdk.route.listeners.RouteComputeListener
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import com.sygic.sdk.vehicletraits.VehicleProfile
@@ -29,8 +35,10 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
@@ -475,5 +483,93 @@ class OfflineNavigationTests : BaseTest() {
                 GeoCoordinates(48.147230, 17.150120)
             )
         assertEquals(route.maneuvers[0].type, RouteManeuver.Type.UTurnLeft)
+    }
+
+    @Test
+    fun testWaypointPassAudioNotification() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.10044188518012, 17.24304412091042),
+            GeoCoordinates(48.100524472993364, 17.243852076060037),
+            GeoCoordinates(48.10047492032134, 17.24460232012754)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnWaypointPassListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        val inOrder: InOrder = inOrder(listener)
+
+        inOrder.verify(listener, timeout(60_000L)).onWaypointPassed(argThat {
+            return@argThat this.type == Waypoint.Type.Via
+        })
+
+        inOrder.verify(listener, timeout(60_000L)).onFinishReached()
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        simulator.destroy()
+        navigation.removeOnWaypointPassListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+        positionManagerKtx.stopPositionUpdating()
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-12305
+     */
+    @Test
+    fun testSaveBriefJsonAfterPassWaypointRecompute() = runBlocking {
+        val waypointPassListener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
+        val routeChangedListener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
+        val routeComputeListener: RouteComputeListener = mock(verboseLogging = true)
+        val currentRouteListener: NavigationManager.OnGetCurrentRoute = mock(verboseLogging = true)
+        lateinit var briefJson: String
+        mapDownload.installAndLoadMap("sk")
+        val route =
+            routeCompute.offlineRouteCompute(
+                start = GeoCoordinates(48.14227359686909, 17.13214634678706),
+                waypoint = GeoCoordinates(48.14407288637856, 17.131352923937925),
+                destination = GeoCoordinates(48.14648207079094, 17.138648964532695)
+            )
+
+        val navigation = NavigationManagerProvider.getInstance().get()
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnRouteChangedListener(routeChangedListener)
+        navigation.addOnWaypointPassListener(waypointPassListener)
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "precision_hdop_output.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 4F)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+        verify(waypointPassListener, timeout(20_000L)).onWaypointPassed(any())
+
+        verify(routeChangedListener, timeout(30_000L)).onRouteChanged(any(), eq(0))
+        navigation.getCurrentRoute(currentRouteListener)
+        val currentRouteCaptor = argumentCaptor<Route>()
+        verify(currentRouteListener, timeout(5_000L)).onCurrentRoute(currentRouteCaptor.capture())
+        briefJson = currentRouteCaptor.lastValue.serializeToBriefJSON()
+        assertFalse(briefJson.isEmpty())
+
+        val routeCaptor = argumentCaptor<Route>()
+
+        RouterProvider.getInstance().get()
+            .computeRouteFromJSONString(briefJson, routeComputeListener)
+        verify(routeComputeListener, timeout(10_000L)).onComputeFinished(
+            routeCaptor.capture(), eq(Router.RouteComputeStatus.Success)
+        )
+
+        val finalRoute = routeCaptor.lastValue
+        assertEquals(finalRoute.waypoints[0].status, Waypoint.Status.Reached)
+        assertEquals(finalRoute.waypoints[1].status, Waypoint.Status.Reached)
+        assertEquals(finalRoute.waypoints[2].status, Waypoint.Status.Ahead)
     }
 }
