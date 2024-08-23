@@ -43,7 +43,7 @@ import org.mockito.junit.MockitoJUnitRunner
 @RunWith(MockitoJUnitRunner::class)
 class MapViewTests : BaseTest() {
 
-    private lateinit var incidentsManager : IncidentsManager
+    private lateinit var incidentsManager: IncidentsManager
 
     override fun setUp() {
         super.setUp()
@@ -221,7 +221,7 @@ class MapViewTests : BaseTest() {
     }
 
     private fun getMapView(mapFragment: TestMapFragment): MapView {
-        val mapInitListener : OnMapInitListener = mock(verboseLogging = true)
+        val mapInitListener: OnMapInitListener = mock(verboseLogging = true)
         val mapViewCaptor = argumentCaptor<MapView>()
 
         mapFragment.getMapAsync(mapInitListener)

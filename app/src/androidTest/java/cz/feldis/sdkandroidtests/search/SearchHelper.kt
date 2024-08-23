@@ -1,11 +1,31 @@
 package cz.feldis.sdkandroidtests.search
 
-import com.nhaarman.mockitokotlin2.*
+import com.nhaarman.mockitokotlin2.any
+import com.nhaarman.mockitokotlin2.anyOrNull
+import com.nhaarman.mockitokotlin2.argumentCaptor
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.never
+import com.nhaarman.mockitokotlin2.timeout
+import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.places.Place
-import com.sygic.sdk.search.*
-import cz.feldis.sdkandroidtests.BaseTest
+import com.sygic.sdk.search.AutocompleteResult
+import com.sygic.sdk.search.AutocompleteResultListener
+import com.sygic.sdk.search.CreateSearchCallback
+import com.sygic.sdk.search.CustomPlacesSearch
+import com.sygic.sdk.search.GeocodeLocationRequest
+import com.sygic.sdk.search.GeocodingResult
+import com.sygic.sdk.search.GeocodingResultListener
+import com.sygic.sdk.search.GeocodingResultsListener
+import com.sygic.sdk.search.OfflineMapSearch
+import com.sygic.sdk.search.OnlineMapSearch
+import com.sygic.sdk.search.PlaceRequest
+import com.sygic.sdk.search.PlacesListener
+import com.sygic.sdk.search.ResultStatus
+import com.sygic.sdk.search.ResultType
+import com.sygic.sdk.search.SearchManagerProvider
+import com.sygic.sdk.search.SearchRequest
 import java.nio.ByteBuffer
-import java.util.*
+import java.util.UUID
 
 class SearchHelper {
 

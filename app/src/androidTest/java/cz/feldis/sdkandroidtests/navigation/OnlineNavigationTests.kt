@@ -11,6 +11,7 @@ import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManager.OnRouteProgressListener
 import com.sygic.sdk.navigation.NavigationManagerProvider
+import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
@@ -119,7 +120,7 @@ class OnlineNavigationTests : BaseTest() {
         )
         val route =
             routeCompute.onlineComputeRoute(
-                GeoCoordinates( 48.0977, 17.2382),
+                GeoCoordinates(48.0977, 17.2382),
                 GeoCoordinates(48.0986, 17.2345)
             )
         Assert.assertNotNull(route)
@@ -257,7 +258,7 @@ class OnlineNavigationTests : BaseTest() {
         )
             .onHighwayExitInfoChanged(argThat {
                 for (exit in this) {
-                    if (exit.exitNumber == "10" && exit.exitSide == 1) {
+                    if (exit.exitNumber == "10" && exit.exitSide == HighwayExitInfo.ExitSide.Right) {
                         return@argThat true
                     }
                 }
@@ -639,11 +640,11 @@ class OnlineNavigationTests : BaseTest() {
 
         val myList: MutableList<Int> = mutableListOf()
 
-        navigation.addOnPlaceListener { listPlaceInfo ->
+        navigation.addOnPlaceListener({ listPlaceInfo ->
             if (listPlaceInfo.isNotEmpty()) {
                 myList.add(listPlaceInfo[0].distance)
             }
-        }
+        })
 
         val inOrder: InOrder = inOrder(listener)
         inOrder.verify(listener, Mockito.timeout(STATUS_TIMEOUT).atLeastOnce())

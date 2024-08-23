@@ -55,8 +55,8 @@ class VoicesTests : BaseTest() {
             )
         assertEquals(1, voiceListCaptor.allValues.size)
         voiceListCaptor.lastValue.find { it.id == "en-au-x-aub-local" }
-            .let {
-                voicesManager.setVoice(it)
+            ?.let { voice ->
+                voicesManager.setVoice(voice)
             }
         verify(onSetVoiceCallback, timeout(10_000L)).onSetVoice("en-au-x-aub-local", true)
     }

@@ -14,6 +14,7 @@ import com.sygic.sdk.incidents.SpeedCamera
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
+import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.Route
 import com.sygic.sdk.route.RouteManeuver
@@ -35,7 +36,6 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -99,7 +99,7 @@ class OfflineNavigationTests : BaseTest() {
      *
      * In this test we compute an offline route and set it for navigation.
      * Via simulator provider we set this route and start demonstrate. We verify that onDirectionInfoChanged
-     * contains direction info with primary nextRoadName "Einsteinova".
+     * contains direction info with primary nextRoadName "Hlavná".
      */
     @Test
     fun onDirectionInfoChangedTest() = runBlocking {
@@ -108,7 +108,7 @@ class OfflineNavigationTests : BaseTest() {
         val navigation = NavigationManagerProvider.getInstance().get()
 
         val route = routeCompute.offlineRouteCompute(
-            GeoCoordinates( 48.0977, 17.2382),
+            GeoCoordinates(48.0977, 17.2382),
             GeoCoordinates(48.0986, 17.2345)
         )
 
@@ -459,7 +459,7 @@ class OfflineNavigationTests : BaseTest() {
         )
             .onHighwayExitInfoChanged(argThat {
                 for (exit in this) {
-                    if (exit.exitNumber == "10" && exit.exitSide == 1) {
+                    if (exit.exitNumber == "10" && exit.exitSide == HighwayExitInfo.ExitSide.Right) {
                         return@argThat true
                     }
                 }
@@ -552,7 +552,7 @@ class OfflineNavigationTests : BaseTest() {
 
         verify(waypointPassListener, timeout(20_000L)).onWaypointPassed(any())
 
-        verify(routeChangedListener, timeout(30_000L)).onRouteChanged(any(), eq(0))
+        verify(routeChangedListener, timeout(30_000L)).onRouteChanged(any(), eq(NavigationManager.RouteUpdateStatus.Success))
         navigation.getCurrentRoute(currentRouteListener)
         val currentRouteCaptor = argumentCaptor<Route>()
         verify(currentRouteListener, timeout(5_000L)).onCurrentRoute(currentRouteCaptor.capture())

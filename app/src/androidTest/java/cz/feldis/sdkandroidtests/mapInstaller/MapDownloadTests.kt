@@ -1,8 +1,14 @@
 package cz.feldis.sdkandroidtests.mapInstaller
 
 import androidx.test.filters.RequiresDevice
-import com.nhaarman.mockitokotlin2.*
-import com.sygic.sdk.OperationStatus.Result.Success
+import com.nhaarman.mockitokotlin2.any
+import com.nhaarman.mockitokotlin2.argThat
+import com.nhaarman.mockitokotlin2.argumentCaptor
+import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.never
+import com.nhaarman.mockitokotlin2.timeout
+import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.map.CountryDetails
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
@@ -12,10 +18,12 @@ import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.mockito.ArgumentMatchers.anyList
-import java.util.*
+import java.util.Timer
 import kotlin.concurrent.schedule
 
 class MapDownloadTests : BaseTest() {
@@ -201,7 +209,7 @@ class MapDownloadTests : BaseTest() {
         verify(listener, timeout(20_000L).times(1))
             .onResult(eq(MapInstaller.LoadResult.Success))
 
-        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         val detailsCaptor = argumentCaptor<CountryDetails>()
 
         installer.getCountryDetails("sk", true, cdListener)
@@ -212,7 +220,7 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun verifyProviderOfInstalledMapTest() {
-        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         mapDownloadHelper.installAndLoadMap("is")
         MapInstallerProvider.getInstance().get().getCountryDetails("is", true, cdListener)
         val captor = argumentCaptor<CountryDetails>()
@@ -224,7 +232,7 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun verifyProviderOfNotInstalledMapCountrySplit() {
-        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         mapDownloadHelper.ensureMapNotInstalled("de-02")
         MapInstallerProvider.getInstance().get().getCountryDetails("de-02", false, cdListener)
         val captor = argumentCaptor<CountryDetails>()
@@ -236,7 +244,7 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun verifyNonExistentCountryDetailsOfResourceMap() {
-        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         MapInstallerProvider.getInstance().get().getCountryDetails("de-01", false, cdListener)
         verify(cdListener, never()).onCountryDetails(any())
         verify(cdListener, timeout(10_000L)).onCountryDetailsError(eq(MapInstaller.LoadResult.DetailsNotAvailable))

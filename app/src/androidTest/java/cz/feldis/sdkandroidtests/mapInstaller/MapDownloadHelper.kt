@@ -1,9 +1,12 @@
 package cz.feldis.sdkandroidtests.mapInstaller
 
-import com.nhaarman.mockitokotlin2.*
+import com.nhaarman.mockitokotlin2.any
+import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.timeout
+import com.nhaarman.mockitokotlin2.verify
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
-import com.sygic.sdk.map.listeners.MapInstallProgressListener
 import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.MapStatusListener
@@ -58,7 +61,7 @@ class MapDownloadHelper : BaseTest() {
     }
 
     fun clearCache() {
-        val listener : ResultListener = mock(verboseLogging = true)
+        val listener: ResultListener = mock(verboseLogging = true)
         installer.clearCache(listener)
         verify(listener, timeout(20_000L)).onResult(eq(MapInstaller.LoadResult.Success))
     }
@@ -66,8 +69,8 @@ class MapDownloadHelper : BaseTest() {
     fun unloadAllMaps() {
         val listener: MapsResultListener = mock(verboseLogging = true)
         installer.getAvailableCountries(
-            installed=true,
-            object: MapListResultListener {
+            installed = true,
+            object : MapListResultListener {
                 override fun onMapListResult(mapIsos: List<String>, result: MapInstaller.LoadResult) {
                     installer.unloadMaps(mapIsos, listener)
                 }

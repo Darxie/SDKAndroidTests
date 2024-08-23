@@ -511,9 +511,11 @@ class RouteComputeTests : BaseTest() {
                 generalVehicleTraits.vehicleType = VehicleType.Car
                 generalVehicleTraits.maximalSpeed = 130
                 dimensionalTraits?.trailers = listOf(
-                    Trailer(1000, true, listOf(
-                        Axle(4, 250F, 4)
-                    ))
+                    Trailer(
+                        1000, true, listOf(
+                            Axle(4, 250F, 4)
+                        )
+                    )
                 )
             }
         }

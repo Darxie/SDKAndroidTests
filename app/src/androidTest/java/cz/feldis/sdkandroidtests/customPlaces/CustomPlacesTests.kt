@@ -65,12 +65,6 @@ class CustomPlacesTests : BaseTest() {
     }
 
     private fun installOfflinePlaces(iso: String) {
-        val searchCallback: CreateSearchCallback<CustomPlacesSearch> = mock(verboseLogging = true)
-        SearchManagerProvider.getInstance().get().createCustomPlacesSearch(searchCallback)
-
-        verify(searchCallback, timeout(10_000L)).onSuccess(
-            any()
-        )
         val customPlacesResultListener: CustomPlacesManager.InstallResultListener =
             mock(verboseLogging = true)
         cpManager.installOfflineDatasets(
@@ -148,6 +142,12 @@ class CustomPlacesTests : BaseTest() {
 
     @Test
     fun testInstallCustomPlacesAndVerifyIndexing() {
+        val searchCallback: CreateSearchCallback<CustomPlacesSearch> = mock(verboseLogging = true)
+        SearchManagerProvider.getInstance().get().createCustomPlacesSearch(searchCallback)
+
+        verify(searchCallback, timeout(10_000L)).onSuccess(
+            any()
+        )
         val customPlacesSearchIndexingListener: CustomPlacesSearchIndexingListener =
             mock(verboseLogging = true)
         cpManager.addSearchIndexingListener(customPlacesSearchIndexingListener)

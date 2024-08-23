@@ -23,7 +23,6 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.runBlocking
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.Mockito

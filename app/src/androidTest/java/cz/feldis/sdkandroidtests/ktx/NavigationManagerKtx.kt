@@ -7,14 +7,13 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 class NavigationManagerKtx {
+
     suspend fun stopNavigation(navigation: NavigationManager): Unit = suspendCoroutine { continuation ->
-        navigation.stopNavigation { continuation.resume(Unit) }
+        navigation.stopNavigation({ continuation.resume(Unit) })
     }
 
     suspend fun setRouteForNavigation(route: Route, navigation: NavigationManager): Unit = suspendCoroutine { continuation ->
-        navigation.setRouteForNavigation(route) {
-            continuation.resume(Unit)
-        }
+        navigation.setRouteForNavigation(route, { continuation.resume(Unit) })
     }
 
     suspend fun setSpeedMultiplier(simulator: Simulator, speedMultiplier: Float): Unit = suspendCoroutine { continuation ->

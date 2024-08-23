@@ -91,7 +91,6 @@ abstract class BaseTest {
         val contextInitRequest = SygicContextInitRequest(
             jsonConfig,
             appContext,
-            tracking = null,
             logConnector = logConnector,
             loadMaps = true,
             clearOnlineCache = false
@@ -106,7 +105,7 @@ abstract class BaseTest {
             override fun onInstance(instance: SygicContext) {
                 isEngineInitialized = true
                 sygicContext = instance
-                SygicEngine.openGpsConnection()
+                PositionManagerProvider.getInstance().get().openGpsConnection()
                 latch.countDown()
             }
         })

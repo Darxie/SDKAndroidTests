@@ -24,17 +24,19 @@ import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
 import com.sygic.sdk.vehicletraits.powertrain.FuelType
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
+import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 
 class RouteWarningTests : BaseTest() {
 
     private lateinit var mapDownloadHelper: MapDownloadHelper
     private lateinit var routeComputeHelper: RouteComputeHelper
+    private val navigationManagerKtx = NavigationManagerKtx()
 
     override fun setUp() {
         super.setUp()
@@ -613,8 +615,9 @@ class RouteWarningTests : BaseTest() {
      * that vehicle zone restriction information is passed through the NavigationManager.
      */
     @Test
-    fun testVehicleZonesBranisko() {
+    fun testVehicleZonesBranisko() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
 
         val setVehicleProfileListener: SetVehicleProfileListener = mock(verboseLogging = true)
         val vehicleZoneListener: OnVehicleZoneListener = mock(verboseLogging = true)
@@ -640,7 +643,7 @@ class RouteWarningTests : BaseTest() {
         )
 
         assertNotNull(route)
-        NavigationManagerProvider.getInstance().get().setRouteForNavigation(route) {}
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
 
         NavigationManagerProvider.getInstance().get().addOnVehicleZoneListener(vehicleZoneListener)
         verify(vehicleZoneListener, timeout(10_000L)).onVehicleZoneInfo(argThat {

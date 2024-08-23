@@ -15,7 +15,6 @@ import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.NmeaFileDataProvider
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
-import cz.feldis.sdkandroidtests.ktx.PositionManagerKtx
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
