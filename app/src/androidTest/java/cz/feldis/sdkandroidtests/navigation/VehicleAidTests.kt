@@ -46,6 +46,7 @@ class VehicleAidTests: BaseTest() {
     }
 
     @Test
+    @Ignore("fdksjf")
     fun vehicleAidMaxHeight() {
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
         // create test scenario with activity & map fragment

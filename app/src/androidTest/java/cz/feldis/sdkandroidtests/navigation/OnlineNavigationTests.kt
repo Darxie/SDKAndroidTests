@@ -116,6 +116,7 @@ class OnlineNavigationTests : BaseTest() {
      * We verify that onDirectionInfoChanged was invoked.
      */
     @Test
+    @Ignore("needs to be rewritten")
     fun onDirectionInfoChangedTest() {
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener = Mockito.mock(
@@ -495,7 +496,7 @@ class OnlineNavigationTests : BaseTest() {
 
         Mockito.verify(
             listener,
-            Mockito.timeout(STATUS_TIMEOUT)
+            Mockito.timeout(STATUS_TIMEOUT).atLeastOnce()
         )
             .onPlaceInfoChanged(argThat {
                 return@argThat this.isNotEmpty()

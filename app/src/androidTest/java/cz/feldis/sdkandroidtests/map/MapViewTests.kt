@@ -1,5 +1,6 @@
 package cz.feldis.sdkandroidtests.map
 
+import android.graphics.Color
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import com.nhaarman.mockitokotlin2.any
@@ -25,12 +26,18 @@ import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.map.listeners.RequestObjectCallback
 import com.sygic.sdk.map.`object`.MapIncident
+import com.sygic.sdk.map.`object`.MapPolygon
 import com.sygic.sdk.map.`object`.ViewObject
 import com.sygic.sdk.map.`object`.data.ViewObjectData
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.route.RouterProvider
+import com.sygic.sdk.route.RoutingOptions
+import com.sygic.sdk.route.listeners.EVRangeListener
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.SygicActivity
 import cz.feldis.sdkandroidtests.TestMapFragment
+import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -196,6 +203,65 @@ class MapViewTests : BaseTest() {
             scenario.moveToState(Lifecycle.State.DESTROYED)
             fail("Expected a MapIncident, but got ${firstValue::class.simpleName}")
         }
+    }
+
+    /**
+     * Calculates remaining EV range polygon and visualizes it, then removes it.
+     * Zooms out and in with animation.
+     * This test should pass without a crash.
+     */
+    @Test
+    fun testSpiderRangeVisualization(): Unit = runBlocking {
+        MapDownloadHelper().installAndLoadMap("sk")
+        val listener: EVRangeListener = mock(verboseLogging = true)
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+        val mapView = getMapView(mapFragment)
+        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
+        mapView.cameraModel.zoomLevel = 15F
+        mapView.cameraModel.tilt = 0F
+
+        RouterProvider.getInstance().get().computeEVRange(
+            GeoCoordinates(48.10095535808773, 17.234824479529344),
+            listOf(3.0),
+            RoutingOptions().apply {
+
+            },
+            RouteComputeHelper().createEVProfile(),
+            listener
+        )
+        mapView.cameraModel.setZoomLevel(
+            12F,
+            MapAnimation(1500L, MapAnimation.InterpolationCurve.Accelerate)
+        )
+        delay(2000)
+        val captor = argumentCaptor<List<List<GeoCoordinates>>>()
+        verify(listener, timeout(60_000L)).onEVRangeComputed(captor.capture())
+        val isochrones = captor.firstValue[0]
+
+        val polygon =
+            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), isochrones)
+                .setBorderColor(Color.BLUE)
+                .setCenterColor(Color.TRANSPARENT)
+                .setCenterRadius(0.95f)
+                .build()
+
+        mapView.mapDataModel.addMapObject(polygon)
+        delay(2000)
+        mapView.mapDataModel.removeMapObject(polygon)
+        mapView.cameraModel.setZoomLevel(
+            15F,
+            MapAnimation(1500L, MapAnimation.InterpolationCurve.Accelerate)
+        )
+        delay(2000)
+
+        scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
     private fun getInitialCameraState(): CameraState {

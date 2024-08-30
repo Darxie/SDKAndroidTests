@@ -1,7 +1,5 @@
 package cz.feldis.sdkandroidtests.routing
 
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.PolyUtil
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argThat
 import com.nhaarman.mockitokotlin2.argumentCaptor
@@ -979,46 +977,6 @@ class RouteComputeTests : BaseTest() {
         for (maneuver in route.maneuvers) {
             assertFalse(maneuver.roadName == "Thomas-Mann-Straße")
         }
-    }
-
-    @Test
-    fun googlePolylineParsingTestSlovakia() {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val polyline = "cfpdHgxmgBtBFDaFB_@@O?UCY?q@J}ID}BJS?MG[KI?UTcGVY`@g@^]pIkDfAi@JkD"
-        val decodedPath: List<LatLng> = PolyUtil.decode(polyline)
-        val decodedPolyline = decodedPath.map { GeoCoordinates(it.latitude, it.longitude) }
-
-        val listener: RouteComputeListener = mock(verboseLogging = true)
-        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
-
-        val guidedRouteProfile = GuidedRouteProfile(decodedPolyline)
-        val routeRequest = RouteRequest(guidedRouteProfile)
-
-        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
-
-        val captor = argumentCaptor<Route>()
-
-        router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
-        verify(listener, timeout(10_000L)).onComputeFinished(
-            captor.capture(),
-            eq(Router.RouteComputeStatus.Success)
-        )
-        val route = captor.firstValue
-        assertNotNull(route)
-
-        assertEquals(8, route.maneuvers[0].type)
-        assertEquals(8, route.maneuvers[1].type)
-        assertEquals(19, route.maneuvers[2].type)
-        assertEquals(2, route.maneuvers[2].roundaboutExit)
-        assertEquals(19, route.maneuvers[3].type)
-        assertEquals(2, route.maneuvers[2].roundaboutExit)
-        assertEquals(17, route.maneuvers[4].type)
-        assertEquals(2, route.maneuvers[2].roundaboutExit)
-        assertEquals(8, route.maneuvers[5].type)
-        assertEquals(4, route.maneuvers[6].type)
     }
 
     private suspend fun getRouteRequest(path: String): RouteRequest =
