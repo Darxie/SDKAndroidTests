@@ -2,7 +2,7 @@
 buildscript {
     ext {
         build_tools_version = '33.0.1'
-        kotlinVersion = "1.7.21"
+        kotlinVersion = "1.9.24"
     }
 
     repositories {
@@ -13,8 +13,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.4.2'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.7.21"
+        classpath 'com.android.tools.build:gradle:8.5.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         classpath 'com.google.gms:google-services:4.3.12'
 
         if (gradle.wantsToBuildSdkFromSource()) {

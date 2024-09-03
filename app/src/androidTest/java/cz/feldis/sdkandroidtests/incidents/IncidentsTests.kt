@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.incidents
 
-import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.incidents.*
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
@@ -23,6 +22,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.InOrder
 import org.mockito.Mockito
+import org.mockito.kotlin.*
 
 class IncidentsTests : BaseTest() {
 

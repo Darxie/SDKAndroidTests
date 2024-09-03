@@ -6,11 +6,7 @@ import android.util.Log
 import androidx.annotation.CallSuper
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.rule.GrantPermissionRule
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.never
-import com.nhaarman.mockitokotlin2.timeout
-import com.nhaarman.mockitokotlin2.verify
+import org.mockito.kotlin.*
 import com.sygic.sdk.LoggingSettings
 import com.sygic.sdk.MapReaderSettings
 import com.sygic.sdk.SygicEngine

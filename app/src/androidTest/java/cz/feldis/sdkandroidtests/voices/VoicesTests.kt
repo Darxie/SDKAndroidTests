@@ -1,10 +1,6 @@
 package cz.feldis.sdkandroidtests.voices
 
-import com.nhaarman.mockitokotlin2.argumentCaptor
-import com.nhaarman.mockitokotlin2.eq
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.timeout
-import com.nhaarman.mockitokotlin2.verify
+import org.mockito.kotlin.*
 import com.sygic.sdk.OperationStatus
 import com.sygic.sdk.voice.VoiceEntry
 import com.sygic.sdk.voice.VoiceManager

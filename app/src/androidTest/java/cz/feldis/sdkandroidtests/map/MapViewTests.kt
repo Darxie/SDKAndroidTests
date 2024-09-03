@@ -3,13 +3,7 @@ package cz.feldis.sdkandroidtests.map
 import android.graphics.Color
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.argumentCaptor
-import com.nhaarman.mockitokotlin2.eq
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.never
-import com.nhaarman.mockitokotlin2.timeout
-import com.nhaarman.mockitokotlin2.verify
+import org.mockito.kotlin.*
 import com.sygic.sdk.incidents.IncidentData
 import com.sygic.sdk.incidents.IncidentId
 import com.sygic.sdk.incidents.IncidentType
