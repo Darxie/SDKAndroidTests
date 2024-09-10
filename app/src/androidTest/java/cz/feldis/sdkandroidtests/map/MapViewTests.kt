@@ -209,6 +209,7 @@ class MapViewTests : BaseTest() {
      */
     @Test
     fun testSpiderRangeVisualization(): Unit = runBlocking {
+        disableOnlineMaps()
         MapDownloadHelper().installAndLoadMap("sk")
         val listener: EVRangeListener = mock(verboseLogging = true)
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
