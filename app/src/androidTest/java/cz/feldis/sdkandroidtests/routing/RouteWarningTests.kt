@@ -47,8 +47,8 @@ class RouteWarningTests : BaseTest() {
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
-        val start = GeoCoordinates(48.07473125945471, 17.121696472685443)
-        val destination = GeoCoordinates(48.08639349401805, 17.124270062341857)
+        val start = GeoCoordinates(48.22920490622517, 17.35421334454338)
+        val destination = GeoCoordinates(48.243843523144996, 17.356337654048843)
         val routingOptions = RoutingOptions().apply {
             routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
         }
