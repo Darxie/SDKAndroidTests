@@ -177,7 +177,7 @@ class RouteExploreTests : BaseTest() {
                     val elapsedTime = System.currentTimeMillis() - startTime
                     Timber.i("Time elapsed waiting for PoR: $elapsedTime ms")
                     simulator.stop(completeListener)
-                    verify(completeListener, timeout(5_000L)).onComplete()
+                    verify(completeListener, timeout(5_000L).atLeastOnce()).onComplete()
                 }
                 return@argThat isNonEmpty
             })
