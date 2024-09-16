@@ -125,8 +125,9 @@ class VehicleAidTests : BaseTest() {
     }
 
     @Test
-    @Ignore("Only works with HERE Maps")
     fun vehicleAidMaxTrailers() = runBlocking {
+        disableOnlineMaps()
+        mapDownload.installAndLoadMap("se")
         val vehicleProfile = VehicleProfile().apply {
             this.dimensionalTraits = DimensionalTraits().apply {
                 this.totalHeight = 8000
