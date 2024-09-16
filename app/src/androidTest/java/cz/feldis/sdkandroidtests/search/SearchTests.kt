@@ -419,7 +419,6 @@ class SearchTests : BaseTest() {
     }
 
     @Test
-    @Ignore("It is Beckov, investigate why the fuck")
     fun searchPostalSK() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
