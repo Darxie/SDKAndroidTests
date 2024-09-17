@@ -106,6 +106,7 @@ abstract class BaseTest {
             }
         })
         latch.await(30, TimeUnit.SECONDS)
+        startPositionUpdating()
     }
 
     @After
@@ -213,6 +214,12 @@ abstract class BaseTest {
     open fun startPositionUpdating() {
         val listener: PositionManager.OnOperationComplete = mock(verboseLogging = true)
         PositionManagerProvider.getInstance().get().startPositionUpdating(listener)
+        verify(listener, timeout(5_000L)).onComplete()
+    }
+
+    open fun stopPositionUpdating() {
+        val listener: PositionManager.OnOperationComplete = mock(verboseLogging = true)
+        PositionManagerProvider.getInstance().get().stopPositionUpdating(listener)
         verify(listener, timeout(5_000L)).onComplete()
     }
 
