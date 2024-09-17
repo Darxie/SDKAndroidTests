@@ -39,7 +39,6 @@ class OnlineNavigationTests : BaseTest() {
         mapDownload = MapDownloadHelper()
         mapDownload.ensureMapNotInstalled("sk")
         navigation = NavigationManagerProvider.getInstance().get()
-        startPositionUpdating()
     }
 
     @Test
@@ -480,9 +479,7 @@ class OnlineNavigationTests : BaseTest() {
      * We verify that onPlaceInfoChanged was invoked.
      */
     @Test
-    @Ignore("fsdf")
     fun onPlaceListenerTest() = runBlocking {
-
         val listener: NavigationManager.OnPlaceListener = mock(verboseLogging = true)
 
         val route =

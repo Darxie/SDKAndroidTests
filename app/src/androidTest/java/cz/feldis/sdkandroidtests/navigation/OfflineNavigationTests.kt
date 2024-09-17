@@ -49,7 +49,6 @@ class OfflineNavigationTests : BaseTest() {
         super.setUp()
         routeCompute = RouteComputeHelper()
         mapDownload = MapDownloadHelper()
-        startPositionUpdating()
         disableOnlineMaps()
     }
 

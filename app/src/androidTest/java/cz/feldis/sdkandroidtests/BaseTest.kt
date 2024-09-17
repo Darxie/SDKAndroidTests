@@ -106,7 +106,6 @@ abstract class BaseTest {
             }
         })
         latch.await(30, TimeUnit.SECONDS)
-        startPositionUpdating()
     }
 
     @After

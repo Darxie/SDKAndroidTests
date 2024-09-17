@@ -13,26 +13,24 @@ import org.junit.Test
 class PositionManagerTests : BaseTest() {
 
     @Test
-    @RequiresDevice
     fun getLastValidLocationTest() {
-        val positionListener: PositionManager.OnLastKnownPositionListener = mock(verboseLogging = true)
+        startPositionUpdating()
+        val positionListener: PositionManager.OnLastKnownPositionListener =
+            mock(verboseLogging = true)
 
         PositionManagerProvider.getInstance().get().getLastKnownPosition(positionListener)
-        verify(positionListener, timeout(5_000L)).onLastKnownPosition(argThat {
-            if (this.isValid) {
-                return@argThat true
-            }
-            false
-        })
+        verify(positionListener, timeout(5_000L)).onLastKnownPosition(argThat { isValid })
     }
 
     @Test
     fun customPositionUpdaterTest() {
         val mPositionManager = PositionManagerProvider.getInstance().get()
 
-        val positionChangeListener: PositionManager.PositionChangeListener = mock(verboseLogging = true)
+        val positionChangeListener: PositionManager.PositionChangeListener =
+            mock(verboseLogging = true)
         val operationListener: PositionManager.OnOperationComplete = mock(verboseLogging = true)
-        val updatePositionListener: CustomPositionUpdater.OnOperationComplete = mock(verboseLogging = true)
+        val updatePositionListener: CustomPositionUpdater.OnOperationComplete =
+            mock(verboseLogging = true)
 
         val customPositionUpdater = CustomPositionUpdater()
         mPositionManager.setCustomPositionUpdater(customPositionUpdater, operationListener)
