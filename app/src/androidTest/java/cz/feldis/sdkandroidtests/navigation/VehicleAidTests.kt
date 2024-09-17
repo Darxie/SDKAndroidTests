@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.navigation
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
@@ -11,6 +10,7 @@ import com.sygic.sdk.route.RoutingOptions.RoutingService
 import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
+import com.sygic.sdk.vehicletraits.dimensional.SemiTrailer
 import com.sygic.sdk.vehicletraits.dimensional.Trailer
 import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
@@ -22,6 +22,10 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 
 class VehicleAidTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -170,6 +174,142 @@ class VehicleAidTests : BaseTest() {
             return@argThat false
         })
 
+        navigation.removeOnVehicleAidListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    //HANKA1
+    @Test
+    fun vehicleAidMaxLength() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+
+        val vehicleProfile = VehicleProfile().apply {
+            this.dimensionalTraits = DimensionalTraits().apply {
+                this.totalLength = 16500
+            }
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                this.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            start = GeoCoordinates(48.3182, 17.2444),
+            destination = GeoCoordinates(48.3258, 17.2351),
+            routingOptions = RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile
+                routingService = RoutingService.Offline
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnVehicleAidListener(listener)
+
+        verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
+            for (vehicleAidInfo in this) {
+                if (vehicleAidInfo.restriction.type == RestrictionInfo.RestrictionType.DimensionalLengthMax) {
+                    if (vehicleAidInfo.restriction.value == 10000)
+                        return@argThat true
+                }
+            }
+            return@argThat false
+        })
+
+        navigation.removeOnVehicleAidListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    //HANKA2
+    @Test
+    fun vehicleAidMaxWeight() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+
+        val vehicleProfile = VehicleProfile().apply {
+            this.dimensionalTraits = DimensionalTraits().apply {
+                this.totalWeight = 44000.0F
+            }
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                this.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            start = GeoCoordinates(48.3182, 17.2444),
+            destination = GeoCoordinates(48.3258, 17.2351),
+            routingOptions = RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile
+                routingService = RoutingService.Offline
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnVehicleAidListener(listener)
+
+        verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
+            for (vehicleAidInfo in this) {
+                if (vehicleAidInfo.restriction.type == RestrictionInfo.RestrictionType.WeightMax) {
+                    if (vehicleAidInfo.restriction.value == 7500)
+                        return@argThat true
+                }
+            }
+            return@argThat false
+        })
+
+        navigation.removeOnVehicleAidListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    //HANKA3
+    @Test
+    @Ignore("only for HERE maps")
+    fun vehicleAidWheelCountRestriction() = runBlocking {
+        disableOnlineMaps()
+        mapDownload.installAndLoadMap("th")
+
+        val vehicleProfile = VehicleProfile().apply {
+            this.dimensionalTraits = DimensionalTraits().apply {
+                this.semiTrailer = SemiTrailer(
+                    60000, false,
+                    listOf(Axle(8, 11000F, 8))
+                )
+            }
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                this.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            start = GeoCoordinates(13.79803, 100.56111),
+            destination = GeoCoordinates(13.79673, 100.56273),
+            routingOptions = RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile
+                routingService = RoutingService.Offline
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnVehicleAidListener(listener)
+
+        verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
+            for (vehicleAidInfo in this) {
+                if (vehicleAidInfo.restriction.type == RestrictionInfo.RestrictionType.LimitsMaxWheels) {
+                    if (vehicleAidInfo.restriction.value == 5)
+                        return@argThat true
+                }
+            }
+            return@argThat false
+        })
         navigation.removeOnVehicleAidListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
