@@ -4,6 +4,7 @@ import com.sygic.sdk.incidents.*
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.explorer.RouteExplorer
+import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.IncidentInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.GeoPolyline
@@ -60,7 +61,7 @@ class IncidentsTests : BaseTest() {
             GeoCoordinates(48.10223044006818, 17.23340438881692),
             GeoCoordinates(48.098580331935274, 17.237506607527582)
         )
-        RouteExplorer.exploreIncidentsOnRoute(route, emptyList(), listener)
+        RouteExplorerProvider.getInstance().get().exploreIncidentsOnRoute(route, emptyList(), listener)
         val captor = argumentCaptor<List<IncidentInfo>>()
         val progressCaptor = argumentCaptor<Int>()
 
@@ -104,7 +105,7 @@ class IncidentsTests : BaseTest() {
             GeoCoordinates(48.10223044006818, 17.23340438881692),
             GeoCoordinates(48.098580331935274, 17.237506607527582)
         )
-        RouteExplorer.exploreIncidentsOnRoute(route, emptyList(), listener)
+        RouteExplorerProvider.getInstance().get().exploreIncidentsOnRoute(route, emptyList(), listener)
 
         verify(
             listener,

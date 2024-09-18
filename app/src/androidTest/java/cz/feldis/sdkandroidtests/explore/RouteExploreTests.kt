@@ -4,6 +4,7 @@ import androidx.test.filters.RequiresDevice
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.explorer.RouteExplorer
+import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
 import com.sygic.sdk.navigation.traffic.TrafficManager
 import com.sygic.sdk.navigation.traffic.TrafficManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
@@ -58,7 +59,7 @@ class RouteExploreTests : BaseTest() {
             GeoCoordinates(48.289024, 17.264717)
         )
 
-        RouteExplorer.exploreTrafficOnRoute(route, listener)
+        RouteExplorerProvider.getInstance().get().exploreTrafficOnRoute(route, listener)
 
         verify(listener, Mockito.timeout(10_000L))
             .onExploreTrafficLoaded(any())
@@ -80,7 +81,7 @@ class RouteExploreTests : BaseTest() {
             GeoCoordinates(48.289024, 17.264717)
         )
 
-        RouteExplorer.exploreTrafficOnRoute(route, listener)
+        RouteExplorerProvider.getInstance().get().exploreTrafficOnRoute(route, listener)
 
         verify(listener, never())
             .onExploreTrafficLoaded(any())
@@ -107,7 +108,7 @@ class RouteExploreTests : BaseTest() {
             )
         val list = listOf("SYRestArea", "SYPetrolStation")
 
-        RouteExplorer.explorePlacesOnRoute(route, list, listener)
+        RouteExplorerProvider.getInstance().get().explorePlacesOnRoute(route, list, listener)
 
         verify(
             listener,
@@ -127,7 +128,7 @@ class RouteExploreTests : BaseTest() {
             GeoCoordinates(48.7429, 17.8603),
             GeoCoordinates(48.7457, 17.86)
         )
-        RouteExplorer.exploreIncidentsOnRoute(route, emptyList(), listener)
+        RouteExplorerProvider.getInstance().get().exploreIncidentsOnRoute(route, emptyList(), listener)
 
         verify(
             listener,
@@ -233,7 +234,7 @@ class RouteExploreTests : BaseTest() {
             }
         }.whenever(listener).onExploreChargingStationsLoaded(any(), any())
 
-        RouteExplorer.exploreChargingStationsOnRoute(
+        RouteExplorerProvider.getInstance().get().exploreChargingStationsOnRoute(
             route,
             RouteComputeHelper().createDefaultElectricVehicleProfile(50f, 50f),
             listener
