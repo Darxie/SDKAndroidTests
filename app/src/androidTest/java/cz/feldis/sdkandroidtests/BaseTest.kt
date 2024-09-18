@@ -148,6 +148,7 @@ abstract class BaseTest {
                 .time("%y/%m/%d %H:%M:%S")
         val loggingItemBuilder = LoggingSettings.LoggingItem.Builder()
             .name("logger")
+            .classpath("")
             .addAppender(consoleAppenderBuilder)
             .addAppender(diagnosticsAppender)
         defaultConfig.logging {
