@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.routing
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.ChargingWaypoint
 import com.sygic.sdk.route.GuidedRouteProfile
@@ -45,6 +44,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.isNotNull
+import org.mockito.kotlin.isNull
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.withSettings
 import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -718,7 +728,8 @@ class RouteComputeTests : BaseTest() {
         val start = GeoCoordinates(48.14548507020328, 17.126529723864405)
         val destination = GeoCoordinates(48.217657544377715, 17.406051728312903)
         val options = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.createElectricVehicleProfileForPreferenceViolation(50f, 5f)
+            vehicleProfile =
+                routeComputeHelper.createElectricVehicleProfileForPreferenceViolation(50f, 5f)
             napStrategy = NearestAccessiblePointStrategy.Disabled
             useEndpointProtection = true
         }
@@ -752,7 +763,9 @@ class RouteComputeTests : BaseTest() {
         val ecoRoutingOptions = RoutingOptions().apply {
             vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 powertrainTraits = PowertrainTraits.InternalCombustionPowertrain(
-                    FuelType.Petrol, EuropeanEmissionStandard.Euro5, ConsumptionData(consumptionCurve, weightFactors)
+                    FuelType.Petrol,
+                    EuropeanEmissionStandard.Euro5,
+                    ConsumptionData(consumptionCurve, weightFactors)
                 )
             }
             routingType = RoutingType.Economic
@@ -776,7 +789,10 @@ class RouteComputeTests : BaseTest() {
 
         assertTrue(fastestRoute.waypoints[1].distanceFromStart in 20001 downTo 14999) // uses highway
         assertTrue(ecoRoute.waypoints[1].distanceFromStart in 14000 downTo 10999) // uses a shorter way
-        assertNotEquals(fastestRoute.maneuvers, ecoRoute.maneuvers) // we check that the maneuvers are different
+        assertNotEquals(
+            fastestRoute.maneuvers,
+            ecoRoute.maneuvers
+        ) // we check that the maneuvers are different
     }
 
     @Test
@@ -962,18 +978,51 @@ class RouteComputeTests : BaseTest() {
         }
     }
 
-    private suspend fun getRouteRequest(path: String): RouteRequest = suspendCoroutine { continuation ->
-        RouteRequest.createRouteRequestFromJSONString(
-            readJson(path),
-            object : RouteRequestDeserializedListener {
-                override fun onError(error: RouteDeserializerError) {
-                    Assert.fail("Deserialization error: $error")
-                }
+    private suspend fun getRouteRequest(path: String): RouteRequest =
+        suspendCoroutine { continuation ->
+            RouteRequest.createRouteRequestFromJSONString(
+                readJson(path),
+                object : RouteRequestDeserializedListener {
+                    override fun onError(error: RouteDeserializerError) {
+                        Assert.fail("Deserialization error: $error")
+                    }
 
-                override fun onSuccess(routeRequest: RouteRequest) {
-                    continuation.resume(routeRequest)
+                    override fun onSuccess(routeRequest: RouteRequest) {
+                        continuation.resume(routeRequest)
+                    }
                 }
+            )
+        }
+
+    /**
+     * Computes a route from Eurovea to Kuchajda and checks that route duration is less than
+     * 5400 seconds (1h 30min) but longer than 1200s (20min).
+     * The meaning of this test is to ensure that the pedestrian duration is not calculated
+     * in the same way as a car and also is not too high.
+     */
+    @Test
+    fun testPedestrianRouteDurationLongerThanCar() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val start = GeoCoordinates(48.14119, 17.12485)
+        val destination = GeoCoordinates(48.16873, 17.14387)
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                setPedestrian()
             }
+        )
+
+        val pedestrianDuration = route.routeInfo.waypointDurations.last().ideal
+        val carDuration = 1200
+
+        assertTrue(
+            "Pedestrian route duration is not as expected",
+            pedestrianDuration in (carDuration + 1)..5400
         )
     }
 
