@@ -256,7 +256,7 @@ class RouteComputeTests : BaseTest() {
         route.getRouteGeometry(true, listener)
         verify(listener, timeout(5_000L)).onGeometry(argThat {
             for (geoCoordinates in this) {
-                assertFalse(geoCoordinates.altitude < 0.0 && geoCoordinates.altitude > 9000.0)
+                assertFalse((geoCoordinates.altitude < 0.0) || (geoCoordinates.altitude > 9000.0))
             }
             return@argThat true
         })
@@ -272,7 +272,7 @@ class RouteComputeTests : BaseTest() {
 
         val routeJson = originalRoute.serializeToBriefJSON()
 
-        RouteRequest.createRouteRequestFromJSONString(json = routeJson, listener)
+        RouterProvider.getInstance().get().createRouteRequestFromJSONString(json = routeJson, listener)
         verify(listener, timeout(1_000L)).onSuccess(
             argThat {
                 if (this.start?.originalPosition == start && this.destination?.originalPosition == destination) {
@@ -980,7 +980,7 @@ class RouteComputeTests : BaseTest() {
 
     private suspend fun getRouteRequest(path: String): RouteRequest =
         suspendCoroutine { continuation ->
-            RouteRequest.createRouteRequestFromJSONString(
+            RouterProvider.getInstance().get().createRouteRequestFromJSONString(
                 readJson(path),
                 object : RouteRequestDeserializedListener {
                     override fun onError(error: RouteDeserializerError) {
