@@ -94,7 +94,7 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         simulator.destroy()
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -135,7 +135,7 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         simulator.destroy()
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -176,7 +176,7 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         simulator.destroy()
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -218,7 +218,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnRailwayCrossingListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -261,7 +261,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnHighwayExitListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -303,7 +303,7 @@ class OnlineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeOnRouteChangedListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
 //    @Test
@@ -388,7 +388,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnLaneListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -431,7 +431,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnSharpCurveListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -468,7 +468,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnIncidentListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -506,7 +506,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnPlaceListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -563,7 +563,7 @@ class OnlineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeOnRouteRecomputeProgressListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -601,7 +601,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnWaypointPassListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -650,7 +650,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigationManagerKtx.stopNavigation(navigation)
         navigation.removeOnPlaceListener(listener)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     @Test
