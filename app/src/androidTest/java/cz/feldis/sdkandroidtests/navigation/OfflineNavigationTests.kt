@@ -6,6 +6,7 @@ import com.sygic.sdk.incidents.SpeedCamera
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
+import com.sygic.sdk.navigation.routeeventnotifications.DirectionInfo
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.Route
@@ -211,6 +212,7 @@ class OfflineNavigationTests : BaseTest() {
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "rovinka.nmea")
         val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 4f)
         Thread.sleep(3000)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
@@ -232,7 +234,7 @@ class OfflineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeJunctionPassedListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -381,7 +383,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnSpeedLimitListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     @Test
@@ -416,7 +418,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnWaypointPassListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
@@ -461,7 +463,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigationManagerKtx.stopNavigation(navigation)
         navigation.removeOnHighwayExitListener(listener)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     @Test
@@ -508,7 +510,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnWaypointPassListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        positionManagerKtx.stopPositionUpdating()
+        
     }
 
     /**
