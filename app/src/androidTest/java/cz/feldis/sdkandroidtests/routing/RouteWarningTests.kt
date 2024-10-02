@@ -26,6 +26,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Ignore
 import org.junit.Test
 
 class RouteWarningTests : BaseTest() {
@@ -646,6 +647,53 @@ class RouteWarningTests : BaseTest() {
             this.find { it.restriction.type == RestrictionInfo.RestrictionType.CargoTunnel } != null
         })
 
+    }
+
+    @Test
+    @Ignore("Only works on HERE maps")
+    fun compositeHazmatWeightExceededTest() {
+        mapDownloadHelper.installAndLoadMap("fr-10")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.62069, 2.97320)
+        val destination = GeoCoordinates(48.62257, 2.97555)
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalWeight = 20_000F
+                }
+                hazmatTraits = HazmatTraits().apply {
+                    hazmatClasses = HazmatTraits.GeneralHazardousMaterialClasses
+                }
+            }
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val captor = argumentCaptor<List<RouteWarning>>()
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.WeightRestriction.ExceededGrossWeight } != null
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.isNotEmpty()
+        })
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(captor.capture())
+
+        val restriction =
+            captor.firstValue[0] as RouteWarning.SectionWarning.WeightRestriction.ExceededGrossWeight
+        assertTrue(restriction.limitValue == 10_000F)
+        assertTrue(restriction.realValue == 20_000F)
+        assertTrue(restriction.iso == "fr-10")
     }
 }
 
