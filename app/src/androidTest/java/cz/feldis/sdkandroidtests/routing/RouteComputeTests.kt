@@ -548,6 +548,37 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
+    fun onlineRoutingGetAllTransitCountries() {
+        val start = GeoCoordinates(48.13204503419638, 17.09786238379282)
+        val destination = GeoCoordinates(51.491340, -0.102940)
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply { // turn off to always get the same route
+                this.useTraffic = false
+                this.useSpeedProfiles = false
+            }
+        )
+
+        val expectedCountries = listOf(
+            TransitCountryInfo("sk", emptyList()),
+            TransitCountryInfo("at", emptyList()),
+            TransitCountryInfo("de", emptyList()),
+            TransitCountryInfo("nl", emptyList()),
+            TransitCountryInfo("be", emptyList()),
+            TransitCountryInfo("fr", emptyList()),
+            TransitCountryInfo("gb", emptyList())
+        )
+
+        val transitCountriesInfoListener: TransitCountriesInfoListener = mock(verboseLogging = true)
+        route.getTransitCountriesInfo(transitCountriesInfoListener)
+        verify(transitCountriesInfoListener, timeout(5_000L)).onTransitCountriesInfo(
+            expectedCountries
+        )
+    }
+
+    @Test
     fun countriesInfoOrderAtSkHu() {
         mapDownloadHelper.installAndLoadMap("at")
         mapDownloadHelper.installAndLoadMap("sk")
