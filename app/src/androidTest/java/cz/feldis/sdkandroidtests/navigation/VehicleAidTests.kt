@@ -14,6 +14,8 @@ import com.sygic.sdk.vehicletraits.dimensional.SemiTrailer
 import com.sygic.sdk.vehicletraits.dimensional.Trailer
 import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
+import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
+import com.sygic.sdk.vehicletraits.hazmat.TunnelCategory
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
@@ -310,6 +312,51 @@ class VehicleAidTests : BaseTest() {
             }
             return@argThat false
         })
+        navigation.removeOnVehicleAidListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    //HANKA4
+    @Test
+    fun vehicleAidHAZMATWarning() = runBlocking {
+
+        mapDownload.installAndLoadMap("sk")
+
+        val vehicleProfile = VehicleProfile().apply {
+            this.dimensionalTraits = DimensionalTraits().apply {
+                this.totalWeight = 44000.0F
+                hazmatTraits = HazmatTraits(HazmatTraits.GeneralHazardousMaterialClasses, TunnelCategory.E)
+            }
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                this.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            start = GeoCoordinates(48.14, 17.0749),
+            destination = GeoCoordinates(48.1495, 17.0764),
+            routingOptions = RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile
+                routingService = RoutingService.Offline
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnVehicleAidListener(listener)
+
+        verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
+            for (vehicleAidInfo in this) {
+                if (vehicleAidInfo.restriction.type == RestrictionInfo.RestrictionType.CargoHazmat) {
+                   return@argThat true
+                }
+            }
+            return@argThat false
+        })
+
         navigation.removeOnVehicleAidListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
