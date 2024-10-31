@@ -104,8 +104,6 @@ abstract class BaseTest {
             override fun onInstance(instance: SygicContext) {
                 isEngineInitialized = true
                 sygicContext = instance
-                SygicEngine.openGpsConnection()
-                PositionManagerProvider.getInstance().get().startPositionUpdating()
                 OnlineManagerProvider.getInstance().get().setActiveMapProvider(
                     MapProvider("ta"), object : SetActiveMapProviderListener {
                         override fun onActiveProviderSet() {

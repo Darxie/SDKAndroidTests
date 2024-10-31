@@ -288,7 +288,7 @@ class SearchTests : BaseTest() {
         assert(placesList.size > 2)
         for (place in placesList) {
             if (place.link.name == "Pyramid of Khufu")
-                assert(place.details[0].value == "Desert of Giza Governorate")
+                assert(place.details[0].value == "Sahra' Muhafadhat al-Jeezah")
             assert(place.details.isNotEmpty())
         }
     }
