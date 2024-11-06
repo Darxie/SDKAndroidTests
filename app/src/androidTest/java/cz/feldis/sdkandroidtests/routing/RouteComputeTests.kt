@@ -272,7 +272,8 @@ class RouteComputeTests : BaseTest() {
 
         val routeJson = originalRoute.serializeToBriefJSON()
 
-        RouterProvider.getInstance().get().createRouteRequestFromJSONString(json = routeJson, listener)
+        RouterProvider.getInstance().get()
+            .createRouteRequestFromJSONString(json = routeJson, listener)
         verify(listener, timeout(1_000L)).onSuccess(
             argThat {
                 if (this.start?.originalPosition == start && this.destination?.originalPosition == destination) {
@@ -482,6 +483,34 @@ class RouteComputeTests : BaseTest() {
         verify(listener, timeout(10_000L)).onComputeFinished(
             eq(null),
             eq(Router.RouteComputeStatus.PathNotFound)
+        )
+    }
+
+    @Test
+    fun computeGuidedRouteExpectLargeGapInPolylineErrorOffline() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+        val polyline = mutableListOf(
+            GeoCoordinates(48.14255480489253, 17.125204056355585),
+            GeoCoordinates(48.14578621767613, 17.12975400149264),
+            GeoCoordinates(48.145800992710754, 17.13600542325981),
+            GeoCoordinates(48.132321417025096, 17.216446443991128),
+            GeoCoordinates(48.1550953747085, 17.049768575766283),
+            GeoCoordinates(48.155677390369334, 17.048702682030516),
+        )
+        val listener: RouteComputeListener = mock(verboseLogging = true)
+        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
+
+        val guidedRouteProfile = GuidedRouteProfile(polyline)
+        val routeRequest = RouteRequest(guidedRouteProfile)
+
+        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
+        val router = RouterProvider.getInstance().get()
+
+        router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
+        verify(listener, timeout(10_000L)).onComputeFinished(
+            eq(null),
+            eq(Router.RouteComputeStatus.LargeGapInPolyline)
         )
     }
 
