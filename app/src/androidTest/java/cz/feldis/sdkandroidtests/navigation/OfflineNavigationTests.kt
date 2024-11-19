@@ -29,6 +29,7 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -564,5 +565,23 @@ class OfflineNavigationTests : BaseTest() {
         assertEquals(finalRoute.waypoints[0].status, Waypoint.Status.Reached)
         assertEquals(finalRoute.waypoints[1].status, Waypoint.Status.Reached)
         assertEquals(finalRoute.waypoints[2].status, Waypoint.Status.Ahead)
+    }
+
+    @Test
+    fun testStopNavigationWhileDemonstrating() = runBlocking {
+        val route =
+            routeCompute.onlineComputeRoute(
+                GeoCoordinates(48.147260, 17.150520),
+                GeoCoordinates(48.147230, 17.150120)
+            )
+        val navigation = NavigationManagerProvider.getInstance().get()
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+        delay(2000)
+        navigationManagerKtx.stopNavigation(navigation) // shouldn't crash
+        delay(500)
     }
 }
