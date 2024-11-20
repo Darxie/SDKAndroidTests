@@ -1,13 +1,22 @@
 package cz.feldis.sdkandroidtests.navigation
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManager.OnRouteProgressListener
 import com.sygic.sdk.navigation.NavigationManagerProvider
+import com.sygic.sdk.navigation.explorer.RouteExplorer
+import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
+import com.sygic.sdk.navigation.routeeventnotifications.PlaceInfo
+import com.sygic.sdk.places.PlacesManager
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.route.RoutingOptions
+import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
+import com.sygic.sdk.route.Waypoint
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
+import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
+import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
+import com.sygic.sdk.vehicletraits.general.VehicleType
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.NmeaFileDataProvider
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
@@ -16,14 +25,23 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.InOrder
 import org.mockito.Mockito
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.inOrder
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
+import timber.log.Timber
 
 class OnlineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -94,7 +112,7 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         simulator.destroy()
-        
+
     }
 
     /**
@@ -135,7 +153,7 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         simulator.destroy()
-        
+
     }
 
     /**
@@ -176,7 +194,7 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         simulator.destroy()
-        
+
     }
 
     /**
@@ -218,7 +236,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnRailwayCrossingListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     /**
@@ -261,7 +279,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnHighwayExitListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     /**
@@ -303,7 +321,7 @@ class OnlineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeOnRouteChangedListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
 //    @Test
@@ -388,7 +406,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnLaneListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     /**
@@ -431,7 +449,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnSharpCurveListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     /**
@@ -468,7 +486,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnIncidentListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     /**
@@ -506,7 +524,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnPlaceListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     /**
@@ -563,7 +581,7 @@ class OnlineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeOnRouteRecomputeProgressListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     /**
@@ -580,8 +598,8 @@ class OnlineNavigationTests : BaseTest() {
 
         val route = routeCompute.onlineComputeRoute(
             GeoCoordinates(48.296103, 17.304851),
-            GeoCoordinates(48.297194, 17.313073),
-            GeoCoordinates(48.296446, 17.306706)
+            GeoCoordinates(48.296446, 17.306706),
+            listOf(GeoCoordinates(48.297194, 17.313073))
         )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
@@ -601,7 +619,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnWaypointPassListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     /**
@@ -650,7 +668,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigationManagerKtx.stopNavigation(navigation)
         navigation.removeOnPlaceListener(listener)
-        
+
     }
 
     @Test
@@ -660,8 +678,8 @@ class OnlineNavigationTests : BaseTest() {
 
         val route = routeCompute.onlineComputeRoute(
             GeoCoordinates(48.457323, 17.739210),
-            GeoCoordinates(48.448209, 17.738767),
-            GeoCoordinates(48.123, 17.723)
+            GeoCoordinates(48.123, 17.723),
+            listOf(GeoCoordinates(48.448209, 17.738767))
         )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
@@ -673,6 +691,75 @@ class OnlineNavigationTests : BaseTest() {
             }
             false
         })
+    }
+
+    @Test
+    fun passTwoWaypoints() = runBlocking {
+        mapDownload.unloadAllMaps()
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
+        val waypoints = listOf(
+            GeoCoordinates(48.148760, 17.124930), // Waypoint 1
+            GeoCoordinates(48.155020, 17.125310)  // Waypoint 2
+        )
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = RouteComputeHelper().createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalWeight = 10_000F
+                }
+            }
+        }
+        val route = routeCompute.onlineComputeRoute(
+            start = GeoCoordinates(48.146255528464, 17.1273927454307),
+            waypoints = waypoints,
+            destination = GeoCoordinates(48.157031,17.121155),
+            routingOptions = routingOptions
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnWaypointPassListener(listener)
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "sygic-legionarska.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 3F)
+
+        val inOrder: InOrder = inOrder(listener)
+
+        inOrder.verify(listener, timeout(20_000L)).onWaypointPassed(argThat {
+            this.type == Waypoint.Type.Via && this.originalPosition == waypoints[0]
+        })
+
+        inOrder.verify(listener, timeout(20_000L)).onWaypointPassed(argThat {
+            this.type == Waypoint.Type.Via && this.originalPosition == waypoints[1]
+        })
+
+        inOrder.verify(listener, timeout(20_000L)).onFinishReached()
+
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        logSimulator.destroy()
+        navigation.removeOnWaypointPassListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    @Test
+    fun testStopNavigationWhileDemonstratingOnline() = runBlocking {
+        val route =
+            routeCompute.onlineComputeRoute(
+                GeoCoordinates(48.147260, 17.150520),
+                GeoCoordinates(48.413651171955465, 16.927561108197466)
+            )
+        val navigation = NavigationManagerProvider.getInstance().get()
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+        delay(2000)
+        navigationManagerKtx.stopNavigation(navigation) // shouldn't crash
+        delay(500)
     }
 
     companion object {

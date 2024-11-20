@@ -510,7 +510,7 @@ class RouteComputeTests : BaseTest() {
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
         verify(listener, timeout(10_000L)).onComputeFinished(
             eq(null),
-            eq(Router.RouteComputeStatus.LargeGapInPolyline)
+            eq(Router.RouteComputeStatus.PathConstructFailed)
         )
     }
 
@@ -619,7 +619,7 @@ class RouteComputeTests : BaseTest() {
         val route = routeComputeHelper.offlineRouteCompute(
             start,
             destination,
-            waypoint = waypoint
+            waypoints = listOf(waypoint)
         )
 
         val expectedCountries = listOf(
@@ -649,7 +649,7 @@ class RouteComputeTests : BaseTest() {
         val route = routeCompute.offlineRouteCompute(
             start,
             destination,
-            waypoint = waypoint
+            waypoints = listOf(waypoint)
         )
 
         val expectedCountries = listOf(

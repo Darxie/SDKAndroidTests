@@ -395,8 +395,8 @@ class OfflineNavigationTests : BaseTest() {
 
         val route = routeCompute.offlineRouteCompute(
             GeoCoordinates(48.10044188518012, 17.24304412091042),
-            GeoCoordinates(48.100524472993364, 17.243852076060037),
-            GeoCoordinates(48.10047492032134, 17.24460232012754)
+            GeoCoordinates(48.10047492032134, 17.24460232012754),
+            listOf(GeoCoordinates(48.100524472993364, 17.243852076060037))
         )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
@@ -487,8 +487,8 @@ class OfflineNavigationTests : BaseTest() {
 
         val route = routeCompute.offlineRouteCompute(
             GeoCoordinates(48.10044188518012, 17.24304412091042),
-            GeoCoordinates(48.100524472993364, 17.243852076060037),
-            GeoCoordinates(48.10047492032134, 17.24460232012754)
+            GeoCoordinates(48.10047492032134, 17.24460232012754),
+            listOf(GeoCoordinates(48.100524472993364, 17.243852076060037))
         )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
@@ -528,7 +528,7 @@ class OfflineNavigationTests : BaseTest() {
         val route =
             routeCompute.offlineRouteCompute(
                 start = GeoCoordinates(48.14227359686909, 17.13214634678706),
-                waypoint = GeoCoordinates(48.14407288637856, 17.131352923937925),
+                waypoints = listOf(GeoCoordinates(48.14407288637856, 17.131352923937925)),
                 destination = GeoCoordinates(48.14648207079094, 17.138648964532695)
             )
 
@@ -568,9 +568,11 @@ class OfflineNavigationTests : BaseTest() {
     }
 
     @Test
-    fun testStopNavigationWhileDemonstrating() = runBlocking {
+    fun testStopNavigationWhileDemonstratingOffline() = runBlocking {
+        disableOnlineMaps()
+        mapDownload.installAndLoadMap("sk")
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.offlineRouteCompute(
                 GeoCoordinates(48.147260, 17.150520),
                 GeoCoordinates(48.147230, 17.150120)
             )

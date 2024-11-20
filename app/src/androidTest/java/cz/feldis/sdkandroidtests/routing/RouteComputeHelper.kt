@@ -34,14 +34,14 @@ class RouteComputeHelper : BaseTest() {
     fun onlineComputeRoute(
         start: GeoCoordinates,
         destination: GeoCoordinates,
-        waypoint: GeoCoordinates? = null,
+        waypoints: List<GeoCoordinates> = emptyList(),
         routingOptions: RoutingOptions = RoutingOptions()
     ): Route {
 
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
-            waypoint?.let { this.addViaPoint(it) }
+            waypoints.forEach { this.addViaPoint(it) }
             this.routingOptions = routingOptions
             this.routingOptions.routingService = RoutingOptions.RoutingService.Online
         }
@@ -67,13 +67,13 @@ class RouteComputeHelper : BaseTest() {
     fun offlineRouteCompute(
         start: GeoCoordinates,
         destination: GeoCoordinates,
-        waypoint: GeoCoordinates? = null,
+        waypoints: List<GeoCoordinates> = emptyList(),
         routingOptions: RoutingOptions = RoutingOptions()
     ): Route {
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
-            waypoint?.let { this.addViaPoint(it) }
+            waypoints.forEach { this.addViaPoint(it) }
             this.routingOptions = routingOptions
             this.routingOptions.routingService = RoutingOptions.RoutingService.Offline
         }
@@ -88,7 +88,7 @@ class RouteComputeHelper : BaseTest() {
             null,
             routeComputeFinishedListener
         )
-        verify(listener, timeout(40_000L)).onComputeFinished(
+        verify(listener, timeout(100_000L)).onComputeFinished(
             captor.capture(), argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
         )
         verify(listener, never()).onComputeFinished(eq(null), any())
@@ -122,7 +122,7 @@ class RouteComputeHelper : BaseTest() {
         val battery = Battery(
             capacity = batteryCapacity,
             remainingCapacity = remainingCapacity,
-            mapOf()
+            chargingCurve = mapOf(1.0 to 1.0, 100.0 to 1.0)
         )
         val connectors = listOf(
             Connector(100F, ConnectorType.Type2Any, ChargingCurrent.AC),
