@@ -3,10 +3,12 @@ package cz.feldis.sdkandroidtests.navigation
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
+import com.sygic.sdk.navigation.routeeventnotifications.VehicleZoneInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingService
+import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
@@ -14,16 +16,21 @@ import com.sygic.sdk.vehicletraits.dimensional.SemiTrailer
 import com.sygic.sdk.vehicletraits.dimensional.Trailer
 import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
+import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
+import com.sygic.sdk.vehicletraits.listeners.SetVehicleProfileListener
 import cz.feldis.sdkandroidtests.BaseTest
+import cz.feldis.sdkandroidtests.NmeaFileDataProvider
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
+import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 
@@ -312,5 +319,38 @@ class VehicleAidTests : BaseTest() {
         })
         navigation.removeOnVehicleAidListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    @Test
+    fun testVehicleZoneSitinaWithoutRoute() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val setVehicleListener: SetVehicleProfileListener = mock(verboseLogging = true)
+        val vehicleZoneListener: NavigationManager.OnVehicleZoneListener = mock(verboseLogging = true)
+        val vehicleProfile = VehicleProfile().apply {
+            this.hazmatTraits = HazmatTraits(HazmatTraits.GeneralHazardousMaterialClasses)
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                this.vehicleType = VehicleType.Truck
+            }
+        }
+
+        navigation.setVehicleProfile(vehicleProfile, setVehicleListener)
+        verify(setVehicleListener, timeout(3_000)).onSuccess()
+        verify(setVehicleListener, never()).onError()
+        navigation.addOnVehicleZoneListener(vehicleZoneListener)
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "sitina.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+        verify(vehicleZoneListener, timeout(10_000L)).onVehicleZoneInfo(argThat {
+            this.forEach {
+                if (it.restriction.type == RestrictionInfo.RestrictionType.CargoHazmat && it.eventType == VehicleZoneInfo.EventType.In) {
+                    return@argThat true
+                }
+            }
+            return@argThat false
+        })
     }
 }
