@@ -1032,7 +1032,7 @@ class RouteComputeTests : BaseTest() {
             destination,
         )
 
-        assertEquals(7, route.maneuvers.size) // 7 maneuvers in March 2023 maps
+        assertEquals(6, route.maneuvers.size) // 6 maneuvers since october 2024 maps
         for (maneuver in route.maneuvers) {
             assertFalse(maneuver.roadName == "Thomas-Mann-Straße")
         }
