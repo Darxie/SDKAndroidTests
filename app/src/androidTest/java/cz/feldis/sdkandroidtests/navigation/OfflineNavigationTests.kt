@@ -1,12 +1,10 @@
 package cz.feldis.sdkandroidtests.navigation
 
 import android.graphics.Color
-import org.mockito.kotlin.*
 import com.sygic.sdk.incidents.SpeedCamera
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
-import com.sygic.sdk.navigation.routeeventnotifications.DirectionInfo
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.Route
@@ -24,7 +22,6 @@ import com.sygic.sdk.vehicletraits.listeners.SetVehicleProfileListener
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.NmeaFileDataProvider
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
-import cz.feldis.sdkandroidtests.ktx.PositionManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
@@ -39,12 +36,20 @@ import org.junit.Test
 import org.mockito.AdditionalMatchers
 import org.mockito.InOrder
 import org.mockito.Mockito
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.atMost
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.inOrder
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 
 class OfflineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
     private lateinit var mapDownload: MapDownloadHelper
     private val navigationManagerKtx = NavigationManagerKtx()
-    private val positionManagerKtx = PositionManagerKtx()
 
     @Before
     override fun setUp() {
@@ -195,7 +200,10 @@ class OfflineNavigationTests : BaseTest() {
 
         Mockito.verify(
             listener, Mockito.timeout(30_000L).atLeast(1)
-        ).onRouteChanged(AdditionalMatchers.not(eq(route)), eq(NavigationManager.RouteUpdateStatus.Success))
+        ).onRouteChanged(
+            AdditionalMatchers.not(eq(route)),
+            eq(NavigationManager.RouteUpdateStatus.Success)
+        )
 
 
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
@@ -235,7 +243,7 @@ class OfflineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeJunctionPassedListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     /**
@@ -384,7 +392,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnSpeedLimitListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     @Test
@@ -419,7 +427,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnWaypointPassListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     /**
@@ -464,7 +472,37 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigationManagerKtx.stopNavigation(navigation)
         navigation.removeOnHighwayExitListener(listener)
-        
+    }
+
+    @Test
+    fun onHighwayExitTestWithoutRoute() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnHighwayExitListener = mock(verboseLogging = true)
+
+        navigation.addOnHighwayExitListener(listener)
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "highwayExitWithoutRoute.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+        Mockito.verify(
+            listener,
+            Mockito.timeout(20_000L)
+        )
+            .onHighwayExitInfoChanged(argThat {
+                if (this.size == 3) { // this should find 10 exits, but due to time length of test we only search for 3
+                    return@argThat true
+                }
+                false
+            })
+
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        logSimulator.destroy()
+        navigationManagerKtx.stopNavigation(navigation)
+        navigation.removeOnHighwayExitListener(listener)
+
     }
 
     @Test
@@ -511,7 +549,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnWaypointPassListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
-        
+
     }
 
     /**
@@ -519,8 +557,10 @@ class OfflineNavigationTests : BaseTest() {
      */
     @Test
     fun testSaveBriefJsonAfterPassWaypointRecompute() = runBlocking {
-        val waypointPassListener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
-        val routeChangedListener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
+        val waypointPassListener: NavigationManager.OnWaypointPassListener =
+            mock(verboseLogging = true)
+        val routeChangedListener: NavigationManager.OnRouteChangedListener =
+            mock(verboseLogging = true)
         val routeComputeListener: RouteComputeListener = mock(verboseLogging = true)
         val currentRouteListener: NavigationManager.OnGetCurrentRoute = mock(verboseLogging = true)
         lateinit var briefJson: String
@@ -546,7 +586,10 @@ class OfflineNavigationTests : BaseTest() {
 
         verify(waypointPassListener, timeout(20_000L)).onWaypointPassed(any())
 
-        verify(routeChangedListener, timeout(30_000L)).onRouteChanged(any(), eq(NavigationManager.RouteUpdateStatus.Success))
+        verify(routeChangedListener, timeout(30_000L)).onRouteChanged(
+            any(),
+            eq(NavigationManager.RouteUpdateStatus.Success)
+        )
         navigation.getCurrentRoute(currentRouteListener)
         val currentRouteCaptor = argumentCaptor<Route>()
         verify(currentRouteListener, timeout(5_000L)).onCurrentRoute(currentRouteCaptor.capture())
