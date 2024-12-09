@@ -93,7 +93,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnSharpCurveListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -172,7 +172,7 @@ class OfflineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeOnRouteChangedListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     @Test
@@ -203,7 +203,7 @@ class OfflineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeJunctionPassedListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -245,7 +245,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnLaneListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     @Test
@@ -283,7 +283,6 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnIncidentListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
     }
 
     @Test
@@ -318,7 +317,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnIncidentListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     @Test
@@ -369,7 +368,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnSpeedLimitListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
 
         //close scenario & activity
         scenario.moveToState(Lifecycle.State.DESTROYED)
@@ -406,7 +405,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnWaypointPassListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -449,7 +448,7 @@ class OfflineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.stopNavigation()
         navigation.removeOnHighwayExitListener(listener)
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     @Test

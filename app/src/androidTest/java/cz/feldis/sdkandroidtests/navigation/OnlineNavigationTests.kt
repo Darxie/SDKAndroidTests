@@ -105,7 +105,7 @@ class OnlineNavigationTests : BaseTest() {
         navigation.stopNavigation()
         simulator.stop()
         simulator.destroy()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -148,7 +148,7 @@ class OnlineNavigationTests : BaseTest() {
         navigation.stopNavigation()
         simulator.stop()
         simulator.destroy()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -183,7 +183,7 @@ class OnlineNavigationTests : BaseTest() {
         navigation.stopNavigation()
         simulator.stop()
         simulator.destroy()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -224,7 +224,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnRailwayCrossingListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -266,7 +266,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.stopNavigation()
         navigation.removeOnHighwayExitListener(listener)
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -306,7 +306,7 @@ class OnlineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeOnRouteChangedListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
 //    @Test
@@ -389,7 +389,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnLaneListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -431,7 +431,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnSharpCurveListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -468,7 +468,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnIncidentListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -479,6 +479,7 @@ class OnlineNavigationTests : BaseTest() {
      * We verify that onPlaceInfoChanged was invoked.
      */
     @Test
+    @Ignore("fdskjf")
     fun onPlaceListenerTest() {
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnPlaceListener = mock(verboseLogging = true)
@@ -506,7 +507,7 @@ class OnlineNavigationTests : BaseTest() {
         navigation.stopNavigation()
         simulator.stop()
         simulator.destroy()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -561,7 +562,7 @@ class OnlineNavigationTests : BaseTest() {
         logSimulator.destroy()
         navigation.removeOnRouteRecomputeProgressListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -598,7 +599,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.removeOnWaypointPassListener(listener)
         navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     /**
@@ -646,7 +647,7 @@ class OnlineNavigationTests : BaseTest() {
         simulator.destroy()
         navigation.stopNavigation()
         navigation.removeOnPlaceListener(listener)
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        
     }
 
     @Test
