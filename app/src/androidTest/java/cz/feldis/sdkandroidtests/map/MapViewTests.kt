@@ -264,7 +264,7 @@ class MapViewTests : BaseTest() {
     // https://git.sygic.com/projects/NAVI/repos/sdk/pull-requests/8699/overview
     // the next set of polygon tests should not crash upon adding to map
     @Test
-    fun testPolyonClockwise(): Unit = runBlocking {
+    fun testPolygonClockwise(): Unit = runBlocking {
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
         // create test scenario with activity & map fragment
         val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
@@ -302,7 +302,7 @@ class MapViewTests : BaseTest() {
     }
 
     @Test
-    fun testPolyonCounterClockwise(): Unit = runBlocking {
+    fun testPolygonCounterClockwise(): Unit = runBlocking {
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
         // create test scenario with activity & map fragment
         val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
@@ -340,7 +340,7 @@ class MapViewTests : BaseTest() {
     }
 
     @Test
-    fun testPolyonStarShape(): Unit = runBlocking {
+    fun testPolygonStarShape(): Unit = runBlocking {
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
         // create test scenario with activity & map fragment
         val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
@@ -378,7 +378,7 @@ class MapViewTests : BaseTest() {
     }
 
     @Test
-    fun testPolyonSpiralShape(): Unit = runBlocking {
+    fun testPolygonSpiralShape(): Unit = runBlocking {
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
         // create test scenario with activity & map fragment
         val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
@@ -418,7 +418,7 @@ class MapViewTests : BaseTest() {
     }
 
     @Test
-    fun testPolyonIrregularShape(): Unit = runBlocking {
+    fun testPolygonIrregularShape(): Unit = runBlocking {
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
         // create test scenario with activity & map fragment
         val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
@@ -485,7 +485,6 @@ class MapViewTests : BaseTest() {
     }
 
     companion object {
-
         private val audioNotificationParams = IncidentsManager.AudioNotificationParameters(5, 10)
         private const val TIMEOUT = 3000L
         private const val VALID_TO_TIMESTAMP = 1904969474L // 14.5.2030
