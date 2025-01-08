@@ -37,6 +37,10 @@ class VoicesTests : BaseTest() {
         assertFalse(list.isEmpty())
     }
 
+    /**
+     * This may not work on Samsung devices as the requested voice is probably missing.
+     * You may use en-GB-default for this purpose.
+     */
     @Test
     fun onSetVoiceCallbackTest() {
         val onSetVoiceCallback: OnSetVoiceCallback = mock(verboseLogging = true)
