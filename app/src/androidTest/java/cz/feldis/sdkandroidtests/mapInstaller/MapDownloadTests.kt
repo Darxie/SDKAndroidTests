@@ -85,33 +85,33 @@ class MapDownloadTests : BaseTest() {
     @Test
     @RequiresDevice
     fun installCancelTest() {
-        mapDownloadHelper.ensureMapNotInstalled("sk")
+        mapDownloadHelper.ensureMapNotInstalled("gi")
+        mapDownloadHelper.ensureMapNotInstalled("ad")
         mapDownloadHelper.ensureMapNotInstalled("us-dc")
-        mapDownloadHelper.ensureMapNotInstalled("de-02")
 
         val installer = MapInstallerProvider.getInstance().get()
         val listenerSK: MapResultListener = mock(verboseLogging = true)
         val listenerUSDC: MapResultListener = mock(verboseLogging = true)
         val listenerDE02: MapResultListener = mock(verboseLogging = true)
 
-        installer.installMap("sk", listenerSK)
-        installer.installMap("de-02", listenerDE02)
+        installer.installMap("gi", listenerSK)
+        installer.installMap("ad", listenerDE02)
         val task = installer.installMap("us-dc", listenerUSDC)
         Timer().schedule(2000) {
             task.cancel()
         }
 
-        verify(listenerSK, timeout(180_000L)).onMapResult(
-            eq("sk"),
+        verify(listenerSK, timeout(30_000L)).onMapResult(
+            eq("gi"),
             eq(MapInstaller.LoadResult.Success)
         )
-        verify(listenerUSDC, timeout(180_000L)).onMapResult(
+        verify(listenerDE02, timeout(30_000L)).onMapResult(
+            eq("ad"),
+            eq(MapInstaller.LoadResult.Success)
+        )
+        verify(listenerUSDC, timeout(30_000L)).onMapResult(
             eq("us-dc"),
             eq(MapInstaller.LoadResult.Cancelled)
-        )
-        verify(listenerDE02, timeout(180_000L)).onMapResult(
-            eq("de-02"),
-            eq(MapInstaller.LoadResult.Success)
         )
     }
 
