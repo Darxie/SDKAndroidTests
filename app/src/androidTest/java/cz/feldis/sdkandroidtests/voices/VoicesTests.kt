@@ -65,7 +65,7 @@ class VoicesTests : BaseTest() {
     }
 
     @Test
-    fun getVoiceStatusTest() = runBlocking {
+    fun getVoiceStatusTest() {
         val listener: VoiceDownload.AvailableVoicesCallback = mock(verboseLogging = true)
         val statusCallback: VoiceEntry.OnGetStatusCallback = mock(verboseLogging = true)
         VoiceDownloadProvider.getInstance().get().getAvailableVoiceList(listener)
@@ -85,5 +85,28 @@ class VoicesTests : BaseTest() {
 
         // Verify the exact number of invocations
         verify(statusCallback, timeout(10_000L).times(voices.size)).onStatus(any())
+    }
+
+    @Test
+    fun getPermanentIdTest() {
+        val listener: VoiceDownload.AvailableVoicesCallback = mock(verboseLogging = true)
+        val statusCallback: VoiceEntry.OnGetPermanentIdCallback = mock(verboseLogging = true)
+        VoiceDownloadProvider.getInstance().get().getAvailableVoiceList(listener)
+
+        val captor = argumentCaptor<List<VoiceEntry>>()
+        verify(listener, timeout(10_000L)).onAvailableVoiceList(
+            captor.capture(),
+            eq(OperationStatus(OperationStatus.Result.Success, ""))
+        )
+
+        val voices = captor.firstValue
+        assertFalse(voices.isEmpty())
+
+        voices.forEach { voiceEntry ->
+            voiceEntry.getPermanentId(statusCallback)
+        }
+
+        // Verify the exact number of invocations
+        verify(statusCallback, timeout(10_000L).times(voices.size)).onPermanentId(any())
     }
 }
