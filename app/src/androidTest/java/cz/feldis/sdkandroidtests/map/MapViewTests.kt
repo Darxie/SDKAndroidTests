@@ -261,6 +261,199 @@ class MapViewTests : BaseTest() {
         scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
+    // https://git.sygic.com/projects/NAVI/repos/sdk/pull-requests/8699/overview
+    // the next set of polygon tests should not crash upon adding to map
+    @Test
+    fun testPolygonClockwise(): Unit = runBlocking {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+        val mapView = getMapView(mapFragment)
+        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
+        mapView.cameraModel.zoomLevel = 16F
+        mapView.cameraModel.tilt = 0F
+
+        val geoCoordinates = listOf(
+            GeoCoordinates(48.102000, 17.234824),  // North
+            GeoCoordinates(48.101500, 17.236000),  // Northeast
+            GeoCoordinates(48.100955, 17.236800),  // East
+            GeoCoordinates(48.100000, 17.236000),  // Southeast
+            GeoCoordinates(48.099500, 17.234824),  // South
+            GeoCoordinates(48.100000, 17.233600),  // Southwest
+            GeoCoordinates(48.100955, 17.232800),  // West
+            GeoCoordinates(48.101500, 17.233600)   // Northwest
+        )
+
+        val polygon =
+            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), geoCoordinates)
+                .setBorderColor(Color.BLUE)
+                .setCenterColor(Color.TRANSPARENT)
+                .setCenterRadius(0.95f)
+                .build()
+
+        mapView.mapDataModel.addMapObject(polygon)
+        delay(2000)
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    @Test
+    fun testPolygonCounterClockwise(): Unit = runBlocking {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+        val mapView = getMapView(mapFragment)
+        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
+        mapView.cameraModel.zoomLevel = 16F
+        mapView.cameraModel.tilt = 0F
+
+        val geoCoordinates = listOf(
+            GeoCoordinates(48.102000, 17.234824),  // North
+            GeoCoordinates(48.101500, 17.233600),  // Northwest
+            GeoCoordinates(48.100955, 17.232800),  // West
+            GeoCoordinates(48.100000, 17.233600),  // Southwest
+            GeoCoordinates(48.099500, 17.234824),  // South
+            GeoCoordinates(48.100000, 17.236000),  // Southeast
+            GeoCoordinates(48.100955, 17.236800),  // East
+            GeoCoordinates(48.101500, 17.236000)   // Northeast
+        )
+
+        val polygon =
+            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), geoCoordinates)
+                .setBorderColor(Color.BLUE)
+                .setCenterColor(Color.TRANSPARENT)
+                .setCenterRadius(0.95f)
+                .build()
+
+        mapView.mapDataModel.addMapObject(polygon)
+        delay(2000)
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    @Test
+    fun testPolygonStarShape(): Unit = runBlocking {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+        val mapView = getMapView(mapFragment)
+        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
+        mapView.cameraModel.zoomLevel = 16F
+        mapView.cameraModel.tilt = 0F
+
+        val starShape = listOf(
+            GeoCoordinates(48.102000, 17.234824),  // Top
+            GeoCoordinates(48.101300, 17.235500), // Upper-right inner
+            GeoCoordinates(48.100955, 17.236800), // Right
+            GeoCoordinates(48.100300, 17.235500), // Lower-right inner
+            GeoCoordinates(48.099500, 17.234824), // Bottom
+            GeoCoordinates(48.100300, 17.234100), // Lower-left inner
+            GeoCoordinates(48.100955, 17.232800), // Left
+            GeoCoordinates(48.101300, 17.234100)  // Upper-left inner
+        )
+
+        val polygon =
+            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), starShape)
+                .setBorderColor(Color.BLUE)
+                .setCenterColor(Color.TRANSPARENT)
+                .setCenterRadius(0.95f)
+                .build()
+
+        mapView.mapDataModel.addMapObject(polygon)
+        delay(2000)
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    @Test
+    fun testPolygonSpiralShape(): Unit = runBlocking {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+        val mapView = getMapView(mapFragment)
+        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
+        mapView.cameraModel.zoomLevel = 16F
+        mapView.cameraModel.tilt = 0F
+
+        val spiralShape = listOf(
+            GeoCoordinates(48.102000, 17.234824), // Outer spiral
+            GeoCoordinates(48.101700, 17.235300),
+            GeoCoordinates(48.101200, 17.235600),
+            GeoCoordinates(48.100600, 17.235700),
+            GeoCoordinates(48.100100, 17.235400),
+            GeoCoordinates(48.099800, 17.234900),
+            GeoCoordinates(48.100000, 17.234300),
+            GeoCoordinates(48.100500, 17.234000),
+            GeoCoordinates(48.101100, 17.234100),
+            GeoCoordinates(48.101600, 17.234400)  // Inner spiral
+        )
+
+        val polygon =
+            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), spiralShape)
+                .setBorderColor(Color.BLUE)
+                .setCenterColor(Color.TRANSPARENT)
+                .setCenterRadius(0.95f)
+                .build()
+
+        mapView.mapDataModel.addMapObject(polygon)
+        delay(2000)
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    @Test
+    fun testPolygonIrregularShape(): Unit = runBlocking {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+        val mapView = getMapView(mapFragment)
+        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
+        mapView.cameraModel.zoomLevel = 16F
+        mapView.cameraModel.tilt = 0F
+
+        val irregularShape = listOf(
+            GeoCoordinates(48.102000, 17.235824), // North-northeast
+            GeoCoordinates(48.101200, 17.237000), // East-northeast
+            GeoCoordinates(48.099800, 17.236300), // Southeast
+            GeoCoordinates(48.099400, 17.234800), // South
+            GeoCoordinates(48.099800, 17.233300), // Southwest
+            GeoCoordinates(48.101000, 17.232800), // West
+            GeoCoordinates(48.101700, 17.233600)  // Northwest
+        )
+
+        val polygon =
+            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), irregularShape)
+                .setBorderColor(Color.BLUE)
+                .setCenterColor(Color.TRANSPARENT)
+                .setCenterRadius(0.95f)
+                .build()
+
+        mapView.mapDataModel.addMapObject(polygon)
+        delay(2000)
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
     private fun getInitialCameraState(): CameraState {
         return CameraState.Builder().apply {
             setPosition(GeoCoordinates(48.15132, 17.07665))
@@ -292,7 +485,6 @@ class MapViewTests : BaseTest() {
     }
 
     companion object {
-
         private val audioNotificationParams = IncidentsManager.AudioNotificationParameters(5, 10)
         private const val TIMEOUT = 3000L
         private const val VALID_TO_TIMESTAMP = 1904969474L // 14.5.2030
