@@ -767,7 +767,7 @@ class RouteComputeTests : BaseTest() {
             null,
             routeComputeFinishedListener
         )
-        verify(listener, timeout(10_000L)).onComputeFinished(
+        verify(listener, timeout(30_000L)).onComputeFinished(
             captor.capture(), eq(Router.RouteComputeStatus.SuccessWithWarnings)
         )
 

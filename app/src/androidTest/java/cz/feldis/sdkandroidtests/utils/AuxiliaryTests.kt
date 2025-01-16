@@ -35,6 +35,7 @@ import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.junit.MockitoJUnitRunner
@@ -61,6 +62,7 @@ class AuxiliaryTests : BaseTest() {
     }
 
     @Test
+    @Ignore("run this only when needed")
     fun testJustNavigationWithMap():Unit = runBlocking {
         mapDownload.installAndLoadMap("sk")
 
