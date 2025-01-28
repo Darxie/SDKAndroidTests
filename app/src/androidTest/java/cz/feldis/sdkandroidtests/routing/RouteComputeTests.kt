@@ -665,6 +665,43 @@ class RouteComputeTests : BaseTest() {
         )
     }
 
+    /**
+     * https://jira.sygic.com/browse/SDC-13368
+     *
+     * Validates that the computed route does not apply the "Country" avoidable type
+     * to the start and destination countries.
+     */
+    @Test
+    fun avoidableCountryTest() {
+        mapDownloadHelper.installAndLoadMap("at")
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("hu")
+        val start = GeoCoordinates(47.591, 16.8735) // hungary
+        val waypoint = GeoCoordinates(48.0184, 16.9746) // austria
+        val destination = GeoCoordinates(48.12917385634974, 17.19439161086379) // slovakia
+
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            waypoints = listOf(waypoint)
+        )
+
+        val startCountry = "hu"
+        val destinationCountry = "sk"
+
+        val countryRouteAvoidables = route.routeRequest.routingOptions.routeAvoids.countryRouteAvoidables
+
+        listOf(startCountry, destinationCountry).forEach { country ->
+            countryRouteAvoidables[country]?.let { avoidSet ->
+                avoidSet.forEach { avoidType ->
+                    assert(avoidType != RouteAvoids.Type.Country) { "Country avoidable type found in $country" }
+                }
+            }
+        }
+    }
+
     @Test
     fun changeWeightAtWaypoint() {
         disableOnlineMaps()
