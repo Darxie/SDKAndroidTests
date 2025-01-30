@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.voices
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.OperationStatus
 import com.sygic.sdk.voice.VoiceDownload
 import com.sygic.sdk.voice.VoiceDownloadProvider
@@ -10,15 +9,11 @@ import com.sygic.sdk.voice.VoiceManager.InstalledVoicesCallback
 import com.sygic.sdk.voice.VoiceManager.OnSetVoiceCallback
 import com.sygic.sdk.voice.VoiceManagerProvider
 import cz.feldis.sdkandroidtests.BaseTest
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.fail
-import org.junit.Ignore
 import org.junit.Test
-import org.mockito.ArgumentMatchers.anyString
-import timber.log.Timber
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
+import org.mockito.kotlin.*
 
 class VoicesTests : BaseTest() {
 
@@ -45,6 +40,10 @@ class VoicesTests : BaseTest() {
         assertFalse(list.isEmpty())
     }
 
+    /**
+     * This may not work on Samsung devices as the requested voice is probably missing.
+     * You may use en-GB-default for this purpose.
+     */
     @Test
     fun onSetVoiceCallbackTest() {
         val onSetVoiceCallback: OnSetVoiceCallback = mock(verboseLogging = true)
@@ -66,38 +65,48 @@ class VoicesTests : BaseTest() {
     }
 
     @Test
-    @Ignore("Won't retrieve all permanentIds until SDK28")
-    fun getPermanentIdOnlineVoice() {
-        val listener : VoiceDownload.AvailableVoicesCallback = mock()
-        val permanentIdCallback: VoiceEntry.OnGetPermanentIdCallback = mock()
-        val voiceListCaptor = argumentCaptor<List<VoiceEntry>>()
+    fun getVoiceStatusTest() {
+        val listener: VoiceDownload.AvailableVoicesCallback = mock(verboseLogging = true)
+        val statusCallback: VoiceEntry.OnGetStatusCallback = mock(verboseLogging = true)
         VoiceDownloadProvider.getInstance().get().getAvailableVoiceList(listener)
-        verify(listener, timeout(10_000L)).onAvailableVoiceList(voiceListCaptor.capture(), eq(OperationStatus(OperationStatus.Result.Success, "")))
-        val voices = voiceListCaptor.allValues.flatten()
-        Timber.i("Number of voices: ${voices.size}")
 
-        val latch = CountDownLatch(voices.size)
-        val permanentIds = mutableListOf<String>()
+        val captor = argumentCaptor<List<VoiceEntry>>()
+        verify(listener, timeout(10_000L)).onAvailableVoiceList(
+            captor.capture(),
+            eq(OperationStatus(OperationStatus.Result.Success, ""))
+        )
 
-        // Mock the callback to collect permanent IDs and log progress
-        whenever(permanentIdCallback.onPermanentId(anyString())).thenAnswer { invocation ->
-            val permanentId = invocation.getArgument<String>(0)
-            synchronized(permanentIds) {
-                permanentIds.add(permanentId)
-                Timber.i("Progress: ${permanentIds.size}/${voices.size} permanent IDs collected")
-            }
-            latch.countDown() // Decrement the latch count
+        val voices = captor.firstValue
+        assertFalse(voices.isEmpty())
+
+        voices.forEach { voiceEntry ->
+            voiceEntry.getStatus(statusCallback)
         }
 
-        // Call getPermanentId for each voice
-        voices.forEach { it.getPermanentId(permanentIdCallback) }
+        // Verify the exact number of invocations
+        verify(statusCallback, timeout(10_000L).times(voices.size)).onStatus(any())
+    }
 
-        // Wait for all callbacks to complete
-        if (!latch.await(30, TimeUnit.SECONDS)) { // Adjust the timeout as needed
-            fail("Timeout waiting for all permanent IDs to be retrieved")
+    @Test
+    fun getPermanentIdTest() {
+        val listener: VoiceDownload.AvailableVoicesCallback = mock(verboseLogging = true)
+        val statusCallback: VoiceEntry.OnGetPermanentIdCallback = mock(verboseLogging = true)
+        VoiceDownloadProvider.getInstance().get().getAvailableVoiceList(listener)
+
+        val captor = argumentCaptor<List<VoiceEntry>>()
+        verify(listener, timeout(10_000L)).onAvailableVoiceList(
+            captor.capture(),
+            eq(OperationStatus(OperationStatus.Result.Success, ""))
+        )
+
+        val voices = captor.firstValue
+        assertFalse(voices.isEmpty())
+
+        voices.forEach { voiceEntry ->
+            voiceEntry.getPermanentId(statusCallback)
         }
 
-        Timber.i("All Permanent IDs: $permanentIds")
-        assertEquals(voices.size, permanentIds.size)
+        // Verify the exact number of invocations
+        verify(statusCallback, timeout(10_000L).times(voices.size)).onPermanentId(any())
     }
 }
