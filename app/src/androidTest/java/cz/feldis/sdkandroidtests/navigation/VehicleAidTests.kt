@@ -354,7 +354,6 @@ class VehicleAidTests : BaseTest() {
         })
 
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
-        logSimulator.destroy()
         navigation.removeOnVehicleZoneListener(vehicleZoneListener)
         navigationManagerKtx.stopNavigation(navigation)
     }

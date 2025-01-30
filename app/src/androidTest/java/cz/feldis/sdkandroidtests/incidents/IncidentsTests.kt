@@ -161,7 +161,6 @@ class IncidentsTests : BaseTest() {
         })
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigation.removeOnIncidentListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -201,7 +200,6 @@ class IncidentsTests : BaseTest() {
         })
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigationManagerKtx.stopNavigation(navigation)
         navigation.removeOnIncidentListener(listener)
     }
@@ -244,7 +242,6 @@ class IncidentsTests : BaseTest() {
         inOrder.verify(listener, timeout(20_000L)).onIncidentsInfoChanged(emptyList())
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigationManagerKtx.stopNavigation(navigation)
         navigation.removeOnIncidentListener(listener)
     }
@@ -298,7 +295,6 @@ class IncidentsTests : BaseTest() {
         inOrder.verify(listener, timeout(30_000L)).onIncidentsInfoChanged(emptyList())
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigationManagerKtx.stopNavigation(navigation)
         navigation.removeOnIncidentListener(listener)
     }
@@ -349,7 +345,6 @@ class IncidentsTests : BaseTest() {
         navigation.removeOnIncidentListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
-        logSimulator.destroy()
     }
 
     @Test
@@ -379,7 +374,6 @@ class IncidentsTests : BaseTest() {
         navigation.removeOnIncidentListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
-        logSimulator.destroy()
     }
 
     @Test
@@ -406,7 +400,6 @@ class IncidentsTests : BaseTest() {
         navigation.removeOnIncidentListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
-        logSimulator.destroy()
     }
 
     // might fail if there actually is a real incident
@@ -437,7 +430,6 @@ class IncidentsTests : BaseTest() {
         navigation.removeOnIncidentListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
-        logSimulator.destroy()
     }
 
     companion object {

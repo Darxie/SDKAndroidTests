@@ -104,7 +104,6 @@ class OnlineNavigationTests : BaseTest() {
         navigation.removeOnSignpostListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
     }
 
     /**
@@ -144,7 +143,6 @@ class OnlineNavigationTests : BaseTest() {
         navigation.removeOnDirectionListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
     }
 
     /**
@@ -184,7 +182,6 @@ class OnlineNavigationTests : BaseTest() {
         navigation.removeOnSpeedLimitListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
     }
 
     /**
@@ -223,7 +220,6 @@ class OnlineNavigationTests : BaseTest() {
             })
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigation.removeOnRailwayCrossingListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -265,7 +261,6 @@ class OnlineNavigationTests : BaseTest() {
             })
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigation.removeOnHighwayExitListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -306,7 +301,6 @@ class OnlineNavigationTests : BaseTest() {
             }, eq(NavigationManager.RouteUpdateStatus.Success))
 
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
-        logSimulator.destroy()
         navigation.removeOnRouteChangedListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -329,10 +323,10 @@ class OnlineNavigationTests : BaseTest() {
 //
 //        navigationManagerKtx.setRouteForNavigation(route, navigation)
 //        val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
-//        logval demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+//        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
 //        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 //        navigation.addOnRouteChangedListener(listener)
-//        lognavigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
+//        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
 //
 //        Mockito.verify(
 //            listener,
@@ -345,8 +339,7 @@ class OnlineNavigationTests : BaseTest() {
 //                else false
 //            }, eq(NavigationManager.RouteUpdateStatus.Success))
 //
-//        lognavigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-//        logSimulator.destroy()
+//        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
 //        navigation.removeOnRouteChangedListener(listener)
 //        navigation.stopNavigation()
 //    }
@@ -389,7 +382,6 @@ class OnlineNavigationTests : BaseTest() {
             })
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigation.removeOnLaneListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -430,7 +422,6 @@ class OnlineNavigationTests : BaseTest() {
             })
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigation.removeOnSharpCurveListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -466,7 +457,6 @@ class OnlineNavigationTests : BaseTest() {
             .onIncidentsInfoChanged(anyList())
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigation.removeOnIncidentListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -503,7 +493,6 @@ class OnlineNavigationTests : BaseTest() {
             })
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigation.removeOnPlaceListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -558,7 +547,6 @@ class OnlineNavigationTests : BaseTest() {
             .onRouteRecomputeProgress(any(), eq(NavigationManager.RouteRecomputeStatus.Failed))
 
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
-        logSimulator.destroy()
         navigation.removeOnRouteRecomputeProgressListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -594,7 +582,6 @@ class OnlineNavigationTests : BaseTest() {
             .onWaypointPassed(any())
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigation.removeOnWaypointPassListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -641,7 +628,6 @@ class OnlineNavigationTests : BaseTest() {
         }
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        simulator.destroy()
         navigationManagerKtx.stopNavigation(navigation)
         navigation.removeOnPlaceListener(listener)
     }
@@ -713,7 +699,6 @@ class OnlineNavigationTests : BaseTest() {
         inOrder.verify(listener, timeout(20_000L)).onFinishReached()
 
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
-        logSimulator.destroy()
         navigation.removeOnWaypointPassListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
