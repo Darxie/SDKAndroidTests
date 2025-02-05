@@ -21,6 +21,7 @@ import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.map.listeners.RequestObjectCallback
 import com.sygic.sdk.map.`object`.MapIncident
 import com.sygic.sdk.map.`object`.MapPolygon
+import com.sygic.sdk.map.`object`.MapPolyline
 import com.sygic.sdk.map.`object`.ViewObject
 import com.sygic.sdk.map.`object`.data.ViewObjectData
 import com.sygic.sdk.position.GeoCoordinates
@@ -34,6 +35,7 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.fail
@@ -451,6 +453,63 @@ class MapViewTests : BaseTest() {
 
         mapView.mapDataModel.addMapObject(polygon)
         delay(2000)
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    @Test
+    fun requestMapPolylineFromCoordinates(): Unit = runBlocking {
+        // Create a map fragment with the initial camera state.
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // Launch the activity and add the map fragment.
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity { activity ->
+            activity.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+
+        // Define two distinct coordinates for the polyline.
+        val startCoordinates = GeoCoordinates(48.10095535808773, 17.234824479529344)
+        val endCoordinates = GeoCoordinates(48.10155535808773, 17.234824479529344)
+
+        // Compute the midpoint for the polyline.
+        val middleLatitude = (startCoordinates.latitude + endCoordinates.latitude) / 2
+        val middleLongitude = (startCoordinates.longitude + endCoordinates.longitude) / 2
+        val middleCoordinates = GeoCoordinates(middleLatitude, middleLongitude)
+
+        // Set the camera position to the midpoint of the polyline.
+        mapView.cameraModel.position = middleCoordinates
+        mapView.cameraModel.zoomLevel = 16F
+        mapView.cameraModel.tilt = 0F
+
+        // Build the polyline using the defined coordinates.
+        val polyline = MapPolyline.of(listOf(startCoordinates, endCoordinates)).build()
+        // Add the polyline to the map.
+        mapView.mapDataModel.addMapObject(polyline)
+        delay(1000)
+
+        // Prepare the callback for object requests.
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        // Get the map view and determine its center.
+        val view = requireNotNull(mapView.view)
+        val x: Float = view.width / 2F
+        val y: Float = view.height / 2F
+
+        // Request objects at the center point (this should hit the polyline).
+        val requestId = mapView.requestObjectsAtPoint(x, y, callback)
+
+        // Verify that the callback returns the objects within 5 seconds.
+        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
+
+        // Verify that among the returned objects, at least one is a MapPolyline.
+        val viewObjects = captor.firstValue
+        assertTrue(
+            "Expected to find a MapPolyline object at the clicked point",
+            viewObjects.any { it is MapPolyline }
+        )
         scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
