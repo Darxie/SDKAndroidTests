@@ -510,7 +510,7 @@ class RouteComputeTests : BaseTest() {
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
         verify(listener, timeout(10_000L)).onComputeFinished(
             eq(null),
-            eq(Router.RouteComputeStatus.PathConstructFailed)
+            eq(Router.RouteComputeStatus.LargeGapInPolyline)
         )
     }
 
