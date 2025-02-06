@@ -524,27 +524,27 @@ class OnlineNavigationTests : BaseTest() {
         Mockito.verify(
             listener, Mockito.timeout(20_000L).times(1)
         )
-            .onRouteRecomputeProgress(eq(0), eq(NavigationManager.RouteRecomputeStatus.Started))
+            .onRouteRecomputeProgress(eq(0), eq(route), eq(NavigationManager.RouteRecomputeStatus.Started))
 
         Mockito.verify(
             listener, Mockito.timeout(20_000L).times(1)
         )
-            .onRouteRecomputeProgress(eq(0), eq(NavigationManager.RouteRecomputeStatus.Computing))
+            .onRouteRecomputeProgress(eq(0), eq(route), eq(NavigationManager.RouteRecomputeStatus.Computing))
 
         Mockito.verify(
             listener, Mockito.timeout(20_000L).times(1)
         )
-            .onRouteRecomputeProgress(eq(100), eq(NavigationManager.RouteRecomputeStatus.Computing))
+            .onRouteRecomputeProgress(eq(100), eq(route), eq(NavigationManager.RouteRecomputeStatus.Computing))
 
         Mockito.verify(
             listener, Mockito.timeout(20_000L).times(1)
         )
-            .onRouteRecomputeProgress(eq(100), eq(NavigationManager.RouteRecomputeStatus.Finished))
+            .onRouteRecomputeProgress(eq(100), eq(route), eq(NavigationManager.RouteRecomputeStatus.Finished))
 
         Mockito.verify(
             listener, never()
         )
-            .onRouteRecomputeProgress(any(), eq(NavigationManager.RouteRecomputeStatus.Failed))
+            .onRouteRecomputeProgress(any(), eq(route), eq(NavigationManager.RouteRecomputeStatus.Failed))
 
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
         navigation.removeOnRouteRecomputeProgressListener(listener)
