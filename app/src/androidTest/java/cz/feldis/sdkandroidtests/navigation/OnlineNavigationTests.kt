@@ -502,11 +502,11 @@ class OnlineNavigationTests : BaseTest() {
      *
      * In this test we compute online route and set it for navigation.
      * Via Nmea Log Recorder we set route from assets/SVK-Kosicka.nmea and start nmea log simulation.
-     * We verify that the onRouteRecomputeProgress was invoked with RouteRecomputeStatus Started and Finished.
+     * We verify that the recompute started, was in progress from 0 to 100 and then finished without error.
      */
     @Test
     fun onRouteRecomputeProgress() = runBlocking {
-        val listener: NavigationManager.OnRouteRecomputeProgressListener =
+        val listener: NavigationManager.OnRouteRecomputeListener =
             mock(verboseLogging = true)
 
         val route = routeCompute.onlineComputeRoute(
@@ -521,30 +521,45 @@ class OnlineNavigationTests : BaseTest() {
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
+        val recomputeStartedData = NavigationManager.OnRouteRecomputeListener.RecomputeStartedData(
+            route, NavigationManager.RouteRecomputeReason.VehicleOutOfRoute
+        )
+        val recomputeProgressData1 = NavigationManager.OnRouteRecomputeListener.RecomputeProgressData(
+            route, 0
+        )
+        val recomputeProgressData2 = NavigationManager.OnRouteRecomputeListener.RecomputeProgressData(
+            route, 100
+        )
+        val recomputeFinishedData = NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData(
+            route, NavigationManager.RouteRecomputeResult.Success
+        )
+        val recomputeFinishedFailedData = NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData(
+            route, NavigationManager.RouteRecomputeResult.Error(NavigationManager.RouteRecomputeResult.Error.Reason.Failed, "Recompute failed")
+        )
+
         Mockito.verify(
             listener, Mockito.timeout(20_000L).times(1)
-        )
-            .onRouteRecomputeProgress(eq(0), eq(route), eq(NavigationManager.RouteRecomputeStatus.Started))
+        ).onRouteRecomputeStarted(eq(recomputeStartedData))
 
         Mockito.verify(
             listener, Mockito.timeout(20_000L).times(1)
         )
-            .onRouteRecomputeProgress(eq(0), eq(route), eq(NavigationManager.RouteRecomputeStatus.Computing))
+            .onRouteRecomputeProgress(eq(recomputeProgressData1))
 
         Mockito.verify(
             listener, Mockito.timeout(20_000L).times(1)
         )
-            .onRouteRecomputeProgress(eq(100), eq(route), eq(NavigationManager.RouteRecomputeStatus.Computing))
+            .onRouteRecomputeProgress(eq(recomputeProgressData2))
 
         Mockito.verify(
             listener, Mockito.timeout(20_000L).times(1)
         )
-            .onRouteRecomputeProgress(eq(100), eq(route), eq(NavigationManager.RouteRecomputeStatus.Finished))
+            .onRouteRecomputeFinished(eq(recomputeFinishedData))
 
         Mockito.verify(
             listener, never()
         )
-            .onRouteRecomputeProgress(any(), eq(route), eq(NavigationManager.RouteRecomputeStatus.Failed))
+            .onRouteRecomputeFinished(eq(recomputeFinishedFailedData))
 
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
         navigation.removeOnRouteRecomputeProgressListener(listener)
