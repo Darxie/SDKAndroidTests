@@ -1110,6 +1110,9 @@
                         <value value="u_vColor - m:CPathInstance::color"/>
                         <value value="u_vBorderColor - m:CPathInstance::border_color"/>
                         <value value="u_vMaskColor - m:CPathInstance::mask_color"/>
+                        <value value="u_vBrunnelColor - m:CPathInstance::brunnel_color"/>
+                        <value value="u_vBrunnelBorderColor - m:CPathInstance::brunnel_border_color"/>
+                        <value value="u_vBrunnelMaskColor - m:CPathInstance::brunnel_mask_color"/>
                         <value value="u_vMasksScales - m:CPathInstance::masks_scales"/>
                         <value value="u_tMask - m:CPathInstance::mask"/>
                         <value value="u_tMaskOneway - m:CPathInstance::mask_oneway"/>
@@ -1126,6 +1129,9 @@
                         <value value="u_vColor - m:CPathInstance::color"/>
                         <value value="u_vBorderColor - m:CPathInstance::border_color"/>
                         <value value="u_vMaskColor - m:CPathInstance::mask_color"/>
+                        <value value="u_vBrunnelColor - m:CPathInstance::brunnel_color"/>
+                        <value value="u_vBrunnelBorderColor - m:CPathInstance::brunnel_border_color"/>
+                        <value value="u_vBrunnelMaskColor - m:CPathInstance::brunnel_mask_color"/>
                         <value value="u_vMasksScales - m:CPathInstance::masks_scales"/>
                         <value value="u_tMask - m:CPathInstance::mask"/>
                         <value value="u_tMaskOneway - m:CPathInstance::mask_oneway"/>
@@ -1231,7 +1237,7 @@
                 <object name="effect.globe_specular_with_lights" type="Library::CEffect">
                     <flags value=""/>
                     <shader value="map/globe/effects/shader.globe_specular_with_lights"/>
-                    <uniforms value="u_vColor-i:map/globe/colors/color.surface;u_vColorToTextureInterpolation-i:map/globe/functions/function.colorToTextureInterpolation;u_sTexture0-r:map/textures/earth;u_sTexture1-r:map/textures/earth_lights;u_sTexture2-r:map/textures/earth_specular;u_vSpecularColor-i:map/globe/effects/specular_settings/color;u_fSpecularPower-i:map/globe/effects/specular_settings/power;u_fSpecularStrength-i:map/globe/effects/specular_settings/strength;u_vNormalizedLightDir-s:CGlobeGroup::ms_vNormalizedLightDir;u_fEffectsInterpolation-s:CGlobeGroup::ms_fGlobeLightingCoeficient"/>
+                    <uniforms value="u_vColor-i:map/globe/colors/color.surface;u_vColorToTextureInterpolation-i:map/globe/functions/function.colorToTextureInterpolation;u_sTexture0-r:map/textures/earth;u_sTexture1-r:map/textures/earth_lights;u_sTexture2-r:map/textures/earth_specular;u_vSpecularColor-i:map/globe/effects/specular_settings/color;u_fSpecularPower-i:map/globe/effects/specular_settings/power;u_fSpecularStrength-i:map/globe/effects/specular_settings/strength;u_vNormalizedLightDir-s:Map::CGlobeGroup::ms_vNormalizedLightDir;u_fEffectsInterpolation-s:Map::CGlobeGroup::ms_fGlobeLightingCoeficient"/>
                 </object>
                 <object name="shader.atmosphere" type="Library::CShader">
                     <shader_files>
@@ -1243,7 +1249,7 @@
                 <object name="effect.atmosphere" type="Library::CEffect">
                     <flags value="Library::CEffect::EfAoBlend"/>
                     <shader value="map/globe/effects/shader.atmosphere"/>
-                    <uniforms value="u_fGlobeRadius-s:C3DMapView::ms_fGlobeRadius;u_fAtmosphereRadius-s:CGlobeGroup::ms_fAtmosphereRadius;u_vNormalizedLightDir-s:CGlobeGroup::ms_vNormalizedLightDir;u_fEffectsInterpolation-s:CGlobeGroup::ms_fGlobeLightingCoeficient"/>
+                    <uniforms value="u_fGlobeRadius-s:C3DMapView::ms_fGlobeRadius;u_fAtmosphereRadius-s:Map::CGlobeGroup::ms_fAtmosphereRadius;u_vNormalizedLightDir-s:Map::CGlobeGroup::ms_vNormalizedLightDir;u_fEffectsInterpolation-s:Map::CGlobeGroup::ms_fGlobeLightingCoeficient"/>
                 </object>
                 <object name="effect.space" type="Library::CEffect">
                     <flags value="Library::CEffect::EfAoBlend"/>
@@ -1384,6 +1390,9 @@
                         <value value="u_vColor - m:CMultiPathInstance::color"/>
                         <value value="u_vBorderColor - m:CMultiPathInstance::border_color"/>
                         <value value="u_vMaskColor - m:CMultiPathInstance::mask_color"/>
+                        <value value="u_vBrunnelColor - m:CMultiPathInstance::brunnel_color"/>
+                        <value value="u_vBrunnelBorderColor - m:CMultiPathInstance::brunnel_border_color"/>
+                        <value value="u_vBrunnelMaskColor - m:CMultiPathInstance::brunnel_mask_color"/>
                         <value value="u_fMaxDistance - m:CMultiPathInstance::max_distance"/>
                         <value value="u_vWidthScales - m:CMultiPathInstance::width_scales"/>
                         <value value="u_vMasksScales - m:CMultiPathInstance::masks_scales"/>
@@ -1400,6 +1409,9 @@
                         <value value="u_vColor - m:CMultiPathInstance::color"/>
                         <value value="u_vBorderColor - m:CMultiPathInstance::border_color"/>
                         <value value="u_vMaskColor - m:CMultiPathInstance::mask_color"/>
+                        <value value="u_vBrunnelColor - m:CMultiPathInstance::brunnel_color"/>
+                        <value value="u_vBrunnelBorderColor - m:CMultiPathInstance::brunnel_border_color"/>
+                        <value value="u_vBrunnelMaskColor - m:CMultiPathInstance::brunnel_mask_color"/>
                         <value value="u_fMaxDistance - m:CMultiPathInstance::max_distance"/>
                         <value value="u_vWidthScales - m:CMultiPathInstance::width_scales"/>
                         <value value="u_vMasksScales - m:CMultiPathInstance::masks_scales"/>
@@ -1416,6 +1428,9 @@
                         <value value="u_vColor - m:CMultiPathInstance::color"/>
                         <value value="u_vBorderColor - m:CMultiPathInstance::border_color"/>
                         <value value="u_vMaskColor - m:CMultiPathInstance::mask_color"/>
+                        <value value="u_vBrunnelColor - m:CMultiPathInstance::brunnel_color"/>
+                        <value value="u_vBrunnelBorderColor - m:CMultiPathInstance::brunnel_border_color"/>
+                        <value value="u_vBrunnelMaskColor - m:CMultiPathInstance::brunnel_mask_color"/>
                         <value value="u_fMaxDistance - m:CMultiPathInstance::max_distance"/>
                         <value value="u_vWidthScales - m:CMultiPathInstance::width_scales"/>
                         <value value="u_vMasksScales - m:CMultiPathInstance::masks_scales"/>
@@ -1435,6 +1450,9 @@
                         <value value="u_vColor - m:CMultiPathInstance::color"/>
                         <value value="u_vBorderColor - m:CMultiPathInstance::border_color"/>
                         <value value="u_vMaskColor - m:CMultiPathInstance::mask_color"/>
+                        <value value="u_vBrunnelColor - m:CMultiPathInstance::brunnel_color"/>
+                        <value value="u_vBrunnelBorderColor - m:CMultiPathInstance::brunnel_border_color"/>
+                        <value value="u_vBrunnelMaskColor - m:CMultiPathInstance::brunnel_mask_color"/>
                         <value value="u_fMaxDistance - m:CMultiPathInstance::max_distance"/>
                         <value value="u_vWidthScales - m:CMultiPathInstance::width_scales"/>
                         <value value="u_vMasksScales - m:CMultiPathInstance::masks_scales"/>
@@ -1575,7 +1593,7 @@
                     <definition value = "9 ~ 1.0, 0.1; 12 ~ 1.0, 0.1; 16 ~ 0.5, 0.1; 22 ~ 0.0, 0.2"/>
                 </object>
                 <object name="function.border_width_local_roads" type="CLinearSegments2DimFunction">
-                    <definition value = "12 ~ 0.0, 0.1; 13 ~ 0.0, 0.1; 16 ~ 0.1, 0.1; 22 ~ 0.0, 0.2"/>
+                    <definition value = "12 ~ 1.0, 0.1; 13 ~ 0.5, 0.1; 16 ~ 0.5, 0.1; 22 ~ 0.0, 0.2"/>
                 </object>
                 <!-- road width  -->
                 <object name="function.width_in_pixels_motorways" type="CLinearSeqmentsFunction">
@@ -1639,6 +1657,15 @@
                 <object name="function.colors_railway" type="CLinearSegmentsThreeColorsFunction">
                     <definition value = "3 ~ 0xffffffff, 0x717171FF, 0x717171FF"/>
                 </object>
+                <object name="function.brunnel_colors_motorways" type="CLinearSegmentsThreeColorsFunction">
+                    <definition value = "4 ~ 0x7B8594ff, 0x7B8594ff, 0x7B8594ff; 4.1 ~ 0xDF9047ff, 0xDF6200FF, 0xDF6200FF"/>
+                </object>
+                <object name="function.brunnel_colors_main" type="CLinearSegmentsThreeColorsFunction">
+                    <definition value = "4 ~ 0x7B8594ff, 0x7B8594ff, 0x7B8594ff; 4.1 ~ 0xD4C29Aff, 0xC87F49ff, 0xC87F49ff"/>
+                </object>
+                <object name="function.brunnel_colors_rest" type="CLinearSegmentsThreeColorsFunction">
+                    <definition value = "8 ~ 0xdfdfdfff, 0xACACACFF, 0xACACACFF; 10.5 ~ 0xdfdfdfff, 0x7B8594ff, 0x7B8594ff"/>
+                </object>
             </functions>
             <object name="settings" type="CRoadTypesSettings">
                 <type_settings size="11">
@@ -1653,6 +1680,7 @@
                             <blend_to_border value="true"/>
                             <mask_oneway value="map/roads/textures/mask_none"/>
                             <colors_by_zoom_level value="map/roads/functions/function.colors_motorways"/>
+                            <brunnel_colors_by_zoom_level value="map/roads/functions/function.brunnel_colors_motorways"/>
                             <max_distance_by_ground_distance value="map/roads/functions/function.motorway"/>
                             <width_by_zoom_level value="map/roads/functions/function.width_in_pixels_motorways"/>
                             <border_width_by_zoom_level value="map/roads/functions/function.border_width_motorways"/>
@@ -1669,6 +1697,7 @@
                             <max_street_radius value="1.500000"/>
                             <mask_oneway value="map/roads/textures/mask_none"/>
                             <colors_by_zoom_level value="map/roads/functions/function.colors_main"/>
+                            <brunnel_colors_by_zoom_level value="map/roads/functions/function.brunnel_colors_main"/>
                             <max_distance_by_ground_distance value="map/roads/functions/function.main"/>
                             <width_by_zoom_level value="map/roads/functions/function.width_in_pixels_main"/>
                             <text_style value="map/textstyles/textstyle.street_big"/>
@@ -1685,6 +1714,7 @@
                             <max_street_radius value="1.500000"/>
                             <mask_oneway value="map/roads/textures/mask_none"/>
                             <colors_by_zoom_level value="map/roads/functions/function.colors_major"/>
+                            <brunnel_colors_by_zoom_level value="map/roads/functions/function.brunnel_colors_main"/>
                             <max_distance_by_ground_distance value="map/roads/functions/function.major"/>
                             <width_by_zoom_level value="map/roads/functions/function.width_in_pixels_major"/>
                             <colors_by_zoom_level value="map/roads/functions/function.colors_major"/>
@@ -1702,6 +1732,7 @@
                             <max_street_radius value="1.500000"/>
                             <mask_oneway value="map/roads/textures/mask_none"/>
                             <colors_by_zoom_level value="map/roads/functions/function.colors_secondary"/>
+                            <brunnel_colors_by_zoom_level value="map/roads/functions/function.brunnel_colors_rest"/>
                             <max_distance_by_ground_distance value="map/roads/functions/function.secondary"/>
                             <width_by_zoom_level value="map/roads/functions/function.width_in_pixels_secondary_roads"/>
                             <border_width_by_zoom_level value="map/roads/functions/function.border_width_local_roads"/>
@@ -1717,6 +1748,7 @@
                             <max_street_radius value="1.500000"/>
                             <mask_oneway value="map/roads/textures/mask_none"/>
                             <colors_by_zoom_level value="map/roads/functions/function.colors_connecting"/>
+                            <brunnel_colors_by_zoom_level value="map/roads/functions/function.brunnel_colors_rest"/>
                             <max_distance_by_ground_distance value="map/roads/functions/function.local_connecting"/>
                             <width_by_zoom_level value="map/roads/functions/function.width_in_pixels_connecting_roads"/>
                             <border_width_by_zoom_level value="map/roads/functions/function.border_width_connecting_roads"/>
@@ -1735,6 +1767,7 @@
                             <mask_closed value="map/roads/textures/mask_closed"/>
                             <mask_closed_scale value="30.000000"/>
                             <colors_by_zoom_level value="map/roads/functions/function.colors_high_importance"/>
+                            <brunnel_colors_by_zoom_level value="map/roads/functions/function.brunnel_colors_rest"/>
                             <max_distance_by_ground_distance value="map/roads/functions/function.local_high_importance"/>
                             <width_by_zoom_level value="map/roads/functions/function.width_in_pixels_high_importance"/>
                             <border_width_by_zoom_level value="map/roads/functions/function.border_width_local_roads"/>
@@ -1753,6 +1786,7 @@
                             <mask_closed value="map/roads/textures/mask_closed"/>
                             <mask_closed_scale value="30.000000"/>
                             <colors_by_zoom_level value="map/roads/functions/function.colors_local"/>
+                            <brunnel_colors_by_zoom_level value="map/roads/functions/function.brunnel_colors_rest"/>
                             <max_distance_by_ground_distance value="map/roads/functions/function.local"/>
                             <width_by_zoom_level value="map/roads/functions/function.width_in_pixels_local_roads"/>
                             <border_width_by_zoom_level value="map/roads/functions/function.border_width_local_roads"/>
@@ -1771,6 +1805,7 @@
                             <mask_closed value="map/roads/textures/mask_closed"/>
                             <mask_closed_scale value="30.000000"/>
                             <colors_by_zoom_level value="map/roads/functions/function.colors_local"/>
+                            <brunnel_colors_by_zoom_level value="map/roads/functions/function.brunnel_colors_rest"/>
                             <max_distance_by_ground_distance value="map/roads/functions/function.local_minor_importance"/>
                             <width_by_zoom_level value="map/roads/functions/function.width_in_pixels_local_roads"/>
                             <border_width_by_zoom_level value="map/roads/functions/function.border_width_local_roads"/>
@@ -1789,6 +1824,7 @@
                             <mask_closed value="map/roads/textures/mask_closed"/>
                             <mask_closed_scale value="30.000000"/>
                             <colors_by_zoom_level value="map/roads/functions/function.colors_pedestrian"/>
+                            <brunnel_colors_by_zoom_level value="map/roads/functions/function.brunnel_colors_rest"/>
                             <max_distance_by_ground_distance value="map/roads/functions/function.other"/>
                             <width_by_zoom_level value="map/roads/functions/function.width_in_pixels_pedestrian_roads"/>
                             <border_width_by_zoom_level value="map/roads/functions/function.border_width_local_roads"/>
@@ -1832,6 +1868,12 @@
                 <vec2>
                     <x value="32"/>
                     <y value="32"/>
+                </vec2>
+            </object>
+            <object name="sign_minimal_padding" type="Library::CVec2Resource">
+                <vec2>
+                    <x value="16"/>
+                    <y value="16"/>
                 </vec2>
             </object>
             <object name="logisticSettings" type="LogisticStyleSettings">
@@ -2084,13 +2126,6 @@
             </object>
             <object name="config" type="Map::CSpeedCamConfig">
                 <speedcam_icons type="DtTemplate::std::map">
-                    <data>
-                        <key value="custom_incident_category"/>
-                        <value>
-                            <icon value="U+E24F"/>
-                            <color value="0xFFA6A6FF"/>
-                        </value>
-                    </data>
                     <data>
                         <key value="SYRadarStaticSpeed"/>
                         <value>
@@ -3009,6 +3044,10 @@
                     <x value="5"/>
                     <y value="10"/>
                 </text_padding>
+                <minimal_text_padding>
+                    <x value="2"/>
+                    <y value="0"/>
+                </minimal_text_padding>
             </object>
             <object name="icon.config.capital" type="Map::CIconConfig">
                 <background value="U+E075"/>
@@ -3524,7 +3563,7 @@
                     18000000 and 9000000 mod TileSize must be 0
                 -->
                 <object name="tile_reader_size_function_default" type="Map::StepFunction">
-                    <definition value="0 ~ 1000; 500 ~ 2500; 1500 ~ 5000; 3500 ~ 7500; 5000 ~ 10000; 10000 ~ 50000; 400000 ~ 500000; 1000000 ~ 1000000; 3000000 ~ 3000000"/>
+                    <definition value="0 ~ 1000; 500 ~ 2500; 1500 ~ 5000; 3500 ~ 7500; 5000 ~ 10000; 10000 ~ 50000; 20000 ~ 100000; 400000 ~ 500000; 1000000 ~ 1000000; 3000000 ~ 3000000"/>
                 </object>
             </data>
             <object name="function.max_rotation_by_distance" type="CLinearFunction">
