@@ -23,16 +23,17 @@ import com.sygic.sdk.map.`object`.MapPolygon
 import com.sygic.sdk.map.`object`.MapPolyline
 import com.sygic.sdk.map.`object`.MapRoute
 import com.sygic.sdk.map.`object`.MapRoute.RouteType
+import com.sygic.sdk.map.`object`.ProxyPlace
 import com.sygic.sdk.map.`object`.ViewObject
 import com.sygic.sdk.map.`object`.data.ViewObjectData
+import com.sygic.sdk.places.PlacesManagerProvider
+import com.sygic.sdk.places.data.PlaceCategoryGroupVisibility
+import com.sygic.sdk.places.data.PlaceCategoryVisibility
+import com.sygic.sdk.places.listeners.SetVisibleCategoriesListener
 import com.sygic.sdk.position.GeoCoordinates
-import com.sygic.sdk.route.PrimaryRouteRequest
-import com.sygic.sdk.route.RouteRequest
 import com.sygic.sdk.route.RouterProvider
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.listeners.EVRangeListener
-import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
-import com.sygic.sdk.route.listeners.RouteComputeListener
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.SygicActivity
 import cz.feldis.sdkandroidtests.TestMapFragment
@@ -55,7 +56,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
-import java.util.Locale
 
 @RunWith(MockitoJUnitRunner::class)
 class MapViewTests : BaseTest() {
@@ -245,7 +245,7 @@ class MapViewTests : BaseTest() {
             GeoCoordinates(48.10095535808773, 17.234824479529344),
             listOf(3.0),
             RoutingOptions().apply {
-                vehicleProfile = RouteComputeHelper().createDefaultElectricVehicleProfile(5F,3F)
+                vehicleProfile = RouteComputeHelper().createDefaultElectricVehicleProfile(5F, 3F)
             },
             listener
         )
@@ -521,7 +521,12 @@ class MapViewTests : BaseTest() {
         val requestId = mapView.requestObjectsAtPoint(x, y, callback)
 
         // Verify that the callback returns the objects within 5 seconds.
-        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
+        verify(callback, timeout(5_000L)).onRequestResult(
+            captor.capture(),
+            eq(x),
+            eq(y),
+            eq(requestId)
+        )
 
         // Verify that among the returned objects, at least one is a MapPolyline.
         val viewObjects = captor.firstValue
@@ -575,7 +580,12 @@ class MapViewTests : BaseTest() {
         val requestId = mapView.requestObjectsAtPoint(x, y, callback)
 
         // Verify that the callback returns the objects within 5 seconds.
-        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
+        verify(callback, timeout(5_000L)).onRequestResult(
+            captor.capture(),
+            eq(x),
+            eq(y),
+            eq(requestId)
+        )
 
         // Verify that among the returned objects, at least one is a MapPolyline.
         val viewObjects = captor.firstValue
@@ -629,7 +639,12 @@ class MapViewTests : BaseTest() {
         val requestId = mapView.requestObjectsAtPoint(x, y, callback)
 
         // Verify that the callback returns the objects within 5 seconds.
-        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
+        verify(callback, timeout(5_000L)).onRequestResult(
+            captor.capture(),
+            eq(x),
+            eq(y),
+            eq(requestId)
+        )
 
         // Verify that among the returned objects, at least one is a MapPolyline.
         val viewObjects = captor.firstValue
@@ -683,7 +698,12 @@ class MapViewTests : BaseTest() {
         val requestId = mapView.requestObjectsAtPoint(x, y, callback)
 
         // Verify that the callback returns the objects within 5 seconds.
-        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
+        verify(callback, timeout(5_000L)).onRequestResult(
+            captor.capture(),
+            eq(x),
+            eq(y),
+            eq(requestId)
+        )
 
         // Verify that among the returned objects, at least one is a MapPolyline.
         val viewObjects = captor.firstValue
@@ -692,6 +712,159 @@ class MapViewTests : BaseTest() {
             viewObjects.any { it is MapRoute }
         )
         scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-13484
+     *
+     * In this test, we create an activity, then hide petrol stations
+     * from the map through PlacesManager,destroy the activity, create a new activity
+     * and we expect that the petrol stations are still hidden.
+     * There was a problem where the skin would be reset to default upon creating a mapView.
+     */
+    @Test
+    fun checkVisibilityOfPOIsAfterDestroyingActivity(): Unit = runBlocking {
+        // Create a map fragment with the initial camera state.
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // Launch the activity and add the map fragment.
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity { activity ->
+            activity.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+        // Set the camera position.
+        mapView.cameraModel.position = GeoCoordinates(48.1293, 17.1943)
+        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.tilt = 0F
+
+        val listener: SetVisibleCategoriesListener = mock(verboseLogging = true)
+
+        PlacesManagerProvider.getInstance().get().setVisibleCategories(
+            listOf(
+                PlaceCategoryGroupVisibility(
+                    "SYPetrolStation",
+                    listOf(PlaceCategoryVisibility("SYPetrolStation", false))
+                )
+            ), listener
+        )
+        verify(listener, timeout(3_000L)).onSuccess()
+        verify(listener, never()).onError(any())
+
+        delay(1000)
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+        delay(1000)
+
+        val mapFragment2 = TestMapFragment.newInstance(getInitialCameraState())
+        val scenario2 = ActivityScenario.launch(SygicActivity::class.java).onActivity { activity ->
+            activity.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment2)
+                .commitNow()
+        }
+        val mapView2 = getMapView(mapFragment2)
+
+        // Set the camera position.
+        mapView2.cameraModel.position = GeoCoordinates(48.1293, 17.1943)
+        mapView2.cameraModel.zoomLevel = 20F
+        mapView2.cameraModel.tilt = 0F
+
+        delay(3000)
+
+        // Prepare the callback for object requests.
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        // Determine the center coordinates of the MapView.
+        val view = requireNotNull(mapView2.view)
+        val x = view.width / 2F
+        val y = view.height / 2F
+
+        // Request objects at the center point.
+        val requestId = mapView2.requestObjectsAtPoint(x, y, callback)
+
+        // Verify that the callback returns objects within 5 seconds and capture them.
+        verify(callback, timeout(5_000L))
+            .onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
+
+        val viewObjects = captor.firstValue
+
+        // Clean up
+        scenario2.moveToState(Lifecycle.State.DESTROYED)
+
+        // Assert that none of the returned objects is a ProxyPlace.
+        assertFalse(
+            "No ProxyPlace should be present in the returned viewObjects list",
+            viewObjects.any { it is ProxyPlace }
+        )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-13484
+     *
+     * In this test, we hide petrol stations from the map using PlacesManager,
+     * create a new activity and we expect that the petrol stations are hidden.
+     * There was a problem where the skin would be reset to default upon creating a mapView.
+     */
+    @Test
+    fun checkVisibilityOfPOIsBeforeFirstScenario(): Unit = runBlocking {
+        val listener: SetVisibleCategoriesListener = mock(verboseLogging = true)
+
+        PlacesManagerProvider.getInstance().get().setVisibleCategories(
+            listOf(
+                PlaceCategoryGroupVisibility(
+                    "SYPetrolStation",
+                    listOf(PlaceCategoryVisibility("SYPetrolStation", false))
+                )
+            ), listener
+        )
+        verify(listener, timeout(3_000L)).onSuccess()
+        verify(listener, never()).onError(any())
+
+        // Create a map fragment with the initial camera state.
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // Launch the activity and add the map fragment.
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity { activity ->
+            activity.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+
+        // Set the camera position.
+        mapView.cameraModel.position = GeoCoordinates(48.1293, 17.1943)
+        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.tilt = 0F
+
+        delay(1000)
+
+        // Prepare the callback for object requests.
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        // Determine the center coordinates of the MapView.
+        val view = requireNotNull(mapView.view)
+        val x = view.width / 2F
+        val y = view.height / 2F
+
+        // Request objects at the center point.
+        val requestId = mapView.requestObjectsAtPoint(x, y, callback)
+
+        // Verify that the callback returns objects within 5 seconds and capture them.
+        verify(callback, timeout(5_000L))
+            .onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
+
+        val viewObjects = captor.firstValue
+
+        // Clean up
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+
+        // Assert that none of the returned objects is a ProxyPlace.
+        assertFalse(
+            "No ProxyPlace should be present in the returned viewObjects list",
+            viewObjects.any { it is ProxyPlace }
+        )
     }
 
 
