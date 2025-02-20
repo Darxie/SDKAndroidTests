@@ -618,30 +618,4 @@ class OfflineNavigationTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation) // shouldn't crash
         delay(500)
     }
-
-    @Test
-    fun shortestRouteInSlovakiaTest() = runBlocking {
-        mapDownload.installAndLoadMap("sk")
-
-        val route = routeCompute.offlineRouteCompute(
-            GeoCoordinates(48.149240, 17.106990),
-            GeoCoordinates(48.574280, 19.126600),
-            routingOptions = RoutingOptions().apply {
-                this.routingType = RoutingOptions.RoutingType.Shortest
-            }
-        )
-
-        // Check if there's at least one maneuver matching the criteria
-        val hasExpectedRoundabout = route.maneuvers.any { maneuver ->
-            maneuver.type == RouteManeuver.Type.RoundaboutNE &&
-                    maneuver.roundaboutExit == 2 &&
-                    maneuver.roadName == "Senecká cesta"
-        }
-
-        // If no maneuver matches, this assertion will fail
-        assertTrue(
-            "Expected to find a roundabout with exit 2 on 'Senecká cesta' but none was found.",
-            hasExpectedRoundabout
-        )
-    }
 }

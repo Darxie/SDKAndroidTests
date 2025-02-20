@@ -7,6 +7,7 @@ import com.sygic.sdk.route.PrimaryRouteRequest
 import com.sygic.sdk.route.Route
 import com.sygic.sdk.route.RouteAvoids
 import com.sygic.sdk.route.RouteDeserializerError
+import com.sygic.sdk.route.RouteManeuver
 import com.sygic.sdk.route.RouteRequest
 import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.Router
@@ -16,6 +17,7 @@ import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingType
 import com.sygic.sdk.route.TransitCountryInfo
 import com.sygic.sdk.route.Waypoint
+import com.sygic.sdk.route.listeners.EVRangeListener
 import com.sygic.sdk.route.listeners.GeometryListener
 import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
 import com.sygic.sdk.route.listeners.RouteComputeListener
@@ -691,7 +693,8 @@ class RouteComputeTests : BaseTest() {
         val startCountry = "hu"
         val destinationCountry = "sk"
 
-        val countryRouteAvoidables = route.routeRequest.routingOptions.routeAvoids.countryRouteAvoidables
+        val countryRouteAvoidables =
+            route.routeRequest.routingOptions.routeAvoids.countryRouteAvoidables
 
         listOf(startCountry, destinationCountry).forEach { country ->
             countryRouteAvoidables[country]?.let { avoidSet ->
@@ -1075,21 +1078,99 @@ class RouteComputeTests : BaseTest() {
         }
     }
 
-    private suspend fun getRouteRequest(path: String): RouteRequest =
-        suspendCoroutine { continuation ->
-            RouterProvider.getInstance().get().createRouteRequestFromJSONString(
-                readJson(path),
-                object : RouteRequestDeserializedListener {
-                    override fun onError(error: RouteDeserializerError) {
-                        Assert.fail("Deserialization error: $error")
-                    }
+    @Test
+    fun fromLeichendorfToZirndorf() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("de-02")
+        val routeCompute = RouteComputeHelper()
 
-                    override fun onSuccess(routeRequest: RouteRequest) {
-                        continuation.resume(routeRequest)
-                    }
-                }
-            )
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(49.4339, 10.9345),
+            GeoCoordinates(49.4425, 10.9459),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingType.Fastest
+            }
+        )
+        val leftTurnExists = route.maneuvers.count {
+            it.type == RouteManeuver.Type.Left &&
+                    it.roundaboutExit == 0 &&
+                    it.roadName == "Schwabacher Straße"
+        } > 0
+
+        val roundaboutExit2Exists = route.maneuvers.count {
+            it.type == RouteManeuver.Type.RoundaboutN &&
+                    it.roundaboutExit == 2
+        } > 0
+
+        val roundaboutExit1Exists = route.maneuvers.count {
+            it.type == RouteManeuver.Type.RoundaboutE &&
+                    it.roundaboutExit == 1 &&
+                    it.nextRoadName == "Banderbacher Straße"
+        } > 0
+
+        val hasExpectedManeuvers = leftTurnExists && roundaboutExit2Exists && roundaboutExit1Exists
+        assertTrue(hasExpectedManeuvers)
+    }
+
+    @Test
+    fun routingViaRoadsOfLowerQualityPortugal() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("pt")
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(39.8021, -8.09799),
+            GeoCoordinates(39.6256, -8.16204),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingType.Fastest
+            }
+        )
+        val roundaboutExit2Exists = route.maneuvers.count {
+            it.type == RouteManeuver.Type.RoundaboutN &&
+                    it.roundaboutExit == 2 &&
+                    it.roadName == "Rua de Proença a Nova"
+        } > 0
+
+        val leftTurnExists = route.maneuvers.count {
+            it.type == RouteManeuver.Type.Left &&
+                    it.roundaboutExit == 0 &&
+                    it.nextRoadNumbers.contains("N2")
+        } > 0
+
+        val secondLeftTurnExists = route.maneuvers.count {
+            it.type == RouteManeuver.Type.Left &&
+                    it.roundaboutExit == 0 &&
+                    it.nextRoadNumbers.contains("N2")
+        } > 0
+
+        val hasExpectedManeuvers = roundaboutExit2Exists && leftTurnExists && secondLeftTurnExists
+        assertTrue(hasExpectedManeuvers)
+    }
+
+    @Test
+    fun shortestRouteInSlovakiaTest() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.149240, 17.106990),
+            GeoCoordinates(48.574280, 19.126600),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingType.Shortest
+            }
+        )
+
+        // Check if there's at least one maneuver matching the criteria
+        val hasExpectedRoundabout = route.maneuvers.any { maneuver ->
+            maneuver.type == RouteManeuver.Type.RoundaboutNE &&
+                    maneuver.roundaboutExit == 2 &&
+                    maneuver.roadName == "Senecká cesta"
         }
+
+        // If no maneuver matches, this assertion will fail
+        assertTrue(
+            "Expected to find a roundabout with exit 2 on 'Senecká cesta' but none was found.",
+            hasExpectedRoundabout
+        )
+    }
 
     /**
      * Computes a route from Eurovea to Kuchajda and checks that route duration is less than
@@ -1132,4 +1213,78 @@ class RouteComputeTests : BaseTest() {
             napStrategy = NearestAccessiblePointStrategy.Disabled
         }
     }
+
+    @Test
+    fun testSpiderRangeWeightFactorsDifference(): Unit = runBlocking {
+        disableOnlineMaps()
+        MapDownloadHelper().installAndLoadMap("sk")
+
+        val listener: EVRangeListener = mock(verboseLogging = true)
+
+        val vehicleProfile =
+            RouteComputeHelper().createDefaultElectricVehicleProfile(5F, 5F).apply {
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalWeight = 1000F
+                }
+            }
+
+        RouterProvider.getInstance().get().computeEVRange(
+            GeoCoordinates(48.10095535808773, 17.234824479529344),
+            listOf(5.0),
+            RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile
+                this.routingService = RoutingOptions.RoutingService.Offline
+            },
+            listener
+        )
+
+        val captor = argumentCaptor<List<List<GeoCoordinates>>>()
+        verify(listener, timeout(10_000L)).onEVRangeComputed(captor.capture())
+        val isochrones1 = captor.firstValue[0]
+
+        val listener2: EVRangeListener = mock(verboseLogging = true)
+
+        RouterProvider.getInstance().get().computeEVRange(
+            GeoCoordinates(48.10095535808773, 17.234824479529344),
+            listOf(5.0),
+            RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile.apply {
+                    dimensionalTraits = DimensionalTraits().apply {
+                        totalWeight = 5000F
+                    }
+                }
+                this.routingService = RoutingOptions.RoutingService.Offline
+            },
+            listener2
+        )
+
+        val captor2 = argumentCaptor<List<List<GeoCoordinates>>>()
+        verify(listener2, timeout(10_000L)).onEVRangeComputed(captor2.capture())
+        val isochrones2 = captor2.firstValue[0]
+
+        // Assert that isochrones1 and isochrones2 are different
+        assertNotEquals(isochrones1.size, isochrones2.size)
+
+        val areDifferent = isochrones1.zip(isochrones2).any { (coord1, coord2) ->
+            coord1.latitude != coord2.latitude || coord1.longitude != coord2.longitude
+        }
+
+        assertTrue("Isochrones should be different, but they appear identical.", areDifferent)
+    }
+
+    private suspend fun getRouteRequest(path: String): RouteRequest =
+        suspendCoroutine { continuation ->
+            RouterProvider.getInstance().get().createRouteRequestFromJSONString(
+                readJson(path),
+                object : RouteRequestDeserializedListener {
+                    override fun onError(error: RouteDeserializerError) {
+                        Assert.fail("Deserialization error: $error")
+                    }
+
+                    override fun onSuccess(routeRequest: RouteRequest) {
+                        continuation.resume(routeRequest)
+                    }
+                }
+            )
+        }
 }
