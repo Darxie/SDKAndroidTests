@@ -46,6 +46,7 @@ import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.fail
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.junit.MockitoJUnitRunner
@@ -470,6 +471,7 @@ class MapViewTests : BaseTest() {
         scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
+    @Ignore("Won't be part of sdk28 yet")
     @Test
     fun requestMapPolylineFromCoordinates(): Unit = runBlocking {
         // Create a map fragment with the initial camera state.
@@ -530,11 +532,11 @@ class MapViewTests : BaseTest() {
 
         // Verify that among the returned objects, at least one is a MapPolyline.
         val viewObjects = captor.firstValue
+        scenario.moveToState(Lifecycle.State.DESTROYED)
         assertTrue(
             "Expected to find a MapPolyline object at the clicked point",
             viewObjects.any { it is MapPolyline }
         )
-        scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
     @Test
