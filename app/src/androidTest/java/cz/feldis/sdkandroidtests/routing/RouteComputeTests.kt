@@ -1145,6 +1145,42 @@ class RouteComputeTests : BaseTest() {
         assertTrue(hasExpectedManeuvers)
     }
 
+    /**
+     * TC864
+     * https://jira.sygic.com/browse/SDC-12136
+     **/
+    @Test
+    fun carRoutingViaRC4RoadsTest() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.146380, 17.125170),
+            GeoCoordinates(48.145140, 17.123600),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingType.Fastest
+            }
+        )
+        val maneuverRight = route.maneuvers.count {
+            it.type == RouteManeuver.Type.Right &&
+                    it.roadName == "Továrenská"
+        } > 0
+
+        val maneuverRight2 = route.maneuvers.count {
+            it.type == RouteManeuver.Type.Right &&
+                    it.roadName == "Továrenská" &&
+                    it.nextRoadName == "Karadžičova"
+        } > 0
+
+        val maneuverRight3 = route.maneuvers.count {
+            it.roadName == "Landererova" ||
+                    it.nextRoadName == "Landererova"
+        } > 0
+
+        val hasExpectedManeuvers = maneuverRight && maneuverRight2 && !maneuverRight3
+        assertTrue(hasExpectedManeuvers)
+    }
+
     @Test
     fun shortestRouteInSlovakiaTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
