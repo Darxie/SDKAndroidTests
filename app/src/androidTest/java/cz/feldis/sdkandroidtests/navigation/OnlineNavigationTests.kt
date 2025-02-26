@@ -1,12 +1,19 @@
 package cz.feldis.sdkandroidtests.navigation
 
+import androidx.lifecycle.Lifecycle
+import androidx.test.core.app.ActivityScenario
+import com.sygic.sdk.map.Camera
+import com.sygic.sdk.map.CameraState
+import com.sygic.sdk.map.MapAnimation
+import com.sygic.sdk.map.MapCenter
+import com.sygic.sdk.map.MapCenterSettings
+import com.sygic.sdk.map.MapView
+import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManager.OnRouteProgressListener
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
 import com.sygic.sdk.position.GeoCoordinates
-import com.sygic.sdk.route.GuidedRouteProfile
-import com.sygic.sdk.route.RouteRequest
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.Waypoint
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
@@ -15,6 +22,8 @@ import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.NmeaFileDataProvider
+import cz.feldis.sdkandroidtests.SygicActivity
+import cz.feldis.sdkandroidtests.TestMapFragment
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
@@ -30,12 +39,14 @@ import org.mockito.InOrder
 import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import java.util.Locale
 
 class OnlineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -567,6 +578,63 @@ class OnlineNavigationTests : BaseTest() {
     }
 
     /**
+     * Navigation test on route recompute reason
+     *
+     * In this test we compute online route and set it for navigation.
+     * Via Nmea Log Recorder we set route from assets/SVK-Kosicka.nmea and start nmea log simulation.
+     * Then we change the language of mapView.
+     * We verify that the recompute was invoked with status Language Changed.
+     */
+    @Test
+    fun onRouteRecomputeStartedReasonLanguageChanged():Unit = runBlocking {
+        val listener: NavigationManager.OnRouteRecomputeListener =
+            mock(verboseLogging = true)
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+        val mapView = getMapView(mapFragment)
+
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.1447, 17.1317),
+            GeoCoordinates(48.1461, 17.1285)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnRouteRecomputeProgressListener(listener)
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+        delay(2000)
+        mapView.setMapLanguage(Locale.FRENCH)
+
+        val recomputeStartedData = NavigationManager.OnRouteRecomputeListener.RecomputeStartedData(
+            route, NavigationManager.RouteRecomputeReason.LanguageChanged
+        )
+        val recomputeFinishedData = NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData(
+            route, NavigationManager.RouteRecomputeResult.Success
+        )
+
+        Mockito.verify(
+            listener, Mockito.timeout(20_000L).times(1)
+        ).onRouteRecomputeStarted(eq(recomputeStartedData))
+
+        Mockito.verify(
+            listener, timeout(20_000L).times(1)).onRouteRecomputeFinished(eq(recomputeFinishedData)
+        )
+
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        navigation.removeOnRouteRecomputeProgressListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+        mapView.setMapLanguage(Locale.ENGLISH)
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    /**
      * Navigation test on waypoint pass
      *
      * In this test we compute route with waypoint and set it for navigation.
@@ -738,5 +806,35 @@ class OnlineNavigationTests : BaseTest() {
 
     companion object {
         private const val STATUS_TIMEOUT: Long = 30000
+    }
+
+    private fun getInitialCameraState(): CameraState {
+        return CameraState.Builder().apply {
+            setPosition(GeoCoordinates(48.15132, 17.07665))
+            setMapCenterSettings(
+                MapCenterSettings(
+                    MapCenter(0.5f, 0.5f),
+                    MapCenter(0.5f, 0.5f),
+                    MapAnimation.NONE, MapAnimation.NONE
+                )
+            )
+            setMapPadding(0.0f, 0.0f, 0.0f, 0.0f)
+            setRotation(0f)
+            setZoomLevel(14F)
+            setMovementMode(Camera.MovementMode.Free)
+            setRotationMode(Camera.RotationMode.Free)
+            setTilt(0f)
+        }.build()
+    }
+
+    private fun getMapView(mapFragment: TestMapFragment): MapView {
+        val mapInitListener: OnMapInitListener = mock(verboseLogging = true)
+        val mapViewCaptor = argumentCaptor<MapView>()
+
+        mapFragment.getMapAsync(mapInitListener)
+        verify(mapInitListener, timeout(5_000L)).onMapReady(
+            mapViewCaptor.capture()
+        )
+        return mapViewCaptor.firstValue
     }
 }
