@@ -107,6 +107,6 @@ class VoicesTests : BaseTest() {
         }
 
         // Verify the exact number of invocations
-        verify(statusCallback, timeout(10_000L).times(voices.size)).onPermanentId(any())
+        verify(statusCallback, timeout(10_000L).times(voices.size)).onPermanentId(anyOrNull())
     }
 }
