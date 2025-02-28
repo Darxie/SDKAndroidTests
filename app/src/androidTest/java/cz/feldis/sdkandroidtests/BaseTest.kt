@@ -205,7 +205,6 @@ abstract class BaseTest {
 
     open fun startPositionUpdating() {
         val listener = mock<PositionManager.OnOperationComplete>()
-        whenever(listener.onComplete())
 
         PositionManagerProvider.getInstance().get().startPositionUpdating(listener)
 
@@ -220,6 +219,4 @@ abstract class BaseTest {
 
         verify(listener, timeout(5000L)).onComplete()
     }
-
-
 }
