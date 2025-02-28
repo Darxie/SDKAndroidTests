@@ -19,6 +19,8 @@ android {
         // use your own SDK client ID
         buildConfigField "String", "SYGIC_SDK_CLIENT_ID", getSdkClientId()
         buildConfigField "String", "LICENSE_KEY", getSdkLicenseKey()
+        buildConfigField "String", "SYGIC_SDK_CLIENT_ID_HERE", getSdkClientIdForHereMaps()
+        buildConfigField "String", "LICENSE_KEY_HERE", getSdkLicenseKeyForHereMaps()
 
         if (gradle.wantsToBuildSdkFromSource) {
             missingDimensionStrategy 'build', 'development'
@@ -95,6 +97,40 @@ def getSdkLicenseKey() {
     }
 
     return sdkLicenseKey
+}
+
+def getSdkClientIdForHereMaps() {
+    def sdkClientId = ""
+
+    def localProperties = project.rootProject.file('local.properties')
+    if (localProperties.exists()) {
+        Properties properties = new Properties()
+        properties.load(localProperties.newDataInputStream())
+        sdkClientId = properties.getProperty('sygic.sdk.client.id.here', "")
+    }
+
+    if (sdkClientId.isEmpty()) {
+        logger.error('Missing Client ID for Sygic Maps SDK! Define one in local.properties as sygic.sdk.client.id="YOUR.CLIENT.ID"')
+    }
+
+    return sdkClientId
+}
+
+def getSdkLicenseKeyForHereMaps() {
+    def sdkClientId = ""
+
+    def localProperties = project.rootProject.file('local.properties')
+    if (localProperties.exists()) {
+        Properties properties = new Properties()
+        properties.load(localProperties.newDataInputStream())
+        sdkClientId = properties.getProperty('license.key.here', "")
+    }
+
+    if (sdkClientId.isEmpty()) {
+        logger.error('Missing License Key for Sygic Maps SDK! Define one in local.properties as license.key="jwt"')
+    }
+
+    return sdkClientId
 }
 
 dependencies {

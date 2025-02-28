@@ -135,56 +135,6 @@ class VehicleAidTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation)
     }
 
-    @Test
-    @Ignore("Only works with HERE Maps")
-    fun vehicleAidMaxTrailers() = runBlocking {
-        disableOnlineMaps()
-        mapDownload.installAndLoadMap("se")
-        val vehicleProfile = VehicleProfile().apply {
-            this.dimensionalTraits = DimensionalTraits().apply {
-                this.totalHeight = 8000
-                this.trailers = listOf(
-                    Trailer(1000, false, listOf(Axle(2, 500F, 2))),
-                    Trailer(1000, false, listOf(Axle(2, 500F, 2))),
-                    Trailer(1000, false, listOf(Axle(2, 500F, 2))),
-                    Trailer(1000, false, listOf(Axle(2, 500F, 2))),
-                    Trailer(1000, false, listOf(Axle(2, 500F, 2)))
-                )
-            }
-            this.generalVehicleTraits = GeneralVehicleTraits().apply {
-                this.vehicleType = VehicleType.Truck
-            }
-        }
-
-        val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
-
-        val route = routeCompute.offlineRouteCompute(
-            start = GeoCoordinates(57.6456, 14.9804),
-            destination = GeoCoordinates(57.6452, 14.9781),
-            routingOptions = RoutingOptions().apply {
-                this.vehicleProfile = vehicleProfile
-                routingService = RoutingService.Offline
-                useEndpointProtection = true
-                napStrategy = NearestAccessiblePointStrategy.Disabled
-            }
-        )
-
-        navigationManagerKtx.setRouteForNavigation(route, navigation)
-        navigation.addOnVehicleAidListener(listener)
-
-        verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
-            for (vehicleAidInfo in this) {
-                if (vehicleAidInfo.restriction.type == RestrictionInfo.RestrictionType.LimitsMaxTrailers) {
-                    return@argThat true
-                }
-            }
-            return@argThat false
-        })
-
-        navigation.removeOnVehicleAidListener(listener)
-        navigationManagerKtx.stopNavigation(navigation)
-    }
-
     //HANKA1
     @Test
     fun vehicleAidMaxLength() = runBlocking {
@@ -269,54 +219,6 @@ class VehicleAidTests : BaseTest() {
             return@argThat false
         })
 
-        navigation.removeOnVehicleAidListener(listener)
-        navigationManagerKtx.stopNavigation(navigation)
-    }
-
-    //HANKA3
-    @Test
-    @Ignore("only for HERE maps")
-    fun vehicleAidWheelCountRestriction() = runBlocking {
-        disableOnlineMaps()
-        mapDownload.installAndLoadMap("th")
-
-        val vehicleProfile = VehicleProfile().apply {
-            this.dimensionalTraits = DimensionalTraits().apply {
-                this.semiTrailer = SemiTrailer(
-                    60000, false,
-                    listOf(Axle(8, 11000F, 8))
-                )
-            }
-            this.generalVehicleTraits = GeneralVehicleTraits().apply {
-                this.vehicleType = VehicleType.Truck
-            }
-        }
-
-        val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
-
-        val route = routeCompute.offlineRouteCompute(
-            start = GeoCoordinates(13.79803, 100.56111),
-            destination = GeoCoordinates(13.79673, 100.56273),
-            routingOptions = RoutingOptions().apply {
-                this.vehicleProfile = vehicleProfile
-                routingService = RoutingService.Offline
-                useEndpointProtection = true
-                napStrategy = NearestAccessiblePointStrategy.Disabled
-            }
-        )
-
-        navigationManagerKtx.setRouteForNavigation(route, navigation)
-        navigation.addOnVehicleAidListener(listener)
-
-        verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
-            for (vehicleAidInfo in this) {
-                if (vehicleAidInfo.restriction.type == RestrictionInfo.RestrictionType.LimitsMaxWheels) {
-                    if (vehicleAidInfo.restriction.value == 5)
-                        return@argThat true
-                }
-            }
-            return@argThat false
-        })
         navigation.removeOnVehicleAidListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
