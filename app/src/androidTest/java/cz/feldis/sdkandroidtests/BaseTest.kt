@@ -16,7 +16,6 @@ import com.sygic.sdk.diagnostics.LogConnector
 import com.sygic.sdk.map.data.MapProvider
 import com.sygic.sdk.online.OnlineManager
 import com.sygic.sdk.online.OnlineManagerProvider
-import com.sygic.sdk.online.data.MapProviderError
 import com.sygic.sdk.online.listeners.SetActiveMapProviderListener
 import com.sygic.sdk.position.PositionManager
 import com.sygic.sdk.position.PositionManagerProvider
@@ -28,9 +27,10 @@ import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.rules.Timeout
 import org.junit.runner.Description
-import org.mockito.Mockito.spy
+import org.mockito.Mockito.mock
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -173,12 +173,8 @@ abstract class BaseTest {
         val onlineManager = OnlineManagerProvider.getInstance().get()
         if (!onlineManager.isOnlineMapStreamingEnabled()) return
 
-        val listener = spy(object : OnlineManager.MapStreamingListener {
-            override fun onSuccess() {}
-            override fun onError(errorCode: OnlineManager.MapStreamingError) {
-                Assert.fail("Failed to disable online maps: ${errorCode.name}")
-            }
-        })
+        val listener = mock<OnlineManager.MapStreamingListener>()
+        whenever(listener.onSuccess()).then {}
 
         onlineManager.disableOnlineMapStreaming(listener)
 
@@ -189,13 +185,8 @@ abstract class BaseTest {
         val onlineManager = OnlineManagerProvider.getInstance().get()
         if (onlineManager.isOnlineMapStreamingEnabled()) return
 
-        val listener = spy(object : OnlineManager.MapStreamingListener {
-            override fun onSuccess() {}
-            override fun onError(errorCode: OnlineManager.MapStreamingError) {
-                Assert.fail("Failed to enable online maps: ${errorCode.name}")
-            }
-
-        })
+        val listener = mock<OnlineManager.MapStreamingListener>()
+        whenever(listener.onSuccess()).then {}
 
         onlineManager.enableOnlineMapStreaming(listener)
 
@@ -203,12 +194,8 @@ abstract class BaseTest {
     }
 
     fun setActiveMapProvider(providerName: String) {
-        val listener = spy(object : SetActiveMapProviderListener {
-            override fun onActiveProviderSet() {}
-            override fun onError(error: MapProviderError) {
-                Assert.fail("Failed to set active map provider: ${error.message}")
-            }
-        })
+        val listener = mock<SetActiveMapProviderListener>()
+        whenever(listener.onActiveProviderSet())
 
         OnlineManagerProvider.getInstance().get()
             .setActiveMapProvider(MapProvider(providerName), listener)
@@ -217,9 +204,8 @@ abstract class BaseTest {
     }
 
     open fun startPositionUpdating() {
-        val listener = spy(object : PositionManager.OnOperationComplete {
-            override fun onComplete() {}
-        })
+        val listener = mock<PositionManager.OnOperationComplete>()
+        whenever(listener.onComplete())
 
         PositionManagerProvider.getInstance().get().startPositionUpdating(listener)
 
@@ -227,9 +213,8 @@ abstract class BaseTest {
     }
 
     open fun stopPositionUpdating() {
-        val listener = spy(object : PositionManager.OnOperationComplete {
-            override fun onComplete() {}
-        })
+        val listener = mock<PositionManager.OnOperationComplete>()
+        whenever(listener.onComplete())
 
         PositionManagerProvider.getInstance().get().stopPositionUpdating(listener)
 
