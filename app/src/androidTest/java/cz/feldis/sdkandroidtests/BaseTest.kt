@@ -2,6 +2,7 @@ package cz.feldis.sdkandroidtests
 
 import android.Manifest
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import androidx.annotation.CallSuper
 import androidx.test.ext.junit.rules.ActivityScenarioRule
@@ -220,5 +221,27 @@ abstract class BaseTest {
         PositionManagerProvider.getInstance().get().stopPositionUpdating(listener)
 
         verify(listener, timeout(5000L)).onComplete()
+    }
+
+    open fun isRunningOnEmulator(): Boolean {
+        val fingerprint = Build.FINGERPRINT.lowercase()
+        val model = Build.MODEL.lowercase()
+        val brand = Build.BRAND.lowercase()
+        val device = Build.DEVICE.lowercase()
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        val product = Build.PRODUCT.lowercase()
+
+        return fingerprint.contains("generic")
+                || fingerprint.contains("test-keys")
+                || model.contains("google_sdk")
+                || model.contains("droid4x")
+                || model.contains("emulator")
+                || model.contains("android sdk built for")
+                || brand.contains("generic")
+                || device.contains("generic")
+                || product.contains("sdk_gphone")
+                || manufacturer.contains("genymotion")
+                || product.contains("vbox")
+                || product.contains("emulator")
     }
 }

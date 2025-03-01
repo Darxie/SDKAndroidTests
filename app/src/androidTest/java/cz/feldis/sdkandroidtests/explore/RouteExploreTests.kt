@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.explore
 
-import androidx.test.filters.RequiresDevice
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.explorer.RouteExplorer
@@ -20,6 +19,7 @@ import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.Mockito
@@ -141,8 +141,8 @@ class RouteExploreTests : BaseTest() {
     }
 
     @Test
-    @RequiresDevice
     fun explorePlacesOnRouteLongRoutePerformance() = runBlocking {
+        assumeTrue(!isRunningOnEmulator())
         disableOnlineMaps()
         val listener: NavigationManager.OnPlaceListener = mock(verboseLogging = true)
         val completeListener: PositionSimulator.OnOperationComplete = mock(verboseLogging = true)

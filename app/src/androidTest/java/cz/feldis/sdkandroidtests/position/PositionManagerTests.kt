@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.position
 
-import androidx.test.filters.RequiresDevice
 import org.mockito.kotlin.*
 import com.sygic.sdk.position.CustomPositionUpdater
 import com.sygic.sdk.position.GeoCoordinates
