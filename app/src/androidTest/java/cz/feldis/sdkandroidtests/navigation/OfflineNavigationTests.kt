@@ -496,18 +496,6 @@ class OfflineNavigationTests : BaseTest() {
     }
 
     @Test
-    @Ignore("Prototype - doesnt apply to TomTom maps")
-    fun correctUTurnInstructionBajkalska() {
-        mapDownload.installAndLoadMap("sk")
-        val route =
-            routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.147260, 17.150520),
-                GeoCoordinates(48.147230, 17.150120)
-            )
-        assertEquals(route.maneuvers[0].type, RouteManeuver.Type.UTurnLeft)
-    }
-
-    @Test
     fun testWaypointPassAudioNotification() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val navigation = NavigationManagerProvider.getInstance().get()

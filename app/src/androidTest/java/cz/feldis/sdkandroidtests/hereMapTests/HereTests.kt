@@ -4,6 +4,7 @@ import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.route.RouteManeuver
 import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
@@ -21,7 +22,9 @@ import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Ignore
 import org.junit.Test
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.argumentCaptor
@@ -184,5 +187,16 @@ class HereTests : BaseHereTest() {
         })
         navigation.removeOnVehicleAidListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    @Test
+    fun correctUTurnInstructionBajkalska() {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val route =
+            routeComputeHelper.offlineRouteCompute(
+                GeoCoordinates(48.147260, 17.150520),
+                GeoCoordinates(48.147230, 17.150120)
+            )
+        assertEquals(route.maneuvers[0].type, RouteManeuver.Type.UTurnLeft)
     }
 }
