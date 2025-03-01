@@ -9,11 +9,9 @@ import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingService
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
+import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import com.sygic.sdk.vehicletraits.VehicleProfile
-import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
-import com.sygic.sdk.vehicletraits.dimensional.SemiTrailer
-import com.sygic.sdk.vehicletraits.dimensional.Trailer
 import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
@@ -24,9 +22,9 @@ import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
+import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.mock
@@ -157,12 +155,18 @@ class VehicleAidTests : BaseTest() {
             routingOptions = RoutingOptions().apply {
                 this.vehicleProfile = vehicleProfile
                 useEndpointProtection = true
+                useSpeedProfiles = false
+                useTraffic = false
                 napStrategy = NearestAccessiblePointStrategy.Disabled
             }
         )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnVehicleAidListener(listener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
         verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
             for (vehicleAidInfo in this) {
@@ -174,6 +178,7 @@ class VehicleAidTests : BaseTest() {
             return@argThat false
         })
 
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         navigation.removeOnVehicleAidListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -207,6 +212,10 @@ class VehicleAidTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnVehicleAidListener(listener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
         verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
             for (vehicleAidInfo in this) {
@@ -218,6 +227,7 @@ class VehicleAidTests : BaseTest() {
             return@argThat false
         })
 
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         navigation.removeOnVehicleAidListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
@@ -226,7 +236,8 @@ class VehicleAidTests : BaseTest() {
     fun testVehicleZoneSitinaWithoutRoute() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val setVehicleListener: SetVehicleProfileListener = mock(verboseLogging = true)
-        val vehicleZoneListener: NavigationManager.OnVehicleZoneListener = mock(verboseLogging = true)
+        val vehicleZoneListener: NavigationManager.OnVehicleZoneListener =
+            mock(verboseLogging = true)
         val vehicleProfile = VehicleProfile().apply {
             this.hazmatTraits = HazmatTraits(HazmatTraits.GeneralHazardousMaterialClasses)
             this.generalVehicleTraits = GeneralVehicleTraits().apply {
