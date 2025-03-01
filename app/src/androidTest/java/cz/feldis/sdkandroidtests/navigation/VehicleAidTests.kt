@@ -156,7 +156,6 @@ class VehicleAidTests : BaseTest() {
             destination = GeoCoordinates(48.3258, 17.2351),
             routingOptions = RoutingOptions().apply {
                 this.vehicleProfile = vehicleProfile
-                routingService = RoutingService.Offline
                 useEndpointProtection = true
                 napStrategy = NearestAccessiblePointStrategy.Disabled
             }
