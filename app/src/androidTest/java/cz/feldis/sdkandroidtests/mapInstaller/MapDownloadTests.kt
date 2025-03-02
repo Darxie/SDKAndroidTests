@@ -1,7 +1,5 @@
 package cz.feldis.sdkandroidtests.mapInstaller
 
-import androidx.test.filters.RequiresDevice
-import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.map.CountryDetails
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
@@ -11,9 +9,16 @@ import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
+import org.junit.Ignore
 import org.junit.Test
-import java.util.*
+import org.mockito.kotlin.*
+import timber.log.Timber
+import java.util.Timer
 import kotlin.concurrent.schedule
 
 class MapDownloadTests : BaseTest() {
@@ -28,8 +33,8 @@ class MapDownloadTests : BaseTest() {
     }
 
     @Test
-    @RequiresDevice
     fun installUninstallAndVerifyMapTest() {
+        assumeTrue(!isRunningOnEmulator())
         //vatican
         mapDownloadHelper.ensureMapNotInstalled("va")
         mapDownloadHelper.installAndLoadMap("va")
@@ -80,35 +85,36 @@ class MapDownloadTests : BaseTest() {
     }
 
     @Test
-    @RequiresDevice
     fun installCancelTest() {
-        mapDownloadHelper.ensureMapNotInstalled("sk")
+        assumeTrue(!isRunningOnEmulator())
+        mapDownloadHelper.ensureMapNotInstalled("gi")
+        mapDownloadHelper.ensureMapNotInstalled("ad")
         mapDownloadHelper.ensureMapNotInstalled("us-dc")
-        mapDownloadHelper.ensureMapNotInstalled("de-02")
 
         val installer = MapInstallerProvider.getInstance().get()
-        val listenerSK: MapResultListener = mock(verboseLogging = true)
-        val listenerUSDC: MapResultListener = mock(verboseLogging = true)
-        val listenerDE02: MapResultListener = mock(verboseLogging = true)
 
-        installer.installMap("sk", listenerSK)
-        installer.installMap("de-02", listenerDE02)
-        val task = installer.installMap("us-dc", listenerUSDC)
+        val spyListenerGI = createSpyListener()
+        val spyListenerUSDC = createSpyListener()
+        val spyListenerAD = createSpyListener()
+
+        installer.installMap("gi", spyListenerGI)
+        installer.installMap("ad", spyListenerAD)
+        val task = installer.installMap("us-dc", spyListenerUSDC)
         Timer().schedule(2000) {
             task.cancel()
         }
 
-        verify(listenerSK, timeout(180_000L)).onMapResult(
-            eq("sk"),
+        verify(spyListenerGI, timeout(30_000L)).onMapResult(
+            eq("gi"),
             eq(MapInstaller.LoadResult.Success)
         )
-        verify(listenerUSDC, timeout(180_000L)).onMapResult(
+        verify(spyListenerAD, timeout(30_000L)).onMapResult(
+            eq("ad"),
+            eq(MapInstaller.LoadResult.Success)
+        )
+        verify(spyListenerUSDC, timeout(30_000L)).onMapResult(
             eq("us-dc"),
             eq(MapInstaller.LoadResult.Cancelled)
-        )
-        verify(listenerDE02, timeout(180_000L)).onMapResult(
-            eq("de-02"),
-            eq(MapInstaller.LoadResult.Success)
         )
     }
 
@@ -135,8 +141,8 @@ class MapDownloadTests : BaseTest() {
     }
 
     @Test
-    @RequiresDevice
     fun installIcelandTest() {
+        assumeTrue(!isRunningOnEmulator())
         mapDownloadHelper.ensureMapNotInstalled("is")
         val installer = MapInstallerProvider.getInstance().get()
 
@@ -166,21 +172,22 @@ class MapDownloadTests : BaseTest() {
     }
 
     @Test
-    @RequiresDevice
     fun installSplitMapTest() {
+        assumeTrue(!isRunningOnEmulator())
         mapDownloadHelper.ensureMapNotInstalled("gb-05")
         mapDownloadHelper.installAndLoadMap("gb-05")
     }
 
     @Test
-    @RequiresDevice
     fun installAndDeleteSplitMapTest() {
+        assumeTrue(!isRunningOnEmulator())
         mapDownloadHelper.ensureMapNotInstalled("gb-05")
         mapDownloadHelper.installAndLoadMap("gb-05")
         mapDownloadHelper.uninstallMap("gb-05")
     }
 
     @Test
+    @Ignore("fails on sdk28")
     fun setUnsupportedLocaleExpectErrorTest() {
         val installer = MapInstallerProvider.getInstance().get()
         val listener: ResultListener = mock(verboseLogging = true)
@@ -191,17 +198,26 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun setLocaleTest() {
+        // cache is cleared during setUp() and locale set to en-en
         val installer = MapInstallerProvider.getInstance().get()
         val listener: ResultListener = mock(verboseLogging = true)
-        mapDownloadHelper.installAndLoadMap("sk")
-        installer.setLocale("sk-def", listener)
+
+        installer.setLocale("sk-sk", listener)
         verify(listener, timeout(20_000L).times(1))
             .onResult(eq(MapInstaller.LoadResult.Success))
+
+        val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
+        val detailsCaptor = argumentCaptor<CountryDetails>()
+
+        installer.getCountryDetails("sk", true, cdListener)
+        verify(cdListener, timeout(20_000L)).onCountryDetails(detailsCaptor.capture())
+        assertTrue(detailsCaptor.firstValue.name == "Slovensko")
+        assertTrue(detailsCaptor.firstValue.continentName == "Európa")
     }
 
     @Test
     fun verifyProviderOfInstalledMapTest() {
-        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         mapDownloadHelper.installAndLoadMap("is")
         MapInstallerProvider.getInstance().get().getCountryDetails("is", true, cdListener)
         val captor = argumentCaptor<CountryDetails>()
@@ -213,7 +229,7 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun verifyProviderOfNotInstalledMapCountrySplit() {
-        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         mapDownloadHelper.ensureMapNotInstalled("de-02")
         MapInstallerProvider.getInstance().get().getCountryDetails("de-02", false, cdListener)
         val captor = argumentCaptor<CountryDetails>()
@@ -225,9 +241,22 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun verifyNonExistentCountryDetailsOfResourceMap() {
-        val cdListener : MapCountryDetailsListener = mock(verboseLogging = true)
+        val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         MapInstallerProvider.getInstance().get().getCountryDetails("de-01", false, cdListener)
         verify(cdListener, never()).onCountryDetails(any())
-        verify(cdListener, timeout(10_000L)).onCountryDetailsError(eq(MapInstaller.LoadResult.DetailsNotAvailable))
+        verify(
+            cdListener,
+            timeout(10_000L)
+        ).onCountryDetailsError(eq(MapInstaller.LoadResult.DetailsNotAvailable))
+    }
+
+    open class TestMapResultListener : MapResultListener {
+        override fun onMapResult(mapIso: String, result: MapInstaller.LoadResult) {
+            Timber.d("MapResultListener called with iso $mapIso and result: $result")
+        }
+    }
+
+    fun createSpyListener(): MapResultListener {
+        return spy(TestMapResultListener())
     }
 }

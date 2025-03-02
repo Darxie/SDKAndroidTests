@@ -1,27 +1,56 @@
 package cz.feldis.sdkandroidtests.navigation
 
-import com.nhaarman.mockitokotlin2.*
+import android.graphics.Color
 import com.sygic.sdk.incidents.SpeedCamera
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
+import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
 import com.sygic.sdk.position.GeoCoordinates
-import com.sygic.sdk.position.PositionManagerProvider
+import com.sygic.sdk.route.Route
+import com.sygic.sdk.route.RouteManeuver
+import com.sygic.sdk.route.Router
+import com.sygic.sdk.route.RouterProvider
+import com.sygic.sdk.route.RoutingOptions
+import com.sygic.sdk.route.Waypoint
+import com.sygic.sdk.route.listeners.RouteComputeListener
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
+import com.sygic.sdk.vehicletraits.VehicleProfile
+import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
+import com.sygic.sdk.vehicletraits.listeners.SetVehicleProfileListener
 import cz.feldis.sdkandroidtests.BaseTest
+import cz.feldis.sdkandroidtests.NmeaFileDataProvider
+import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
+import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
+import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import org.mockito.AdditionalMatchers
+import org.mockito.InOrder
 import org.mockito.Mockito
-import timber.log.Timber
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.atMost
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.inOrder
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 
 class OfflineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
     private lateinit var mapDownload: MapDownloadHelper
+    private val navigationManagerKtx = NavigationManagerKtx()
 
     @Before
     override fun setUp() {
@@ -32,7 +61,7 @@ class OfflineNavigationTests : BaseTest() {
     }
 
     @Test
-    fun onSharpCurveListenerTest() {
+    fun onSharpCurveListenerTest() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnSharpCurveListener = mock(verboseLogging = true)
@@ -42,27 +71,25 @@ class OfflineNavigationTests : BaseTest() {
             GeoCoordinates(48.132, 17.3009)
         )
 
-        navigation.setRouteForNavigation(route)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnSharpCurveListener(listener)
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
-        simulator.start()
-        simulator.setSpeedMultiplier(4F)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
 
         Mockito.verify(
-            listener,
-            Mockito.timeout(10_000L)
-        )
-            .onSharpCurveInfoChanged(argThat {
-                if (this.angle != 0.0) {
-                    return@argThat true
-                }
-                false
-            })
+            listener, Mockito.timeout(10_000L)
+        ).onSharpCurveInfoChanged(argThat {
+            if (this.angle != 0.0) {
+                return@argThat true
+            }
+            false
+        })
 
-        simulator.stop()
-        simulator.destroy()
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         navigation.removeOnSharpCurveListener(listener)
-        navigation.stopNavigation()
+        navigationManagerKtx.stopNavigation(navigation)
     }
 
     /**
@@ -70,42 +97,78 @@ class OfflineNavigationTests : BaseTest() {
      *
      * In this test we compute an offline route and set it for navigation.
      * Via simulator provider we set this route and start demonstrate. We verify that onDirectionInfoChanged
-     * contains direction info with primary nextRoadName "Einsteinova".
+     * contains direction info with primary nextRoadName "Hlavná".
      */
     @Test
-    fun onDirectionInfoChangedTest() {
+    fun onDirectionInfoChangedTest() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val directionListener: NavigationManager.OnDirectionListener = mock(verboseLogging = true)
         val navigation = NavigationManagerProvider.getInstance().get()
 
-        val route =
-            routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.132310, 17.114100),
-                GeoCoordinates(48.131733, 17.109952)
-            )
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.0977, 17.2382),
+            GeoCoordinates(48.0986, 17.2345)
+        )
 
-        navigation.setRouteForNavigation(route)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
-        simulator.start()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
         navigation.addOnDirectionListener(directionListener)
 
         Mockito.verify(
-            directionListener,
-            Mockito.timeout(15_000L)
-        )
-            .onDirectionInfoChanged(argThat {
-                if (this.primary.nextRoadName != "Einsteinova") {
-                    Timber.e("Primary road name is not equal to Einsteinova.")
-                    return@argThat false
-                }
-                true
-            })
+            directionListener, Mockito.timeout(15_000L)
+        ).onDirectionInfoChanged(argThat {
+            if (this.primary.nextRoadName == "Hlavná") {
+                return@argThat true
+            }
+            false
+        })
 
         navigation.removeOnDirectionListener(directionListener)
-        navigation.stopNavigation()
-        simulator.stop()
-        simulator.destroy()
-        mapDownload.uninstallMap("sk")
+        navigationManagerKtx.stopNavigation(navigation)
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+    }
+
+    /**
+     * Navigation test on direction info changed - colors
+     *
+     * In this test we compute an offline route and set it for navigation.
+     * Via simulator provider we set this route and start demonstrate. We verify that onDirectionInfoChanged
+     * contains direction info with colors from signpost.
+     */
+    @Test
+    fun onDirectionInfoChangedCheckColorsTest() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val directionListener: NavigationManager.OnDirectionListener = mock(verboseLogging = true)
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val expectedBorderColor = Color.WHITE
+        val expectedBackgroundColor = 0xff009966.toInt()
+        val expectedTextColor = Color.WHITE
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(49.0849, 18.4182),
+            GeoCoordinates(49.0936, 18.4215)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnDirectionListener(directionListener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        Mockito.verify(
+            directionListener, Mockito.timeout(30_000L)
+        ).onDirectionInfoChanged(argThat {
+            if (this.primary.borderColor == expectedBorderColor && this.primary.backgroundColor == expectedBackgroundColor && this.primary.textColor == expectedTextColor) {
+                return@argThat true
+            }
+            false
+        })
+
+        navigation.removeOnDirectionListener(directionListener)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
     }
 
     /**
@@ -116,69 +179,66 @@ class OfflineNavigationTests : BaseTest() {
      * We verify that the onRouteChanged callback is called and the status is Success.
      */
     @Test
-    fun onRouteChangedTest() {
+    fun onRouteChangedTest() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
         val navigation = NavigationManagerProvider.getInstance().get()
-        val route =
-            routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.14364765102184, 17.131080867348153),
-                GeoCoordinates(48.14852112743662, 17.13397077018316)
-            )
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.1447, 17.1317),
+            GeoCoordinates(48.1461, 17.1285)
+        )
 
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("SVK-Kosicka.nmea").get()
-        logSimulator.setSpeedMultiplier(2F)
-        navigation.setRouteForNavigation(route)
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnRouteChangedListener(listener)
-        logSimulator.start()
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
         Mockito.verify(
-            listener,
-            Mockito.timeout(30_000L).atLeast(1)
+            listener, Mockito.timeout(30_000L).atLeast(1)
+        ).onRouteChanged(
+            AdditionalMatchers.not(eq(route)),
+            eq(NavigationManager.RouteUpdateStatus.Success)
         )
-            .onRouteChanged(AdditionalMatchers.not(eq(route)), eq(NavigationManager.RouteUpdateStatus.Success))
 
 
-        logSimulator.stop()
-        logSimulator.destroy()
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
         navigation.removeOnRouteChangedListener(listener)
-        navigation.stopNavigation()
+        navigationManagerKtx.stopNavigation(navigation)
     }
 
     @Test
-    fun onJunctionPassedStandaloneListenerInvocationWithoutRoute() {
+    fun onJunctionPassedStandaloneListenerInvocationWithoutRoute() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val listener: NavigationManager.JunctionPassedListener = mock(verboseLogging = true)
         val navigation = NavigationManagerProvider.getInstance().get()
-        PositionManagerProvider.getInstance().get().startPositionUpdating()
 
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("rovinka.nmea").get()
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "rovinka.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 4f)
         Thread.sleep(3000)
-        logSimulator.start()
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
         navigation.addJunctionPassedListener(listener)
 
         verify(
-            listener,
-            timeout(60_000L).atLeast(2)
-        )
-            .onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
+            listener, timeout(60_000L).atLeast(2)
+        ).onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
         verify(
-            listener,
-            atMost(10)
-        )
-            .onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
+            listener, atMost(10)
+        ).onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
         verify(
             listener, timeout(60_000L).times(1)
         ).onJunctionPassed(
             eq(StreetDetail.JunctionType.EnteringUrbanArea)
         )
 
-        logSimulator.stop()
-        logSimulator.destroy()
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
         navigation.removeJunctionPassedListener(listener)
-        navigation.stopNavigation()
-        PositionManagerProvider.getInstance().get().stopPositionUpdating()
+        navigationManagerKtx.stopNavigation(navigation)
     }
 
     /**
@@ -189,104 +249,361 @@ class OfflineNavigationTests : BaseTest() {
      * We verify that onLaneInfoChanged was invoked.
      */
     @Test
-    fun onLaneListenerTestOffline() {
+    fun onLaneListenerTestOffline() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnLaneListener = mock(verboseLogging = true)
 
-        val route =
-            routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.147682401781026, 17.14365655304184),
-                GeoCoordinates(48.15310362223699, 17.147190865317768)
-            )
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.147682401781026, 17.14365655304184),
+            GeoCoordinates(48.15310362223699, 17.147190865317768)
+        )
 
-        navigation.setRouteForNavigation(route)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnLaneListener(listener)
 
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
-        simulator.setSpeedMultiplier(4F)
-        simulator.start()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
 
         Mockito.verify(
-            listener,
-            Mockito.timeout(30_000L)
+            listener, Mockito.timeout(30_000L)
+        ).onLaneInfoChanged(argThat {
+            if (this.simpleLanesInfo?.lanes?.isNotEmpty() == true) {
+                return@argThat true
+            }
+            false
+        })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnLaneListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    @Test
+    fun sectionCameraTest() = runBlocking {
+        mapDownload.installAndLoadMap("be")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(51.007530, 3.175810),
+            GeoCoordinates(51.001320, 3.203420)
         )
-            .onLaneInfoChanged(argThat {
-                if (this.simpleLanesInfo?.lanes?.isNotEmpty() == true) {
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnIncidentListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        var count = 0
+        // verify that the callback has been called at least 5 times with value different than -1
+        verify(listener, timeout(20_000L).atLeastOnce()).onIncidentsInfoChanged(argThat {
+            this.forEach {
+                if (it.recommendedSpeed != -1) {
+                    count += 1
+                }
+                if (count >= 5)
+                    return@argThat true
+            }
+            false
+        })
+    }
+
+    @Test
+    fun checkSpeedLimitOfRealCamera() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.7429, 17.8603),
+            GeoCoordinates(48.7457, 17.86)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnIncidentListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        verify(listener, timeout(20_000L)).onIncidentsInfoChanged(argThat {
+            this.forEach {
+                if (it.incident is SpeedCamera) {
+                    val expectedSpeedcam = it.incident as SpeedCamera
+                    if (expectedSpeedcam.speedLimit == 130) return@argThat true
+                }
+            }
+            false
+        })
+    }
+
+    @Test
+    fun changeMaxSpeedAndCheckSpeedLimit() = runBlocking {
+        val profileListener: SetVehicleProfileListener = mock(verboseLogging = true)
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits(
+                maximalSpeed = 80
+            )
+        }
+
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        navigation.setVehicleProfile(vehicleProfile, profileListener)
+        verify(profileListener, timeout(5_000L)).onSuccess()
+        val listener: NavigationManager.OnSpeedLimitListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.18180777150043, 17.05352048126561),
+            GeoCoordinates(48.18417452255745, 17.04909691425327),
+            routingOptions = RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile
+            }
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnSpeedLimitListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        verify(listener, timeout(20_000L)).onSpeedLimitInfoChanged(
+            argThat {
+                return@argThat this.nextSpeedLimit == 80.0f
+            }
+        )
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnSpeedLimitListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+
+    }
+
+    @Test
+    fun onWaypointAndFinishReached() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.10044188518012, 17.24304412091042),
+            GeoCoordinates(48.10047492032134, 17.24460232012754),
+            listOf(GeoCoordinates(48.100524472993364, 17.243852076060037))
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnWaypointPassListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        val inOrder: InOrder = inOrder(listener)
+
+        inOrder.verify(listener, timeout(60_000L)).onWaypointPassed(argThat {
+            return@argThat this.type == Waypoint.Type.Via
+        })
+
+        inOrder.verify(listener, timeout(60_000L)).onFinishReached()
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnWaypointPassListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+
+    }
+
+    /**
+     * Navigation test on highway exit
+     *
+     * In this test we compute route and set it for navigation.
+     * Via simulator provider we set this route and start demonstrate navigation.
+     * We verify that onHighwayExitInfoChanged was invoked with a non-null list.
+     */
+    @Test
+    fun onHighwayExitTest() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnHighwayExitListener = mock(verboseLogging = true)
+        val route =
+            routeCompute.offlineRouteCompute(
+                GeoCoordinates(48.1581, 17.1822),
+                GeoCoordinates(48.1647, 17.1837)
+            )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnHighwayExitListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        Mockito.verify(
+            listener,
+            Mockito.timeout(10_000L)
+        )
+            .onHighwayExitInfoChanged(argThat {
+                for (exit in this) {
+                    if (exit.exitNumber == "10" && exit.exitSide == HighwayExitInfo.ExitSide.Right) {
+                        return@argThat true
+                    }
+                }
+                false
+            })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigation.removeOnHighwayExitListener(listener)
+    }
+
+    @Test
+    fun onHighwayExitTestWithoutRoute() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnHighwayExitListener = mock(verboseLogging = true)
+
+        navigation.addOnHighwayExitListener(listener)
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "highwayExitWithoutRoute.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+        Mockito.verify(
+            listener,
+            Mockito.timeout(20_000L)
+        )
+            .onHighwayExitInfoChanged(argThat {
+                if (this.size == 3) { // this should find 10 exits, but due to time length of test we only search for 3
                     return@argThat true
                 }
                 false
             })
 
-        simulator.stop()
-        simulator.destroy()
-        navigation.removeOnLaneListener(listener)
-        navigation.stopNavigation()
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigation.removeOnHighwayExitListener(listener)
+
     }
 
     @Test
-    @Ignore("waiting for fix - https://jira.sygic.com/browse/SDC-9122")
-    fun sectionCameraTest() {
+    fun testWaypointPassAudioNotification() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val navigation = NavigationManagerProvider.getInstance().get()
-        val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
+        val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
 
-        val route =
-            routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.212465230469, 17.03545199713536),
-                GeoCoordinates(48.18179480984319, 17.05224437941669)
-            )
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.10044188518012, 17.24304412091042),
+            GeoCoordinates(48.10047492032134, 17.24460232012754),
+            listOf(GeoCoordinates(48.100524472993364, 17.243852076060037))
+        )
 
-        navigation.setRouteForNavigation(route)
-        navigation.addOnIncidentListener(listener)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnWaypointPassListener(listener)
 
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
-        simulator.setSpeedMultiplier(4F)
-        simulator.start()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
-        verify(listener, timeout(20_000L).atLeast(5)).onIncidentsInfoChanged(
-            argThat {
-                this.forEach {
-                    println("speedcam: $it")
-                    if (it.recommendedSpeed != -1)
-                        return@argThat true
-                }
-                false
-            }
+        val inOrder: InOrder = inOrder(listener)
+
+        inOrder.verify(listener, timeout(60_000L)).onWaypointPassed(argThat {
+            return@argThat this.type == Waypoint.Type.Via
+        })
+
+        inOrder.verify(listener, timeout(60_000L)).onFinishReached()
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnWaypointPassListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-12305
+     */
+    @Test
+    fun testSaveBriefJsonAfterPassWaypointRecompute() = runBlocking {
+        val waypointPassListener: NavigationManager.OnWaypointPassListener =
+            mock(verboseLogging = true)
+        val routeChangedListener: NavigationManager.OnRouteChangedListener =
+            mock(verboseLogging = true)
+        val routeComputeListener: RouteComputeListener = mock(verboseLogging = true)
+        val currentRouteListener: NavigationManager.OnGetCurrentRoute = mock(verboseLogging = true)
+        lateinit var briefJson: String
+        mapDownload.installAndLoadMap("sk")
+        val route =
+            routeCompute.offlineRouteCompute(
+                start = GeoCoordinates(48.14227359686909, 17.13214634678706),
+                waypoints = listOf(GeoCoordinates(48.14407288637856, 17.131352923937925)),
+                destination = GeoCoordinates(48.14648207079094, 17.138648964532695)
+            )
+
+        val navigation = NavigationManagerProvider.getInstance().get()
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnRouteChangedListener(routeChangedListener)
+        navigation.addOnWaypointPassListener(waypointPassListener)
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "precision_hdop_output.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 4F)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+        verify(waypointPassListener, timeout(20_000L)).onWaypointPassed(any())
+
+        verify(routeChangedListener, timeout(30_000L)).onRouteChanged(
+            any(),
+            eq(NavigationManager.RouteUpdateStatus.Success)
         )
+        navigation.getCurrentRoute(currentRouteListener)
+        val currentRouteCaptor = argumentCaptor<Route>()
+        verify(currentRouteListener, timeout(5_000L)).onCurrentRoute(currentRouteCaptor.capture())
+        briefJson = currentRouteCaptor.lastValue.serializeToBriefJSON()
+        assertFalse(briefJson.isEmpty())
+
+        val routeCaptor = argumentCaptor<Route>()
+
+        RouterProvider.getInstance().get()
+            .computeRouteFromJSONString(briefJson, routeComputeListener)
+        verify(routeComputeListener, timeout(10_000L)).onComputeFinished(
+            routeCaptor.capture(), eq(Router.RouteComputeStatus.Success)
+        )
+
+        val finalRoute = routeCaptor.lastValue
+        assertEquals(finalRoute.waypoints[0].status, Waypoint.Status.Reached)
+        assertEquals(finalRoute.waypoints[1].status, Waypoint.Status.Reached)
+        assertEquals(finalRoute.waypoints[2].status, Waypoint.Status.Ahead)
     }
 
     @Test
-    fun checkSpeedLimitOfRealCamera() {
+    fun testStopNavigationWhileDemonstratingOffline() = runBlocking {
+        disableOnlineMaps()
         mapDownload.installAndLoadMap("sk")
-        val navigation = NavigationManagerProvider.getInstance().get()
-        val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
-
         val route =
             routeCompute.offlineRouteCompute(
-                GeoCoordinates(48.649189548913924, 17.842829374576407),
-                GeoCoordinates(48.662019021892746, 17.869242810014157)
+                GeoCoordinates(48.147260, 17.150520),
+                GeoCoordinates(48.147230, 17.150120)
             )
-
-        navigation.setRouteForNavigation(route)
-        navigation.addOnIncidentListener(listener)
-
+        val navigation = NavigationManagerProvider.getInstance().get()
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
-        simulator.setSpeedMultiplier(4F)
-        simulator.start()
-
-        verify(listener, timeout(20_000L)).onIncidentsInfoChanged(
-            argThat {
-                this.forEach {
-                    if (it.incident is SpeedCamera) {
-                        val expectedSpeedcam = it.incident as SpeedCamera
-                        if (expectedSpeedcam.speedLimit == 130)
-                            return@argThat true
-                    }
-                }
-                false
-            }
-        )
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+        delay(2000)
+        navigationManagerKtx.stopNavigation(navigation) // shouldn't crash
+        delay(500)
     }
 }

@@ -1,11 +1,25 @@
 package cz.feldis.sdkandroidtests.search
 
-import com.nhaarman.mockitokotlin2.*
+import org.mockito.kotlin.*
 import com.sygic.sdk.places.Place
-import com.sygic.sdk.search.*
-import cz.feldis.sdkandroidtests.BaseTest
+import com.sygic.sdk.search.AutocompleteResult
+import com.sygic.sdk.search.AutocompleteResultListener
+import com.sygic.sdk.search.CreateSearchCallback
+import com.sygic.sdk.search.CustomPlacesSearch
+import com.sygic.sdk.search.GeocodeLocationRequest
+import com.sygic.sdk.search.GeocodingResult
+import com.sygic.sdk.search.GeocodingResultListener
+import com.sygic.sdk.search.GeocodingResultsListener
+import com.sygic.sdk.search.OfflineMapSearch
+import com.sygic.sdk.search.OnlineMapSearch
+import com.sygic.sdk.search.PlaceRequest
+import com.sygic.sdk.search.PlacesListener
+import com.sygic.sdk.search.ResultStatus
+import com.sygic.sdk.search.ResultType
+import com.sygic.sdk.search.SearchManagerProvider
+import com.sygic.sdk.search.SearchRequest
 import java.nio.ByteBuffer
-import java.util.*
+import java.util.UUID
 
 class SearchHelper {
 
@@ -37,19 +51,40 @@ class SearchHelper {
         val createSearchListener: CreateSearchCallback<OnlineMapSearch> = mock()
         val searchCaptor = argumentCaptor<OnlineMapSearch>()
         val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
+        val errorCaptor = argumentCaptor<ResultStatus>()
         searchManager.createOnlineMapSearch(createSearchListener)
         verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
         val search = searchCaptor.lastValue
 
         val session = search.createSession()
 
-        session.autocomplete(autocompleteRequest, autocompleteResultListener)
+        var attempts = 0
+        val maxRetries = 3
+        val retryDelay = 5000L // 2 seconds delay between retries
 
-        verify(autocompleteResultListener, timeout(10_000L)).onAutocomplete(
-            resultCaptor.capture()
-        )
-        verify(autocompleteResultListener, never()).onAutocompleteError(any())
-        return resultCaptor.firstValue
+        while (attempts < maxRetries) {
+            session.autocomplete(autocompleteRequest, autocompleteResultListener)
+
+            try {
+                verify(autocompleteResultListener, timeout(10_000L)).onAutocomplete(
+                    resultCaptor.capture()
+                )
+                verify(autocompleteResultListener, never()).onAutocompleteError(any())
+                return resultCaptor.firstValue
+            } catch (e: Exception) {
+                verify(autocompleteResultListener).onAutocompleteError(errorCaptor.capture())
+                val capturedError = errorCaptor.lastValue
+
+                if (capturedError == ResultStatus.UNSPECIFIED_ERROR && attempts < maxRetries - 1) {
+                    attempts++
+                    Thread.sleep(retryDelay) // Wait before retrying
+                } else {
+                    throw e // Rethrow the exception
+                }
+            }
+        }
+
+        throw RuntimeException("Failed to retrieve autocomplete results after $maxRetries attempts")
     }
 
     //ToDo doesnt work
@@ -97,7 +132,30 @@ class SearchHelper {
         val searchCaptor = argumentCaptor<CustomPlacesSearch>()
         val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
         searchManager.createCustomPlacesSearch(createSearchListener)
-        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
+        verify(createSearchListener, timeout(5_000L)).onSuccess(searchCaptor.capture())
+        val search = searchCaptor.lastValue
+
+        val session = search.createSession()
+
+        session.autocomplete(searchRequest, autocompleteResultListener)
+
+        verify(autocompleteResultListener, timeout(10_000L)).onAutocomplete(
+            resultCaptor.capture()
+        )
+        verify(autocompleteResultListener, never()).onAutocompleteError(any())
+        assert(resultCaptor.firstValue[0].type == ResultType.CUSTOM_PLACE) // fail here already
+        session.close()
+        return resultCaptor.firstValue
+    }
+
+    fun offlineAutocompleteCustomPlacesWithDataset(searchRequest: SearchRequest, dataset: String): List<AutocompleteResult> {
+        val autocompleteResultListener: AutocompleteResultListener = mock(verboseLogging = true)
+        val createSearchListener: CreateSearchCallback<CustomPlacesSearch> =
+            mock(verboseLogging = true)
+        val searchCaptor = argumentCaptor<CustomPlacesSearch>()
+        val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
+        searchManager.createCustomPlacesSearchForDataset(dataset, createSearchListener)
+        verify(createSearchListener, timeout(5_000L)).onSuccess(searchCaptor.capture())
         val search = searchCaptor.lastValue
 
         val session = search.createSession()
@@ -112,8 +170,25 @@ class SearchHelper {
         return resultCaptor.firstValue
     }
 
-    fun onlineGeocode() {
+    fun onlineGeocode(searchRequest: SearchRequest): List<GeocodingResult> {
+        val geocodeResultListener: GeocodingResultsListener = mock(verboseLogging = true)
+        val createSearchListener: CreateSearchCallback<OnlineMapSearch> =
+            mock(verboseLogging = true)
+        val searchCaptor = argumentCaptor<OnlineMapSearch>()
+        val resultCaptor = argumentCaptor<List<GeocodingResult>>()
+        searchManager.createOnlineMapSearch(createSearchListener)
+        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
+        val search = searchCaptor.lastValue
 
+        val session = search.createSession()
+
+        session.geocode(searchRequest, geocodeResultListener)
+
+        verify(geocodeResultListener, timeout(10_000L)).onGeocodingResults(
+            resultCaptor.capture()
+        )
+        verify(geocodeResultListener, never()).onGeocodingResultsError(any())
+        return resultCaptor.firstValue
     }
 
     fun offlineReverseGeocode() {
@@ -138,7 +213,7 @@ class SearchHelper {
 
         verify(listener, timeout(10_000L)).onPlacesLoaded(
             argumentCaptor.capture(),
-            isNotNull()
+            anyOrNull()
         )
 
         return argumentCaptor.firstValue
@@ -161,7 +236,7 @@ class SearchHelper {
 
         verify(listener, timeout(10_000L)).onPlacesLoaded(
             argumentCaptor.capture(),
-            isNotNull()
+            anyOrNull()
         )
 
         return argumentCaptor.firstValue

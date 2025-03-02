@@ -1,10 +1,10 @@
 package cz.feldis.sdkandroidtests.incidents
 
-import com.nhaarman.mockitokotlin2.*
 import com.sygic.sdk.incidents.*
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.explorer.RouteExplorer
+import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.IncidentInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.GeoPolyline
@@ -13,17 +13,24 @@ import com.sygic.sdk.route.simulator.PositionSimulator
 import com.sygic.sdk.route.simulator.PositionSimulator.PositionSimulatorListener
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
+import cz.feldis.sdkandroidtests.NmeaFileDataProvider
+import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
+import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
+import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.InOrder
 import org.mockito.Mockito
+import org.mockito.kotlin.*
 
 class IncidentsTests : BaseTest() {
 
     private lateinit var routeCompute: RouteComputeHelper
     private lateinit var incidentsManager: IncidentsManager
     private val listener: IncidentsResultListener = mock()
+    private val navigationManagerKtx = NavigationManagerKtx()
 
 
     override fun setUp() {
@@ -35,7 +42,7 @@ class IncidentsTests : BaseTest() {
 
     private fun removeAllIncidents() {
         incidentsManager.removeAllIncidents(listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
         verify(listener, never()).onError(any())
         reset(listener)
     }
@@ -45,7 +52,7 @@ class IncidentsTests : BaseTest() {
         val importedSpeedCam = getMockSpeedCam()
         val importedIncidentData = IncidentData(importedSpeedCam, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
         verify(listener, never()).onError(any())
 
         val listener: RouteExplorer.OnExploreIncidentsOnRouteListener = mock(verboseLogging = true)
@@ -54,7 +61,7 @@ class IncidentsTests : BaseTest() {
             GeoCoordinates(48.10223044006818, 17.23340438881692),
             GeoCoordinates(48.098580331935274, 17.237506607527582)
         )
-        RouteExplorer.exploreIncidentsOnRoute(route, emptyList(), listener)
+        RouteExplorerProvider.getInstance().get().exploreIncidentsOnRoute(route, emptyList(), listener)
         val captor = argumentCaptor<List<IncidentInfo>>()
         val progressCaptor = argumentCaptor<Int>()
 
@@ -78,7 +85,7 @@ class IncidentsTests : BaseTest() {
         requireNotNull(expectedSpeedcam)
         assertEquals("ejjj_buracka", expectedSpeedcam.category)
         assertEquals("26a69832-7f72-42ba-8f1d-394811376579", expectedSpeedcam.id.uuid)
-        assertEquals(1713510440, expectedSpeedcam.validToTimestamp)
+        assertEquals(VALID_TO_TIMESTAMP, expectedSpeedcam.validToTimestamp)
         assertEquals(80, expectedSpeedcam.speedLimit)
         assertEquals(true, expectedSpeedcam.isBidirectional)
         assertEquals(359F, expectedSpeedcam.heading)
@@ -90,7 +97,7 @@ class IncidentsTests : BaseTest() {
         val importedSpeedCam = getMockSpeedCamOld()
         val importedIncidentData = IncidentData(importedSpeedCam, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
 
         val listener: RouteExplorer.OnExploreIncidentsOnRouteListener = mock(verboseLogging = true)
 
@@ -98,7 +105,7 @@ class IncidentsTests : BaseTest() {
             GeoCoordinates(48.10223044006818, 17.23340438881692),
             GeoCoordinates(48.098580331935274, 17.237506607527582)
         )
-        RouteExplorer.exploreIncidentsOnRoute(route, emptyList(), listener)
+        RouteExplorerProvider.getInstance().get().exploreIncidentsOnRoute(route, emptyList(), listener)
 
         verify(
             listener,
@@ -113,7 +120,7 @@ class IncidentsTests : BaseTest() {
     }
 
     @Test
-    fun onIncidentListenerTest() {
+    fun onIncidentListenerTest() = runBlocking {
         val importedSpeedCam1 = getMockSpeedCamForAnalyzer1()
         val importedSpeedCam2 = getMockSpeedCamForAnalyzer2()
         val importedSpeedCam3 = getMockSpeedCamForAnalyzer3()
@@ -140,33 +147,30 @@ class IncidentsTests : BaseTest() {
                 GeoCoordinates(48.12788892758158, 17.195351511200577)
             )
 
-        navigation.setRouteForNavigation(route)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
-        simulator.start()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
         Mockito.verify(
             listener,
             Mockito.timeout(10_000L)
         ).onIncidentsInfoChanged(argThat<List<IncidentInfo>> {
-            if (this.size > 3)
-                return@argThat true
-            return@argThat false
+            return@argThat this.size > 3
         })
 
-        simulator.stop()
-        simulator.destroy()
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         navigation.removeOnIncidentListener(listener)
-        navigation.stopNavigation()
-        reset(listener)
+        navigationManagerKtx.stopNavigation(navigation)
     }
 
     @Test
-    fun testIncidentWithRadiusStartingOutside() {
+    fun testIncidentWithRadiusStartingOutside() = runBlocking {
         val importedAreaIncident = getMockRadiusIncident()
         val importedIncidentData = IncidentData(importedAreaIncident, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
 
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
@@ -177,11 +181,12 @@ class IncidentsTests : BaseTest() {
                 GeoCoordinates(48.098, 17.2381),
             )
 
-        navigation.setRouteForNavigation(route)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
-        simulator.setSpeedMultiplier(2F)
-        simulator.start()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
         verify(listener, timeout(10_000L)).onIncidentsInfoChanged(argThat {
             if (this.isNotEmpty()) {
@@ -194,19 +199,17 @@ class IncidentsTests : BaseTest() {
             return@argThat false
         })
 
-        reset(listener)
-        simulator.stop()
-        simulator.destroy()
-        navigation.stopNavigation()
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigationManagerKtx.stopNavigation(navigation)
         navigation.removeOnIncidentListener(listener)
     }
 
     @Test
-    fun testIncidentWithRadiusStartingInside() {
+    fun testIncidentWithRadiusStartingInside() = runBlocking {
         val importedAreaIncident = getMockRadiusIncident()
         val importedIncidentData = IncidentData(importedAreaIncident, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
 
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
@@ -217,11 +220,12 @@ class IncidentsTests : BaseTest() {
                 GeoCoordinates(48.098, 17.2381)
             )
 
-        navigation.setRouteForNavigation(route)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
-        simulator.setSpeedMultiplier(2F)
-        simulator.start()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
         val inOrder: InOrder = inOrder(listener)
 
@@ -237,19 +241,17 @@ class IncidentsTests : BaseTest() {
 
         inOrder.verify(listener, timeout(20_000L)).onIncidentsInfoChanged(emptyList())
 
-        reset(listener)
-        simulator.stop()
-        simulator.destroy()
-        navigation.stopNavigation()
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigationManagerKtx.stopNavigation(navigation)
         navigation.removeOnIncidentListener(listener)
     }
 
     @Test
-    fun testIncidentWithRadiusStartingOutsideCheckThatOutside() {
+    fun testIncidentWithRadiusStartingOutsideCheckThatOutside() = runBlocking {
         val importedAreaIncident = getMockRadiusIncident()
         val importedIncidentData = IncidentData(importedAreaIncident, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
 
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
@@ -260,11 +262,12 @@ class IncidentsTests : BaseTest() {
                 GeoCoordinates(48.098, 17.2381),
             )
 
-        navigation.setRouteForNavigation(route)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
-        simulator.setSpeedMultiplier(6F)
-        simulator.start()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 6F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
         val inOrder: InOrder = inOrder(listener)
 
@@ -291,28 +294,28 @@ class IncidentsTests : BaseTest() {
 
         inOrder.verify(listener, timeout(30_000L)).onIncidentsInfoChanged(emptyList())
 
-        reset(listener)
-        simulator.stop()
-        simulator.destroy()
-        navigation.stopNavigation()
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigationManagerKtx.stopNavigation(navigation)
         navigation.removeOnIncidentListener(listener)
     }
 
     @Test
-    fun testIncidentWithRadiusStartingOutsideCheckThatOutsideAfterWithoutRoute() {
+    fun testIncidentWithRadiusStartingOutsideCheckThatOutsideAfterWithoutRoute() = runBlocking {
         val importedAreaIncident = getMockRadiusIncidentLovosice()
         val importedIncidentData = IncidentData(importedAreaIncident, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
 
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
 
         navigation.addOnIncidentListener(listener)
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("logLovosice.nmea").get()
-        logSimulator.setSpeedMultiplier(2F)
-        logSimulator.start()
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "logLovosice.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
         val inOrder: InOrder = inOrder(listener)
 
@@ -339,27 +342,27 @@ class IncidentsTests : BaseTest() {
 
         inOrder.verify(listener, timeout(30_000L)).onIncidentsInfoChanged(emptyList())
 
-        reset(listener)
-        logSimulator.stop()
-        logSimulator.destroy()
-        navigation.stopNavigation()
         navigation.removeOnIncidentListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
     }
 
     @Test
-    fun testTraceIncidentOppositeDirection() {
+    fun testTraceIncidentOppositeDirection() = runBlocking {
         val importedAreaIncident = getMockPolylineIncident()
         val importedIncidentData = IncidentData(importedAreaIncident, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
 
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         navigation.addOnIncidentListener(listener)
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("logLovosice.nmea").get()
-        logSimulator.setSpeedMultiplier(2F)
-        logSimulator.start()
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "logLovosice.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
         val positionSimulatorListener: PositionSimulatorListener = mock(verboseLogging = true)
         logSimulator.addPositionSimulatorListener(positionSimulatorListener)
@@ -368,58 +371,54 @@ class IncidentsTests : BaseTest() {
             this.find { it.roadPosition == GeoCoordinates(50.50351, 14.04214) } != null
         })
 
-//        verify(positionSimulatorListener, timeout(40_000L)).onSimulatedStateChanged(eq(SimulatorState.End))
-//
-//        verify(listener, never()).onIncidentsInfoChanged(argThat { isNotEmpty() })
-
-        reset(listener)
-        logSimulator.stop()
-        logSimulator.destroy()
-        navigation.stopNavigation()
         navigation.removeOnIncidentListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
     }
 
     @Test
-    fun testTraceIncidentInDirection() {
+    fun testTraceIncidentInDirection() = runBlocking {
         val importedAreaIncident = getMockPolylineIncident()
         val importedIncidentData = IncidentData(importedAreaIncident, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
 
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         navigation.addOnIncidentListener(listener)
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("logLovosice.nmea").get()
-        logSimulator.setSpeedMultiplier(2F)
-        logSimulator.start()
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "logLovosice.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
         verify(listener, timeout(10_000L)).onIncidentsInfoChanged(argThat {
             this.find { it.roadPosition == GeoCoordinates(50.50351, 14.04214) } != null
         })
 
-        reset(listener)
-        logSimulator.stop()
-        logSimulator.destroy()
-        navigation.stopNavigation()
         navigation.removeOnIncidentListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
     }
 
     // might fail if there actually is a real incident
     @Test
-    fun testTraceIncidentOppositeDirectionPristavnaShouldNotNotify() {
+    fun testTraceIncidentOppositeDirectionPristavnaShouldNotNotify() = runBlocking {
         val importedAreaIncident = getMockPolylineIncidentPristavna()
         val importedIncidentData = IncidentData(importedAreaIncident, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
-        verify(listener, timeout(Timeout)).onSuccess()
+        verify(listener, timeout(TIMEOUT)).onSuccess()
 
         val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         navigation.addOnIncidentListener(listener)
-        val logSimulator = NmeaLogSimulatorProvider.getInstance("pristavnaOppositeRoadTraceIncident.nmea").get()
-        logSimulator.setSpeedMultiplier(4F)
-        logSimulator.start()
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "pristavnaOppositeRoadTraceIncident.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 8F)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
         val positionSimulatorListener: PositionSimulatorListener = mock(verboseLogging = true)
         logSimulator.addPositionSimulatorListener(positionSimulatorListener)
@@ -428,26 +427,24 @@ class IncidentsTests : BaseTest() {
 
         verify(listener, never()).onIncidentsInfoChanged(argThat { isNotEmpty() })
 
-        reset(listener)
-        logSimulator.stop()
-        logSimulator.destroy()
-        navigation.stopNavigation()
         navigation.removeOnIncidentListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
     }
 
     companion object {
         private val audioNotificationParams =
             IncidentsManager.AudioNotificationParameters(20, 25)
-        private const val Timeout = 3000L
-        private const val validTimestamp = 1713510440L // 19.4.2024
-        private const val invalidTimestamp = 1650352040L // 19.4.2022
+        private const val TIMEOUT = 3000L
+        private const val VALID_TO_TIMESTAMP = 1904969474L // 14.5.2030
+        private const val INVALID_TIMESTAMP = 1650352040L // 19.4.2022
 
         private fun getMockSpeedCam(): SpeedCamera {
             return SpeedCamera(
                 IncidentId("26a69832-7f72-42ba-8f1d-394811376579"),
                 GeoCoordinates(48.10095535808773, 17.234824479529344),
                 "ejjj_buracka",
-                validTimestamp,
+                VALID_TO_TIMESTAMP,
                 359F,
                 true,
                 80
@@ -459,7 +456,7 @@ class IncidentsTests : BaseTest() {
                 IncidentId("26a69832-7f72-42ba-8f1d-324811371579"),
                 GeoCoordinates(48.10095535808773, 17.234824479529344),
                 "ejjj_buracka",
-                invalidTimestamp,
+                INVALID_TIMESTAMP,
                 359F,
                 true,
                 80
@@ -471,7 +468,7 @@ class IncidentsTests : BaseTest() {
                 IncidentId("26a69832-7f72-42ba-8f1d-324811371579"),
                 GeoCoordinates(48.11516784597829, 17.21736550170222),
                 IncidentType.DangerousPlaceVehicleStopped,
-                validTimestamp,
+                VALID_TO_TIMESTAMP,
                 359F,
                 true,
                 80
@@ -483,7 +480,7 @@ class IncidentsTests : BaseTest() {
                 IncidentId("26a69834-7f72-42ba-8f1d-324811371579"),
                 GeoCoordinates(48.1152235606362, 17.217302913637262),
                 "tristo_hrmenych",
-                validTimestamp,
+                VALID_TO_TIMESTAMP,
                 359F,
                 true,
                 80
@@ -495,7 +492,7 @@ class IncidentsTests : BaseTest() {
                 IncidentId("26a69830-7f72-42ba-8f1d-324811371579"),
                 GeoCoordinates(48.115278008993506, 17.217244118788365),
                 "kategorija",
-                validTimestamp,
+                VALID_TO_TIMESTAMP,
                 359F,
                 true,
                 80
@@ -507,7 +504,7 @@ class IncidentsTests : BaseTest() {
                 IncidentId("26a69831-7f72-42ba-8f1d-324811371579"),
                 GeoCoordinates(48.11534258720295, 17.21716256464312),
                 IncidentType.CrashMinor,
-                validTimestamp,
+                VALID_TO_TIMESTAMP,
                 359F,
                 true,
                 80
@@ -519,7 +516,7 @@ class IncidentsTests : BaseTest() {
                 IncidentId("26a69831-7f82-42ba-8f1d-324811371579"),
                 GeoCoordinates(48.0994, 17.2366),
                 IncidentType.CrashMinor,
-                validTimestamp,
+                VALID_TO_TIMESTAMP,
                 Area.Circular(100)
             )
         }
@@ -529,7 +526,7 @@ class IncidentsTests : BaseTest() {
                 IncidentId("26a69831-7f82-42ba-8f1d-324811371519"),
                 GeoCoordinates(50.50350272545388, 14.042164306068361),
                 IncidentType.CrashMinor,
-                validTimestamp,
+                VALID_TO_TIMESTAMP,
                 Area.Circular(50)
             )
         }
@@ -539,7 +536,7 @@ class IncidentsTests : BaseTest() {
                 IncidentId("26a69831-7f82-42ba-8f1d-324811071519"),
                 GeoCoordinates(50.50350272545388, 14.042164306068361),
                 IncidentType.CrashMinor,
-                validTimestamp,
+                VALID_TO_TIMESTAMP,
                 GeoPolyline(
                     listOf(
                         GeoCoordinates(50.50533588452118, 14.044448736255015),
@@ -554,7 +551,7 @@ class IncidentsTests : BaseTest() {
                 IncidentId("26a69831-7f22-42ba-8f1d-324811071519"),
                 GeoCoordinates(48.14222, 17.13511),
                 IncidentType.DangerousPlaceCrossWind,
-                validTimestamp,
+                VALID_TO_TIMESTAMP,
                 GeoPolyline(
                     listOf( // {wydHmuqgBDaB@sA?s@
                         GeoCoordinates(48.14222, 17.13511),

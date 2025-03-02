@@ -1,23 +1,26 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
+    id 'org.jetbrains.kotlin.android'
 }
 
 android {
-    compileSdk 33
+    compileSdk 35
     ndkVersion "21.1.6352462"
     defaultConfig {
         applicationId "com.sygic.sdk.test.android"
-        minSdk 21
-        targetSdk 33
-        versionCode 1
-        versionName "1.0"
+        minSdk 24
+        targetSdk 35
+        versionCode 2
+        versionName "2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         // use your own SDK client ID
         buildConfigField "String", "SYGIC_SDK_CLIENT_ID", getSdkClientId()
         buildConfigField "String", "LICENSE_KEY", getSdkLicenseKey()
+        buildConfigField "String", "SYGIC_SDK_CLIENT_ID_HERE", getSdkClientIdForHereMaps()
+        buildConfigField "String", "LICENSE_KEY_HERE", getSdkLicenseKeyForHereMaps()
 
         if (gradle.wantsToBuildSdkFromSource) {
             missingDimensionStrategy 'build', 'development'
@@ -32,23 +35,15 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+
+        coreLibraryDesugaringEnabled true
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
-    compileOptions {
-        sourceCompatibility 1.8
-        targetCompatibility 1.8
-    }
-
-    sourceSets {
-        androidTest {
-            assets.srcDirs = ['src/main/assets']
-        }
-    }
     namespace 'cz.feldis.sdkandroidtests'
 }
 
@@ -99,20 +94,57 @@ def getSdkLicenseKey() {
     return sdkLicenseKey
 }
 
-dependencies {
+def getSdkClientIdForHereMaps() {
+    def sdkClientId = ""
 
+    def localProperties = project.rootProject.file('local.properties')
+    if (localProperties.exists()) {
+        Properties properties = new Properties()
+        properties.load(localProperties.newDataInputStream())
+        sdkClientId = properties.getProperty('sygic.sdk.client.id.here', "")
+    }
+
+    if (sdkClientId.isEmpty()) {
+        logger.error('Missing Client ID for Sygic Maps SDK! Define one in local.properties as sygic.sdk.client.id="YOUR.CLIENT.ID"')
+    }
+
+    return sdkClientId
+}
+
+def getSdkLicenseKeyForHereMaps() {
+    def sdkClientId = ""
+
+    def localProperties = project.rootProject.file('local.properties')
+    if (localProperties.exists()) {
+        Properties properties = new Properties()
+        properties.load(localProperties.newDataInputStream())
+        sdkClientId = properties.getProperty('license.key.here', "")
+    }
+
+    if (sdkClientId.isEmpty()) {
+        logger.error('Missing License Key for Sygic Maps SDK! Define one in local.properties as license.key="jwt"')
+    }
+
+    return sdkClientId
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.core:core-ktx:1.10.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test:core:1.5.0'
-    androidTestImplementation 'androidx.test:runner:1.5.2'
-    androidTestImplementation 'androidx.test:rules:1.5.0'
-    androidTestImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
-    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.core:core-ktx:1.15.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
+    androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0"
+
+    implementation("com.sygic.lib.auth:sygicauth-android:1.1.0") {
+        exclude group: 'org.jetbrains.kotlin'
+        exclude group: 'org.jetbrains.kotlinx'
+    }
 
     if (!gradle.wantsToBuildSdkFromSource()) {
         // use aar from maven
@@ -126,9 +158,11 @@ dependencies {
         api project(':sdk')
     }
 
-    implementation 'com.google.android.material:material:1.8.0'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    implementation 'com.google.android.material:material:1.12.0'
+    androidTestImplementation ('org.mockito:mockito-android:5.12.0')
+    androidTestImplementation ('org.mockito.kotlin:mockito-kotlin:5.4.0')
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     implementation 'com.jakewharton.timber:timber:5.0.1'
-    androidTestImplementation 'org.mockito:mockito-android:5.1.1'
-    implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.2'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0"
 }

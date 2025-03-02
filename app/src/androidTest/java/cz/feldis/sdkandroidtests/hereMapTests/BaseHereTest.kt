@@ -1,4 +1,4 @@
-package cz.feldis.sdkandroidtests
+package cz.feldis.sdkandroidtests.hereMapTests
 
 import android.Manifest
 import android.content.Context
@@ -20,6 +20,8 @@ import com.sygic.sdk.online.OnlineManagerProvider
 import com.sygic.sdk.online.listeners.SetActiveMapProviderListener
 import com.sygic.sdk.position.PositionManager
 import com.sygic.sdk.position.PositionManagerProvider
+import cz.feldis.sdkandroidtests.BuildConfig
+import cz.feldis.sdkandroidtests.SygicActivity
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -28,16 +30,14 @@ import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.rules.Timeout
 import org.junit.runner.Description
-import org.mockito.Mockito.mock
-import org.mockito.kotlin.timeout
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import org.mockito.Mockito
+import org.mockito.kotlin.*
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 
-abstract class BaseTest {
+abstract class BaseHereTest {
     private val defaultConfig = SygicEngine.JsonConfigBuilder()
     var isEngineInitialized = false
     open lateinit var appContext: Context
@@ -45,17 +45,17 @@ abstract class BaseTest {
     open lateinit var appDataPath: String
 
     @get:Rule
-    var activityRule: ActivityScenarioRule<SygicActivity> =
+    var mActivityRule: ActivityScenarioRule<SygicActivity> =
         ActivityScenarioRule(SygicActivity::class.java)
 
     @get:Rule
-    var permissionRule: GrantPermissionRule = GrantPermissionRule.grant(
+    var mGrantPermissionRule: GrantPermissionRule = GrantPermissionRule.grant(
         Manifest.permission.WRITE_EXTERNAL_STORAGE,
         Manifest.permission.ACCESS_FINE_LOCATION
     )
 
     @get:Rule
-    var watcher: TestRule = object : TestWatcher() {
+    var mWatcher: TestRule = object : TestWatcher() {
         override fun starting(description: Description) {
             Log.i("SYGIC_TEST", "Starting test " + description.methodName)
         }
@@ -71,7 +71,6 @@ abstract class BaseTest {
 
     @get:Rule
     var globalTimeout: Timeout = Timeout.seconds(1200)
-
 
     /**
      * Initialization of SDK Sygic Engine
@@ -137,10 +136,10 @@ abstract class BaseTest {
             .addAppender(diagnosticsAppender)
 
         return defaultConfig.apply {
-            license(BuildConfig.LICENSE_KEY)
-            authentication(BuildConfig.SYGIC_SDK_CLIENT_ID)
+            license(BuildConfig.LICENSE_KEY_HERE)
+            authentication(BuildConfig.SYGIC_SDK_CLIENT_ID_HERE)
             mapReaderSettings().startupOnlineMapsEnabled(true)
-            storageFolders().rootPath(appDataPath)
+            storageFolders().rootPath("$appDataPath/here")
             mapReaderSettings()
                 .startupPoiProvider(MapReaderSettings.StartupPoiProvider.CUSTOM_PLACES)
             if (isUAT) {
@@ -176,7 +175,7 @@ abstract class BaseTest {
         val onlineManager = OnlineManagerProvider.getInstance().get()
         if (!onlineManager.isOnlineMapStreamingEnabled()) return
 
-        val listener = mock<OnlineManager.MapStreamingListener>()
+        val listener = Mockito.mock<OnlineManager.MapStreamingListener>()
         whenever(listener.onSuccess()).then {}
 
         onlineManager.disableOnlineMapStreaming(listener)
@@ -188,7 +187,7 @@ abstract class BaseTest {
         val onlineManager = OnlineManagerProvider.getInstance().get()
         if (onlineManager.isOnlineMapStreamingEnabled()) return
 
-        val listener = mock<OnlineManager.MapStreamingListener>()
+        val listener = Mockito.mock<OnlineManager.MapStreamingListener>()
         whenever(listener.onSuccess()).then {}
 
         onlineManager.enableOnlineMapStreaming(listener)
@@ -197,7 +196,7 @@ abstract class BaseTest {
     }
 
     fun setActiveMapProvider(providerName: String) {
-        val listener = mock<SetActiveMapProviderListener>()
+        val listener = Mockito.mock<SetActiveMapProviderListener>()
         whenever(listener.onActiveProviderSet())
 
         OnlineManagerProvider.getInstance().get()
@@ -207,7 +206,7 @@ abstract class BaseTest {
     }
 
     open fun startPositionUpdating() {
-        val listener = mock<PositionManager.OnOperationComplete>()
+        val listener = Mockito.mock<PositionManager.OnOperationComplete>()
 
         PositionManagerProvider.getInstance().get().startPositionUpdating(listener)
 
@@ -215,7 +214,7 @@ abstract class BaseTest {
     }
 
     open fun stopPositionUpdating() {
-        val listener = mock<PositionManager.OnOperationComplete>()
+        val listener = Mockito.mock<PositionManager.OnOperationComplete>()
         whenever(listener.onComplete())
 
         PositionManagerProvider.getInstance().get().stopPositionUpdating(listener)
