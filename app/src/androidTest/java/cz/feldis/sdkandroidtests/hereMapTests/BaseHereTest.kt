@@ -2,15 +2,14 @@ package cz.feldis.sdkandroidtests.hereMapTests
 
 import android.Manifest
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import androidx.annotation.CallSuper
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.rule.GrantPermissionRule
-import org.mockito.kotlin.*
 import com.sygic.sdk.LoggingSettings
 import com.sygic.sdk.MapReaderSettings
 import com.sygic.sdk.SygicEngine
-import com.sygic.sdk.SygicEngine.initialize
 import com.sygic.sdk.context.CoreInitException
 import com.sygic.sdk.context.SygicContext
 import com.sygic.sdk.context.SygicContextInitRequest
@@ -29,7 +28,10 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
+import org.junit.rules.Timeout
 import org.junit.runner.Description
+import org.mockito.Mockito
+import org.mockito.kotlin.*
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -41,7 +43,6 @@ abstract class BaseHereTest {
     open lateinit var appContext: Context
     lateinit var sygicContext: SygicContext
     open lateinit var appDataPath: String
-    private lateinit var logConnector: LogConnector
 
     @get:Rule
     var mActivityRule: ActivityScenarioRule<SygicActivity> =
@@ -68,6 +69,9 @@ abstract class BaseHereTest {
         }
     }
 
+    @get:Rule
+    var globalTimeout: Timeout = Timeout.seconds(1200)
+
     /**
      * Initialization of SDK Sygic Engine
      */
@@ -77,37 +81,8 @@ abstract class BaseHereTest {
         appContext =
             androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
         appDataPath = appContext.getExternalFilesDir(null).toString()
-        val latch = CountDownLatch(1)
-        this.isEngineInitialized = false
-        val jsonConfig = buildUATConfig(true)
 
-        logConnector = object : LogConnector() {
-            override fun onLogReceived(message: String, logLevel: LogLevel) {
-            }
-        }
-
-        val contextInitRequest = SygicContextInitRequest(
-            jsonConfig,
-            appContext,
-            logConnector = logConnector,
-            loadMaps = true,
-            clearOnlineCache = false
-        )
-
-        initialize(contextInitRequest, object : SygicEngine.OnInitCallback {
-            override fun onError(error: CoreInitException) {
-                latch.countDown()
-                Assert.fail("sdk init FAILED with error $error")
-            }
-
-            override fun onInstance(instance: SygicContext) {
-                isEngineInitialized = true
-                sygicContext = instance
-                PositionManagerProvider.getInstance().get().openGpsConnection()
-                latch.countDown()
-            }
-        })
-        latch.await(30, TimeUnit.SECONDS)
+        initializeSdk(loadMaps = true)
     }
 
     @After
@@ -115,29 +90,35 @@ abstract class BaseHereTest {
         sygicContext.destroy()
     }
 
-    private fun buildUATConfig(onlineMaps: Boolean): String {
-        defaultConfig.license(BuildConfig.LICENSE_KEY_HERE)
-        defaultConfig.mapReaderSettings().startupOnlineMapsEnabled(onlineMaps)
-        defaultConfig.storageFolders().rootPath("$appDataPath/here")
+    private fun initializeSdk(loadMaps: Boolean) {
+        val latch = CountDownLatch(1)
 
-        defaultConfig.mapReaderSettings()
-            .startupPoiProvider(MapReaderSettings.StartupPoiProvider.CUSTOM_PLACES)
+        val contextInitRequest = SygicContextInitRequest(
+            jsonConfiguration = buildConfig(isUAT = true),
+            context = appContext,
+            logConnector = object : LogConnector() {},
+            loadMaps = loadMaps,
+            clearOnlineCache = false
+        )
 
-        defaultConfig.authentication(BuildConfig.SYGIC_SDK_CLIENT_ID_HERE)
-        defaultConfig.online().routingUrl("https://routing-uat.api.sygic.com")
-        defaultConfig.online().sSOServerUrl("https://auth-uat.api.sygic.com")
-        defaultConfig.online().productServer()
-            .onlineMapsLinkUrl("https://licensing-uat.api.sygic.com")
-        defaultConfig.online().searchUrl("https://search-uat.api.sygic.com")
-        defaultConfig.online().speedCameras().url("https://incidents-testing.api.sygic.com")
-        defaultConfig.online().incidents()
-            .url("https://incidents-testing.api.sygic.com")
-        defaultConfig.online().trafficUrl("https://traffic-uat.api.sygic.com")
-        defaultConfig.online()
-            .offlineMapsApiUrl("https://licensing-uat.api.sygic.com")
-        defaultConfig.online().voicesUrl("https://nonttsvoices-testing.api.sygic.com")
-        defaultConfig.online().placesUrl("https://places-uat.api.sygic.com")
+        SygicEngine.initialize(contextInitRequest, object : SygicEngine.OnInitCallback {
+            override fun onError(error: CoreInitException) {
+                Assert.fail("SDK initialization failed: $error")
+                latch.countDown()
+            }
 
+            override fun onInstance(instance: SygicContext) {
+                sygicContext = instance
+                isEngineInitialized = true
+                PositionManagerProvider.getInstance().get().openGpsConnection()
+                latch.countDown()
+            }
+        })
+
+        latch.await(30, TimeUnit.SECONDS)
+    }
+
+    private fun buildConfig(isUAT: Boolean = true): String {
         val consoleAppenderBuilder =
             LoggingSettings.LoggingItem.AppenderItem.ConsoleAppender.Builder()
                 .format("%levshort %datetime %msg\n")
@@ -153,68 +134,113 @@ abstract class BaseHereTest {
             .classpath("")
             .addAppender(consoleAppenderBuilder)
             .addAppender(diagnosticsAppender)
-        defaultConfig.logging {
-            addLoggingItem(loggingItemBuilder)
-        }
-        return defaultConfig.build()
+
+        return defaultConfig.apply {
+            license(BuildConfig.LICENSE_KEY_HERE)
+            authentication(BuildConfig.SYGIC_SDK_CLIENT_ID_HERE)
+            mapReaderSettings().startupOnlineMapsEnabled(true)
+            storageFolders().rootPath("$appDataPath/here")
+            mapReaderSettings()
+                .startupPoiProvider(MapReaderSettings.StartupPoiProvider.CUSTOM_PLACES)
+            if (isUAT) {
+                online().apply {
+                    routingUrl("https://routing-uat.api.sygic.com")
+                    sSOServerUrl("https://auth-uat.api.sygic.com")
+                    productServer().onlineMapsLinkUrl("https://licensing-uat.api.sygic.com")
+                    searchUrl("https://search-uat.api.sygic.com")
+                    trafficUrl("https://traffic-uat.api.sygic.com")
+                    offlineMapsApiUrl("https://offlinemaps-uat.api.sygic.com")
+                    voicesUrl("https://nonttsvoices-testing.api.sygic.com")
+                    placesUrl("https://places-uat.api.sygic.com")
+                    incidents().url("https://incidents-testing.api.sygic.com")
+                    speedCameras().url("https://incidents-testing.api.sygic.com")
+                }
+            }
+            logging {
+                addLoggingItem(loggingItemBuilder)
+            }
+        }.build()
     }
 
     open fun readJson(filename: String): String {
-        lateinit var jsonString: String
-        try {
-            jsonString = appContext.assets.open(filename)
-                .bufferedReader()
-                .use { it.readText() }
-        } catch (_: IOException) {
-            assert(true)
+        return try {
+            appContext.assets.open(filename).bufferedReader().use { it.readText() }
+        } catch (e: IOException) {
+            Log.e("SYGIC_TEST", "Error reading JSON file: $filename", e)
+            ""
         }
-        return jsonString
     }
 
     open fun disableOnlineMaps() {
-        if (!OnlineManagerProvider.getInstance().get().isOnlineMapStreamingEnabled()) {
-            return
-        }
-        val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
-        OnlineManagerProvider.getInstance().get().disableOnlineMapStreaming(listener)
-        verify(listener, timeout(5_000L))
-            .onSuccess()
-        verify(listener, never())
-            .onError(any())
+        val onlineManager = OnlineManagerProvider.getInstance().get()
+        if (!onlineManager.isOnlineMapStreamingEnabled()) return
+
+        val listener = Mockito.mock<OnlineManager.MapStreamingListener>()
+        whenever(listener.onSuccess()).then {}
+
+        onlineManager.disableOnlineMapStreaming(listener)
+
+        verify(listener, timeout(5000L)).onSuccess()
     }
 
     open fun enableOnlineMaps() {
-        if (OnlineManagerProvider.getInstance().get().isOnlineMapStreamingEnabled()) {
-            return
-        }
-        val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
-        OnlineManagerProvider.getInstance().get().enableOnlineMapStreaming(listener)
-        verify(listener, timeout(5_000L))
-            .onSuccess()
-        verify(listener, never())
-            .onError(any())
+        val onlineManager = OnlineManagerProvider.getInstance().get()
+        if (onlineManager.isOnlineMapStreamingEnabled()) return
+
+        val listener = Mockito.mock<OnlineManager.MapStreamingListener>()
+        whenever(listener.onSuccess()).then {}
+
+        onlineManager.enableOnlineMapStreaming(listener)
+
+        verify(listener, timeout(5000L)).onSuccess()
     }
 
     fun setActiveMapProvider(providerName: String) {
-        val listener: SetActiveMapProviderListener = mock(verboseLogging = true)
-        OnlineManagerProvider.getInstance().get().setActiveMapProvider(MapProvider(providerName), listener)
-        verify(listener, timeout(5_000L))
-            .onActiveProviderSet()
-        verify(listener, never())
-            .onError(any())
+        val listener = Mockito.mock<SetActiveMapProviderListener>()
+        whenever(listener.onActiveProviderSet())
+
+        OnlineManagerProvider.getInstance().get()
+            .setActiveMapProvider(MapProvider(providerName), listener)
+
+        verify(listener, timeout(5000L)).onActiveProviderSet()
     }
 
     open fun startPositionUpdating() {
-        val listener: PositionManager.OnOperationComplete = mock(verboseLogging = true)
+        val listener = Mockito.mock<PositionManager.OnOperationComplete>()
+
         PositionManagerProvider.getInstance().get().startPositionUpdating(listener)
-        verify(listener, timeout(5_000L)).onComplete()
+
+        verify(listener, timeout(5000L)).onComplete()
     }
 
     open fun stopPositionUpdating() {
-        val listener: PositionManager.OnOperationComplete = mock(verboseLogging = true)
+        val listener = Mockito.mock<PositionManager.OnOperationComplete>()
+        whenever(listener.onComplete())
+
         PositionManagerProvider.getInstance().get().stopPositionUpdating(listener)
-        verify(listener, timeout(5_000L)).onComplete()
+
+        verify(listener, timeout(5000L)).onComplete()
     }
 
+    open fun isRunningOnEmulator(): Boolean {
+        val fingerprint = Build.FINGERPRINT.lowercase()
+        val model = Build.MODEL.lowercase()
+        val brand = Build.BRAND.lowercase()
+        val device = Build.DEVICE.lowercase()
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        val product = Build.PRODUCT.lowercase()
 
+        return fingerprint.contains("generic")
+                || fingerprint.contains("test-keys")
+                || model.contains("google_sdk")
+                || model.contains("droid4x")
+                || model.contains("emulator")
+                || model.contains("android sdk built for")
+                || brand.contains("generic")
+                || device.contains("generic")
+                || product.contains("sdk_gphone")
+                || manufacturer.contains("genymotion")
+                || product.contains("vbox")
+                || product.contains("emulator")
+    }
 }
