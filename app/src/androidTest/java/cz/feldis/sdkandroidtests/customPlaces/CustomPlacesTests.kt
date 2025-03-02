@@ -3,7 +3,6 @@ package cz.feldis.sdkandroidtests.customPlaces
 import android.R
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
-import org.mockito.kotlin.*
 import com.sygic.sdk.map.Camera
 import com.sygic.sdk.map.CameraState
 import com.sygic.sdk.map.MapAnimation
@@ -34,16 +33,13 @@ import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.SygicActivity
 import cz.feldis.sdkandroidtests.TestMapFragment
 import cz.feldis.sdkandroidtests.search.SearchHelper
-import cz.feldis.sdkandroidtests.utils.AdvancedRunner
-import cz.feldis.sdkandroidtests.utils.Repeat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
-import org.junit.runner.RunWith
+import org.mockito.kotlin.*
 
-@RunWith(AdvancedRunner::class)
 class CustomPlacesTests : BaseTest() {
     private lateinit var cpManager: CustomPlacesManager
     private lateinit var searchHelper: SearchHelper
@@ -191,7 +187,10 @@ class CustomPlacesTests : BaseTest() {
             readJson("svk_custom_places.json"), customPlacesResultListener
         )
 
-        verify(customPlacesResultListener, timeout(5_000L)).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), any())
+        verify(
+            customPlacesResultListener,
+            timeout(5_000L)
+        ).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), any())
 
         mapView.cameraModel.position = GeoCoordinates(48.2587, 17.75712)
         mapView.cameraModel.zoomLevel = 22F
@@ -313,7 +312,6 @@ class CustomPlacesTests : BaseTest() {
     }
 
     @Test
-    @Repeat(5)
     fun testInstallAndSearchAndVerifyPlaceNameFrenchLanguageTag() {
         installOfflinePlaces("sk")
         val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
@@ -376,7 +374,10 @@ class CustomPlacesTests : BaseTest() {
             location = GeoCoordinates(48.2718, 17.7697),
         )
 
-        val autocompleteResult = searchHelper.offlineAutocompleteCustomPlacesWithDataset(searchRequest, defaultDataset)[0]
+        val autocompleteResult = searchHelper.offlineAutocompleteCustomPlacesWithDataset(
+            searchRequest,
+            defaultDataset
+        )[0]
         assertEquals("ibi maiga", autocompleteResult.subtitle)
         assertEquals("mojaSuperKategoria", autocompleteResult.categoryTags[0])
         assertEquals("vyzlec sa", autocompleteResult.title)
