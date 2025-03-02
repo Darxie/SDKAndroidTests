@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.mapInstaller
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.map.CountryDetails
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
@@ -17,6 +16,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Ignore
 import org.junit.Test
+import org.mockito.kotlin.*
+import timber.log.Timber
 import java.util.Timer
 import kotlin.concurrent.schedule
 
@@ -91,26 +92,27 @@ class MapDownloadTests : BaseTest() {
         mapDownloadHelper.ensureMapNotInstalled("us-dc")
 
         val installer = MapInstallerProvider.getInstance().get()
-        val listenerSK: MapResultListener = mock(verboseLogging = true)
-        val listenerUSDC: MapResultListener = mock(verboseLogging = true)
-        val listenerDE02: MapResultListener = mock(verboseLogging = true)
 
-        installer.installMap("gi", listenerSK)
-        installer.installMap("ad", listenerDE02)
-        val task = installer.installMap("us-dc", listenerUSDC)
+        val spyListenerGI = createSpyListener()
+        val spyListenerUSDC = createSpyListener()
+        val spyListenerAD = createSpyListener()
+
+        installer.installMap("gi", spyListenerGI)
+        installer.installMap("ad", spyListenerAD)
+        val task = installer.installMap("us-dc", spyListenerUSDC)
         Timer().schedule(2000) {
             task.cancel()
         }
 
-        verify(listenerSK, timeout(30_000L)).onMapResult(
+        verify(spyListenerGI, timeout(30_000L)).onMapResult(
             eq("gi"),
             eq(MapInstaller.LoadResult.Success)
         )
-        verify(listenerDE02, timeout(30_000L)).onMapResult(
+        verify(spyListenerAD, timeout(30_000L)).onMapResult(
             eq("ad"),
             eq(MapInstaller.LoadResult.Success)
         )
-        verify(listenerUSDC, timeout(30_000L)).onMapResult(
+        verify(spyListenerUSDC, timeout(30_000L)).onMapResult(
             eq("us-dc"),
             eq(MapInstaller.LoadResult.Cancelled)
         )
@@ -242,6 +244,19 @@ class MapDownloadTests : BaseTest() {
         val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         MapInstallerProvider.getInstance().get().getCountryDetails("de-01", false, cdListener)
         verify(cdListener, never()).onCountryDetails(any())
-        verify(cdListener, timeout(10_000L)).onCountryDetailsError(eq(MapInstaller.LoadResult.DetailsNotAvailable))
+        verify(
+            cdListener,
+            timeout(10_000L)
+        ).onCountryDetailsError(eq(MapInstaller.LoadResult.DetailsNotAvailable))
+    }
+
+    open class TestMapResultListener : MapResultListener {
+        override fun onMapResult(mapIso: String, result: MapInstaller.LoadResult) {
+            Timber.d("MapResultListener called with iso $mapIso and result: $result")
+        }
+    }
+
+    fun createSpyListener(): MapResultListener {
+        return spy(TestMapResultListener())
     }
 }
