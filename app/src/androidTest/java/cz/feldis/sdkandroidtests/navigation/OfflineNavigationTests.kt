@@ -8,7 +8,6 @@ import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.Route
-import com.sygic.sdk.route.RouteManeuver
 import com.sygic.sdk.route.Router
 import com.sygic.sdk.route.RouterProvider
 import com.sygic.sdk.route.RoutingOptions
@@ -30,9 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.AdditionalMatchers
 import org.mockito.InOrder
@@ -605,5 +602,33 @@ class OfflineNavigationTests : BaseTest() {
         delay(2000)
         navigationManagerKtx.stopNavigation(navigation) // shouldn't crash
         delay(500)
+    }
+
+    @Test
+    fun testStreetChangedListenerOffline() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener : NavigationManager.StreetChangedListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.1209419355147, 17.207606308128618),
+            GeoCoordinates(48.12276083935055, 17.207632634218143),
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addStreetChangedListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        verify(listener, timeout(10_000L)).onStreetChanged(argThat {
+            return@argThat this.street == "Mramorová"
+        })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeStreetChangedListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
     }
 }

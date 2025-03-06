@@ -206,4 +206,32 @@ class HereTests : BaseHereTest() {
             )
         assertEquals(route.maneuvers[0].type, RouteManeuver.Type.UTurnLeft)
     }
+
+    @Test
+    fun testStreetChangedListenerOfflineHere() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener : NavigationManager.StreetChangedListener = mock(verboseLogging = true)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            GeoCoordinates(48.1209419355147, 17.207606308128618),
+            GeoCoordinates(48.12276083935055, 17.207632634218143),
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addStreetChangedListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        verify(listener, timeout(10_000L)).onStreetChanged(argThat {
+            return@argThat this.street == "Mramorová"
+        })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeStreetChangedListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
 }
