@@ -41,6 +41,7 @@ import org.mockito.kotlin.atMost
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 
@@ -199,7 +200,6 @@ class OfflineNavigationTests : BaseTest() {
             AdditionalMatchers.not(eq(route)),
             eq(NavigationManager.RouteUpdateStatus.Success)
         )
-
 
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
         navigation.removeOnRouteChangedListener(listener)
@@ -629,6 +629,108 @@ class OfflineNavigationTests : BaseTest() {
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         navigation.removeStreetChangedListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    /**
+     * Navigation test on route recompute progress
+     *
+     * In this test we compute online route and set it for navigation.
+     * Via Nmea Log Recorder we set route from assets/SVK-Kosicka.nmea and start nmea log simulation.
+     * We verify that the recompute started, was in progress from 0 to 100 and then finished without error.
+     */
+    @Test
+    fun onRouteRecomputeProgressOffline() = runBlocking {
+        val listener: NavigationManager.OnRouteRecomputeListener =
+            mock(verboseLogging = true)
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.1447, 17.1317),
+            GeoCoordinates(48.1461, 17.1285)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnRouteRecomputeProgressListener(listener)
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+        val recomputeStartedData = NavigationManager.OnRouteRecomputeListener.RecomputeStartedData(
+            route, NavigationManager.RouteRecomputeReason.VehicleOutOfRoute
+        )
+        val recomputeProgressData1 = NavigationManager.OnRouteRecomputeListener.RecomputeProgressData(
+            route, 0
+        )
+        val recomputeProgressData2 = NavigationManager.OnRouteRecomputeListener.RecomputeProgressData(
+            route, 100
+        )
+        val recomputeFinishedData = NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData(
+            route, NavigationManager.RouteRecomputeResult.Success
+        )
+        val recomputeFinishedFailedData = NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData(
+            route, NavigationManager.RouteRecomputeResult.Error(NavigationManager.RouteRecomputeResult.Error.Reason.Failed, "Recompute failed")
+        )
+
+        Mockito.verify(
+            listener, Mockito.timeout(20_000L).times(1)
+        ).onRouteRecomputeStarted(eq(recomputeStartedData))
+
+        Mockito.verify(
+            listener, Mockito.timeout(20_000L).times(1)
+        )
+            .onRouteRecomputeProgress(eq(recomputeProgressData1))
+
+        Mockito.verify(
+            listener, Mockito.timeout(20_000L).times(1)
+        )
+            .onRouteRecomputeProgress(eq(recomputeProgressData2))
+
+        Mockito.verify(
+            listener, Mockito.timeout(20_000L).times(1)
+        )
+            .onRouteRecomputeFinished(eq(recomputeFinishedData))
+
+        Mockito.verify(
+            listener, never()
+        )
+            .onRouteRecomputeFinished(eq(recomputeFinishedFailedData))
+
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        navigation.removeOnRouteRecomputeProgressListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    @Test
+    fun onRouteChangedTestPedestrian() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.1447, 17.1317),
+            GeoCoordinates(48.1461, 17.1285),
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = null
+            }
+        )
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 3F)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnRouteChangedListener(listener)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+        Mockito.verify(
+            listener, Mockito.timeout(30_000L).atLeast(1)
+        ).onRouteChanged(
+            AdditionalMatchers.not(eq(route)),
+            eq(NavigationManager.RouteUpdateStatus.Success)
+        )
+
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        navigation.removeOnRouteChangedListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
 }
