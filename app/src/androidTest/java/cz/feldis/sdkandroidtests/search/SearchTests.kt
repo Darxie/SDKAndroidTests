@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.search
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.places.Place
 import com.sygic.sdk.places.PlaceCategories
 import com.sygic.sdk.places.PlacesManager
@@ -21,9 +20,17 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.isNotNull
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
