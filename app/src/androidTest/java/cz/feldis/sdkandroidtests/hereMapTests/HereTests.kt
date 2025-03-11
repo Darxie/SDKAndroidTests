@@ -19,6 +19,10 @@ import com.sygic.sdk.vehicletraits.dimensional.Trailer
 import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
+import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
+import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
+import com.sygic.sdk.vehicletraits.powertrain.FuelType
+import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
@@ -26,7 +30,6 @@ import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.argumentCaptor
@@ -232,6 +235,57 @@ class HereTests : BaseHereTest() {
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         navigation.removeStreetChangedListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    /***
+     * https://jira.sygic.com/browse/CI-3412
+     */
+    @Test
+    fun vehicleAidZonePaid() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("gb-02")
+
+        val zonePaidCondition = PowertrainTraits.InternalCombustionPowertrain(
+            fuelType = FuelType.Diesel,
+            europeanEmissionStandard = EuropeanEmissionStandard.Euro2,
+            consumptionData = ConsumptionData()
+        )
+
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                this.vehicleType = VehicleType.Car
+            }
+            this.powertrainTraits = zonePaidCondition
+        }
+
+        val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start = GeoCoordinates(55.945820, -3.206570),
+            destination = GeoCoordinates(55.944850, -3.199610),
+            routingOptions = RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile
+                routingService = RoutingService.Offline
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnVehicleAidListener(listener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        verify(listener, timeout(10_000)).onVehicleAidInfo(argThat { aidInfoList ->
+            aidInfoList.any { vehicleAidInfo ->
+                vehicleAidInfo.restriction.type == RestrictionInfo.RestrictionType.ZonePaid
+            }
+        })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnVehicleAidListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
 }
