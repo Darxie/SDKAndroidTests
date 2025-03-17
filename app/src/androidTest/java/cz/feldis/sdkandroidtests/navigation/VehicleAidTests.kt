@@ -118,6 +118,10 @@ class VehicleAidTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnVehicleAidListener(listener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
         verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
             for (vehicleAidInfo in this) {
@@ -129,6 +133,7 @@ class VehicleAidTests : BaseTest() {
             return@argThat false
         })
 
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         navigation.removeOnVehicleAidListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }

@@ -641,6 +641,7 @@ class OfflineNavigationTests : BaseTest() {
      */
     @Test
     fun onRouteRecomputeProgressOffline() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
         val listener: NavigationManager.OnRouteRecomputeListener =
             mock(verboseLogging = true)
         val navigation = NavigationManagerProvider.getInstance().get()
