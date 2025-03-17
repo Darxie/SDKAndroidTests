@@ -6,9 +6,9 @@ buildscript {
     }
 
     repositories {
-        maven { url "https://public.repo.sygic.com/repository/maven-sygic-releases/" }
-        maven { url "https://repository.sygic.com/repository/maven-sygic-internal/" }
-        maven { url "https://repository.sygic.com/repository/maven-sygic-releases/" }
+        maven { url = "https://public.repo.sygic.com/repository/maven-sygic-releases/" }
+        maven { url = "https://repository.sygic.com/repository/maven-sygic-internal/" }
+        maven { url = "https://repository.sygic.com/repository/maven-sygic-releases/" }
         google()
         mavenCentral()
     }
@@ -28,9 +28,9 @@ buildscript {
 
 allprojects {
     repositories {
-        maven { url "https://public.repo.sygic.com/repository/maven-sygic-releases/" }
-        maven { url "https://repository.sygic.com/repository/maven-sygic-internal/" }
-        maven { url "https://repository.sygic.com/repository/maven-sygic-releases/" }
+        maven { url = "https://public.repo.sygic.com/repository/maven-sygic-releases/" }
+        maven { url = "https://repository.sygic.com/repository/maven-sygic-internal/" }
+        maven { url = "https://repository.sygic.com/repository/maven-sygic-releases/" }
         google()
         mavenCentral()
     }

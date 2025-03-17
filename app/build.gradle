@@ -5,14 +5,14 @@ plugins {
 }
 
 android {
-    compileSdk 35
-    ndkVersion "21.1.6352462"
+    compileSdk = 35
+    ndkVersion = "21.1.6352462"
     defaultConfig {
         applicationId "com.sygic.sdk.test.android"
-        minSdk 24
-        targetSdk 35
-        versionCode 2
-        versionName "2.0"
+        minSdk = 24
+        targetSdk = 35
+        versionCode = 2
+        versionName = "2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -31,20 +31,23 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
         }
+    }
+    buildFeatures {
+        buildConfig true
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
 
-        coreLibraryDesugaringEnabled true
+        coreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = '17'
     }
 
-    namespace 'cz.feldis.sdkandroidtests'
+    namespace = 'cz.feldis.sdkandroidtests'
 }
 
 def getSdkVersion() {
@@ -151,7 +154,7 @@ dependencies {
         api("com.sygic.sdk:maps-android:${getSdkVersion()}@aar") {
             exclude group: 'com.google.android.gms'
             exclude group: 'androidx.core', module: 'core-ktx'
-            transitive true
+            transitive = true
         }
     } else {
         // compile sdk yourself (with correctly included sdk module of course)
