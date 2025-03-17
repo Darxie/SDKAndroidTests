@@ -368,7 +368,7 @@ class IncidentsTests : BaseTest() {
         logSimulator.addPositionSimulatorListener(positionSimulatorListener)
 
         verify(listener, timeout(10_000L)).onIncidentsInfoChanged(argThat {
-            this.find { it.roadPosition == GeoCoordinates(50.50351, 14.04214) } != null
+            this.isEmpty()
         })
 
         navigation.removeOnIncidentListener(listener)
@@ -387,7 +387,7 @@ class IncidentsTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         navigation.addOnIncidentListener(listener)
-        val nmeaDataProvider = NmeaFileDataProvider(appContext, "logLovosice.nmea")
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "logLovosiceInDirection.nmea")
         val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
