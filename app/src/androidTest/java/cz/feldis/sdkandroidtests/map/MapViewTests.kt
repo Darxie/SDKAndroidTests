@@ -650,11 +650,11 @@ class MapViewTests : BaseTest() {
 
         // Verify that among the returned objects, at least one is a MapPolyline.
         val viewObjects = captor.firstValue
+        scenario.moveToState(Lifecycle.State.DESTROYED)
         assertTrue(
             "Expected to find a MapPolyline object at the clicked point",
             viewObjects.any { it is MapRoute }
         )
-        scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
     @Test
@@ -709,11 +709,11 @@ class MapViewTests : BaseTest() {
 
         // Verify that among the returned objects, at least one is a MapPolyline.
         val viewObjects = captor.firstValue
+        scenario.moveToState(Lifecycle.State.DESTROYED)
         assertTrue(
             "Expected to find a MapPolyline object at the clicked point",
             viewObjects.any { it is MapRoute }
         )
-        scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
     /**
