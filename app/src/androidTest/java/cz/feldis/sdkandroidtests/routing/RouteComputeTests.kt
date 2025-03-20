@@ -527,7 +527,6 @@ class RouteComputeTests : BaseTest() {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
                 generalVehicleTraits.maximalSpeed = 90
             }
-
         }
 
         val routeTruck = routeCompute.offlineRouteCompute(
@@ -1306,6 +1305,33 @@ class RouteComputeTests : BaseTest() {
         }
 
         assertTrue("Isochrones should be different, but they appear identical.", areDifferent)
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-13864
+     */
+    @Test
+    fun shortBusRoutingTest() {
+        disableOnlineMaps()
+        MapDownloadHelper().installAndLoadMap("sk")
+
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Bus
+                generalVehicleTraits.maximalSpeed = 90
+            }
+        }
+
+        val start = GeoCoordinates(48.1237, 17.1991)
+        val destination = GeoCoordinates(48.1021, 17.2321)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+        val actualLength = route.routeInfo.length
+        assertTrue("Expected route length < 4000, but was $actualLength", route.routeInfo.length < 4000)
     }
 
     private suspend fun getRouteRequest(path: String): RouteRequest =
