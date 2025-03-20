@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.search
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.places.Place
 import com.sygic.sdk.places.PlaceCategories
 import com.sygic.sdk.places.PlacesManager
@@ -18,12 +17,23 @@ import com.sygic.sdk.search.SearchManagerProvider
 import com.sygic.sdk.search.SearchRequest
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.isNotNull
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
@@ -62,6 +72,38 @@ class SearchTests : BaseTest() {
         val results = searchHelper.offlineSearchPlaces(placeRequest)
         results.forEach {
             assert(it.link.category == PlaceCategories.EVStation)
+        }
+    }
+
+    @Test
+    @Ignore("https://jira.sygic.com/browse/SDC-13525")
+    fun searchEVStationInAreaAndCheckSYMaxPowerOfflineTest() {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val position = GeoCoordinates(48.11708633532345, 17.216519354470783)
+        val categories = listOf(PlaceCategories.EVStation)
+        val placeRequest = PlaceRequest(position, categories, 50)
+
+        val results = searchHelper.offlineSearchPlaces(placeRequest)
+        results.forEach { place ->
+            assert(place.link.category == PlaceCategories.EVStation)
+
+            val chademoDetail = place.details.firstOrNull { detail ->
+                detail.key == "SYChargingConnector" &&
+                        detail.value?.contains("\"SYConnectorType\":\"chademo\"") == true
+            }
+
+            assertNotNull("CHAdeMO connector detail not found", chademoDetail)
+
+            // Parse the JSON string correctly
+            val json = chademoDetail!!.value?.let { JSONObject(it) }
+            val maxPower = json?.getInt("SYMaxPower")
+
+            // Now correctly assert the numeric value
+            assertEquals(50, maxPower)
+
+            val brandDetail = place.details.firstOrNull { it.key == "SYBrand" }
+            assertNotNull("SYBrand detail not found", brandDetail)
+            assertEquals("Lidl", brandDetail!!.value)
         }
     }
 
@@ -279,7 +321,7 @@ class SearchTests : BaseTest() {
         assert(placesList.size > 2)
         for (place in placesList) {
             if (place.link.name == "Pyramid of Khufu")
-                assert(place.details[0].value == "Sahra' Muhafadhat al-Jeezah")
+                assert(place.details[0].value == "Desert of Giza Governorate")
             assert(place.details.isNotEmpty())
         }
     }
@@ -357,9 +399,11 @@ class SearchTests : BaseTest() {
     fun reverseGeoSlovakia() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
-        val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener = mock(verboseLogging = true)
+        val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
+            mock(verboseLogging = true)
 
-        ReverseGeocoderProvider.getInstance().get().reverseGeocode(GeoCoordinates(48.1476, 17.1046), emptySet(), reverseGeoListener)
+        ReverseGeocoderProvider.getInstance().get()
+            .reverseGeocode(GeoCoordinates(48.1476, 17.1046), emptySet(), reverseGeoListener)
         verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
             this.forEach {
                 if ((it.names.houseNumber == "6504/4") && (it.names.street == "Lýcejná"))
@@ -373,9 +417,11 @@ class SearchTests : BaseTest() {
     fun reverseGeoVriezewegNetherlands() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("nl")
-        val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener = mock(verboseLogging = true)
+        val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
+            mock(verboseLogging = true)
 
-        ReverseGeocoderProvider.getInstance().get().reverseGeocode(GeoCoordinates(51.8889, 5.66974), emptySet(), reverseGeoListener)
+        ReverseGeocoderProvider.getInstance().get()
+            .reverseGeocode(GeoCoordinates(51.8889, 5.66974), emptySet(), reverseGeoListener)
         verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
             this.forEach {
                 if ((it.names.houseNumber == "63") && (it.names.street == "Vriezeweg"))
@@ -396,7 +442,9 @@ class SearchTests : BaseTest() {
         )
         val result = searchHelper.offlineAutocomplete(searchRequest)
         assertTrue("Search found no results, empty list", result.isNotEmpty())
-        assertTrue("The result should contain an item with the title 'MK2 2RU'", result.any { it.title == "MK2 2RU" })
+        assertTrue(
+            "The result should contain an item with the title 'MK2 2RU'",
+            result.any { it.title == "MK2 2RU" })
     }
 
     @Test
