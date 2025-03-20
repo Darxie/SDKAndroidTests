@@ -471,7 +471,6 @@ class MapViewTests : BaseTest() {
         scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
-    @Ignore("Won't be part of sdk28 yet")
     @Test
     fun requestMapPolylineFromCoordinates(): Unit = runBlocking {
         // Create a map fragment with the initial camera state.

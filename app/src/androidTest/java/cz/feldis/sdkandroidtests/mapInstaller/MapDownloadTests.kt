@@ -187,7 +187,6 @@ class MapDownloadTests : BaseTest() {
     }
 
     @Test
-    @Ignore("fails on sdk28")
     fun setUnsupportedLocaleExpectErrorTest() {
         val installer = MapInstallerProvider.getInstance().get()
         val listener: ResultListener = mock(verboseLogging = true)
