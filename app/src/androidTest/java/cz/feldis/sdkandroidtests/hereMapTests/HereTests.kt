@@ -288,4 +288,46 @@ class HereTests : BaseHereTest() {
         navigation.removeOnVehicleAidListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
+    /***
+     * https://jira.sygic.com/browse/SDC-12634
+     */
+    @Test
+    fun theRouteReturnsToTheHighwaySwedenTest() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("se")
+
+        val vehicleProfile = VehicleProfile().apply {
+            this.dimensionalTraits = DimensionalTraits().apply {
+                this.totalWeight = 10000.0F
+                this.totalLength = 16500
+                this.totalHeight = 3000
+                this.totalWidth = 2500
+            }
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                this.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            GeoCoordinates(57.46712,12.06938),
+            GeoCoordinates(57.499780, 12.052100),
+            listOf(GeoCoordinates(57.471980, 12.060330)),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                useEndpointProtection = true
+                useSpeedProfiles = true
+                useTraffic = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        // Check if there's at least one maneuver matching the criteria
+        val hasExpectedRoundaboutExit = route.maneuvers.any { maneuver ->
+            maneuver.type == RouteManeuver.Type.RoundaboutS &&
+                    maneuver.roundaboutExit == 4
+        }
+
+        assertTrue(
+            hasExpectedRoundaboutExit
+        )
+    }
 }
