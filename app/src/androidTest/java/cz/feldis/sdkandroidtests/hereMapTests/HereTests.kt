@@ -29,6 +29,7 @@ import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.argThat
@@ -328,6 +329,43 @@ class HereTests : BaseHereTest() {
 
         assertTrue(
             hasExpectedRoundaboutExit
+        )
+    }
+
+    @Test
+    fun lowerHeavyTruckPenaltiesSwedenTest() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("se")
+
+        val vehicleProfile = VehicleProfile().apply {
+            this.dimensionalTraits = DimensionalTraits().apply {
+                this.totalWeight = 30000.0F
+                this.totalLength = 18000
+                this.totalHeight = 4000
+                this.totalWidth = 2500
+            }
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                this.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            GeoCoordinates(58.351620, 11.845900),
+            GeoCoordinates(58.347790, 11.792080),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.useSpeedProfiles = false
+                this.useTraffic = false
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val unwantedManeuver = route.maneuvers.any { maneuver ->
+            maneuver.type == RouteManeuver.Type.Right
+        }
+
+        assertFalse(
+            "Route contains an unwanted RIGHT maneuver.", unwantedManeuver,
         )
     }
 }
