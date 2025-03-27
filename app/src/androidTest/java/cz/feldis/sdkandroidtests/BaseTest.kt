@@ -10,6 +10,7 @@ import androidx.test.rule.GrantPermissionRule
 import com.sygic.sdk.LoggingSettings
 import com.sygic.sdk.MapReaderSettings
 import com.sygic.sdk.SygicEngine
+import com.sygic.sdk.buildJsonConfig
 import com.sygic.sdk.context.CoreInitException
 import com.sygic.sdk.context.SygicContext
 import com.sygic.sdk.context.SygicContextInitRequest
@@ -20,6 +21,7 @@ import com.sygic.sdk.online.OnlineManagerProvider
 import com.sygic.sdk.online.listeners.SetActiveMapProviderListener
 import com.sygic.sdk.position.PositionManager
 import com.sygic.sdk.position.PositionManagerProvider
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -95,7 +97,7 @@ abstract class BaseTest {
         val latch = CountDownLatch(1)
 
         val contextInitRequest = SygicContextInitRequest(
-            jsonConfiguration = buildConfig(isUAT = true),
+            jsonConfiguration = buildJsonConfig(buildConfig(isUAT = true)) {}.betaRouting(false),
             context = appContext,
             logConnector = object : LogConnector() {},
             loadMaps = loadMaps,
@@ -243,5 +245,23 @@ abstract class BaseTest {
                 || manufacturer.contains("genymotion")
                 || product.contains("vbox")
                 || product.contains("emulator")
+    }
+
+    private fun String.betaRouting(useBetaRouting: Boolean): String {
+        val sdkConfig = JSONObject(this)
+        val online = runCatching { sdkConfig.getJSONObject("Online") }
+            .getOrElse {
+                val newOnline = JSONObject()
+                sdkConfig.put("Online", newOnline)
+                newOnline
+            }
+        val routing = runCatching { online.getJSONObject("Routing") }
+            .getOrElse {
+                val newRouting = JSONObject()
+                online.put("Routing", newRouting)
+                newRouting
+            }
+        routing.put("use_beta_online_routing", useBetaRouting)
+        return sdkConfig.toString()
     }
 }
