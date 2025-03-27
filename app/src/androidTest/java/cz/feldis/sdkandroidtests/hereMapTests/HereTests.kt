@@ -332,6 +332,11 @@ class HereTests : BaseHereTest() {
         )
     }
 
+    /**
+     * https://jira.sygic.com/browse/SDC-12572
+     * Route should go straight and should no have any detours (which would most likely be to the right).
+     * Therefore we check that there is no right turn.
+     */
     @Test
     fun lowerHeavyTruckPenaltiesSwedenTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("se")
