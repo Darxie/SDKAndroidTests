@@ -3,6 +3,7 @@ package cz.feldis.sdkandroidtests.hereMapTests
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
+import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.RouteManeuver
 import com.sygic.sdk.route.RouteWarning
@@ -26,6 +27,7 @@ import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
+import cz.feldis.sdkandroidtests.utils.GeoUtils
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -373,4 +375,67 @@ class HereTests : BaseHereTest() {
             "Route contains an unwanted RIGHT maneuver.", unwantedManeuver,
         )
     }
+
+    /***
+     * https://jira.sygic.com/browse/SDC-12637
+     * TC869
+     *
+     * In this test, we compute a route from Copenhagen to Goteborg. We know that there was
+     * a problematic highway detour near Malmo, so we check that there is no maneuver present
+     * in the depicted bounding box. To be sure, we also check that there is no maneuver
+     * in that specific distance from start range.
+     */
+    @Test
+    fun exitFromTheRouteSwedenDenmarkTest() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("se")
+        mapDownloadHelper.installAndLoadMap("dk")
+
+        val vehicleProfile = VehicleProfile().apply {
+            this.dimensionalTraits = DimensionalTraits().apply {
+                totalWeight = 40000.0F
+                totalLength = 16500
+                totalHeight = 4100
+                totalWidth = 2450
+            }
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Truck
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(55.567639303872824, 13.063895982391863),
+            bottomRight = GeoCoordinates(55.549896844375866, 13.088053326229309)
+        )
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            GeoCoordinates(55.614150, 12.505980),
+            GeoCoordinates(57.700670, 11.968220),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        val maneuversInBoundingBox = route.maneuvers.filter { maneuver ->
+            GeoUtils.isPointInBoundingBox(maneuver.position, boundingBox)
+        }
+
+        assertTrue(
+            "Route contains unexpected maneuvers within the bounding box: $maneuversInBoundingBox",
+            maneuversInBoundingBox.isEmpty()
+        )
+
+        val unwantedManeuversInRange = route.maneuvers.filter { maneuver ->
+            maneuver.distanceFromStart in 39000..41000
+        }
+
+        assertTrue(
+            "Unexpected maneuvers found within the suspicious distance range: $unwantedManeuversInRange",
+            unwantedManeuversInRange.isEmpty(),
+        )
+    }
+
+
 }
