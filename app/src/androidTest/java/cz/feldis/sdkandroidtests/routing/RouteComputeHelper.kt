@@ -19,6 +19,7 @@ import com.sygic.sdk.vehicletraits.powertrain.Battery
 import com.sygic.sdk.vehicletraits.powertrain.ChargingCurrent
 import com.sygic.sdk.vehicletraits.powertrain.ChargingPreferences
 import com.sygic.sdk.vehicletraits.powertrain.Connector
+import com.sygic.sdk.vehicletraits.powertrain.ConnectorFormat
 import com.sygic.sdk.vehicletraits.powertrain.ConnectorType
 import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
 import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
@@ -125,8 +126,8 @@ class RouteComputeHelper : BaseTest() {
             chargingCurve = mapOf(1.0 to 1.0, 100.0 to 1.0)
         )
         val connectors = listOf(
-            Connector(100F, ConnectorType.Type2Any, ChargingCurrent.AC),
-            Connector(100F, ConnectorType.Type2Any, ChargingCurrent.DC)
+            Connector(100F, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.AC),
+            Connector(100F, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.DC)
         )
         val chargingPreferences = ChargingPreferences(
             fullChargeThreshold = 0.8F,
@@ -153,8 +154,8 @@ class RouteComputeHelper : BaseTest() {
             mapOf()
         )
         val connectors = listOf(
-            Connector(100F, ConnectorType.Type2Any, ChargingCurrent.AC),
-            Connector(100F, ConnectorType.Type2Any, ChargingCurrent.DC)
+            Connector(100F, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.AC),
+            Connector(100F, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.DC)
         )
         val chargingPreferences = ChargingPreferences(
             fullChargeThreshold = 0.9F,
@@ -181,10 +182,8 @@ class RouteComputeHelper : BaseTest() {
             mapOf()
         )
         val connectors = listOf(
-            Connector(500f, ConnectorType.Type2Any, ChargingCurrent.AC),
-            Connector(500f, ConnectorType.Type2Any, ChargingCurrent.DC),
-            Connector(500f, ConnectorType.Ccs2, ChargingCurrent.AC),
-            Connector(500f, ConnectorType.Ccs2, ChargingCurrent.DC),
+            Connector(500f, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.AC),
+            Connector(500f, ConnectorType.Ccs2, ConnectorFormat.Unknown, ChargingCurrent.DC)
         )
         val chargingPreferences = ChargingPreferences(
             fullChargeThreshold = 0.9F,

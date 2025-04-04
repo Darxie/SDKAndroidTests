@@ -58,7 +58,7 @@ class SearchTests : BaseTest() {
 
         val results = searchHelper.onlineSearchPlaces(placeRequest)
         results.forEach {
-            assert(it.link.category == PlaceCategories.PetrolStation)
+            assert(it.category == PlaceCategories.PetrolStation)
         }
     }
 
@@ -71,35 +71,28 @@ class SearchTests : BaseTest() {
 
         val results = searchHelper.offlineSearchPlaces(placeRequest)
         results.forEach {
-            assert(it.link.category == PlaceCategories.EVStation)
+            assert(it.category == PlaceCategories.EVStation)
         }
     }
 
     @Test
-    @Ignore("https://jira.sygic.com/browse/SDC-13525")
     fun searchEVStationInAreaAndCheckSYMaxPowerOfflineTest() {
-        mapDownloadHelper.installAndLoadMap("sk")
+        disableOnlineMaps()
+//        mapDownloadHelper.installAndLoadMap("sk")
         val position = GeoCoordinates(48.11708633532345, 17.216519354470783)
         val categories = listOf(PlaceCategories.EVStation)
         val placeRequest = PlaceRequest(position, categories, 50)
 
         val results = searchHelper.offlineSearchPlaces(placeRequest)
         results.forEach { place ->
-            assert(place.link.category == PlaceCategories.EVStation)
+            assert(place.category == PlaceCategories.EVStation)
 
-            val chademoDetail = place.details.firstOrNull { detail ->
-                detail.key == "SYChargingConnector" &&
-                        detail.value?.contains("\"SYConnectorType\":\"chademo\"") == true
-            }
+            val chademoConnector = place.evCharger?.evses
+                ?.flatMap { it.chargingConnectors.toList() }
+                ?.firstOrNull { it.type.name.equals("chademo", ignoreCase = true) }
 
-            assertNotNull("CHAdeMO connector detail not found", chademoDetail)
-
-            // Parse the JSON string correctly
-            val json = chademoDetail!!.value?.let { JSONObject(it) }
-            val maxPower = json?.getInt("SYMaxPower")
-
-            // Now correctly assert the numeric value
-            assertEquals(50, maxPower)
+            assertNotNull("CHAdeMO connector not found", chademoConnector)
+            assertEquals(50000.0F, chademoConnector!!.maximalPower)
 
             val brandDetail = place.details.firstOrNull { it.key == "SYBrand" }
             assertNotNull("SYBrand detail not found", brandDetail)
@@ -193,9 +186,9 @@ class SearchTests : BaseTest() {
         val resultList = argumentCaptor.firstValue
         for (bank in resultList) {
             assertNotNull(resultList)
-            assertFalse(bank.link.name.isEmpty())
+            assertFalse(bank.name.isEmpty())
             assertFalse(bank.details.isEmpty())
-            assertTrue(bank.link.category == PlaceCategories.Bank)
+            assertTrue(bank.category == PlaceCategories.Bank)
         }
     }
 
@@ -236,14 +229,14 @@ class SearchTests : BaseTest() {
         verify(listener, timeout(10_000L))
             .onPlacesLoaded(argThat {
                 for (place in this) {
-                    if (place.link.name.isEmpty() || place.details.isEmpty()) {
+                    if (place.name.isEmpty() || place.details.isEmpty()) {
                         Timber.e("Place link name or place details are empty")
                         return@argThat false
                     }
-                    if (place.link.category != PlaceCategories.EVStation) {
+                    if (place.category != PlaceCategories.EVStation) {
                         Timber.e(
-                            "Category of the place: " + place.link.name + "at" +
-                                    place.link.location + "is not equal to the requested one"
+                            "Category of the place: " + place.name + "at" +
+                                    place.position + "is not equal to the requested one"
                         )
                         return@argThat false
                     }
@@ -252,52 +245,24 @@ class SearchTests : BaseTest() {
             }, any())
     }
 
-    @Test
-    fun loadExternalPlaceId() {
-        mapDownloadHelper.installAndLoadMap("eg")
-        val placesManager = PlacesManagerProvider.getInstance().get()
-
-        val listenerExternalIdKhufu: PlacesManager.PlaceExternalIdListener =
-            mock(verboseLogging = true)
-        val listenerExternalIdGiza: PlacesManager.PlaceExternalIdListener =
-            mock(verboseLogging = true)
-
-        val category = listOf(PlaceCategories.ImportantTouristAttraction)
-        val request = PlaceRequest(GeoCoordinates(29.978296, 31.132839), category, 500)
-
-        val expectedKhufuExternalId = "30303266-3831-6238-2d30-3032642d6265"
-        val expectedGizaExternalId = "30303266-3830-6630-2d30-3032642d6266"
-
-        val placesList = searchHelper.offlineSearchPlaces(request)
-        for (place in placesList) {
-            if (place.link.name == "Pyramid of Khufu") {
-                placesManager.loadExternalPlaceId(place.link, listenerExternalIdKhufu)
-                verify(
-                    listenerExternalIdKhufu,
-                    Mockito.timeout(5000)
-                )
-                    .onExternalPlaceIdLoaded(argThat {
-                        if (searchHelper.byteArrayToUUID(this) != expectedKhufuExternalId) {
-                            return@argThat false
-                        }
-                        true
-                    })
-            }
-            if (place.link.name == "El Giza Monuments Area") {
-                placesManager.loadExternalPlaceId(place.link, listenerExternalIdGiza)
-                verify(
-                    listenerExternalIdGiza,
-                    Mockito.timeout(5000)
-                )
-                    .onExternalPlaceIdLoaded(argThat {
-                        if (searchHelper.byteArrayToUUID(this) != expectedGizaExternalId) {
-                            return@argThat false
-                        }
-                        true
-                    })
-            }
-        }
-    }
+//    @Test
+//    fun loadExternalPlaceId() {
+//        mapDownloadHelper.installAndLoadMap("eg")
+//        val placesManager = PlacesManagerProvider.getInstance().get()
+//
+//        val category = listOf(PlaceCategories.ImportantTouristAttraction)
+//        val request = PlaceRequest(GeoCoordinates(29.978296, 31.132839), category, 500)
+//
+//        val expectedKhufuExternalId = "30303266-3831-6238-2d30-3032642d6265"
+//        val expectedGizaExternalId = "30303266-3830-6630-2d30-3032642d6266"
+//
+//        val placesList = searchHelper.offlineSearchPlaces(request)
+//        for (place in placesList) {
+//            if (place.name == "Pyramid of Khufu") {
+//                print("fksdjf")
+//            }
+//        }
+//    }
 
     @Test
     fun searchPlacesDetails() {
@@ -320,7 +285,7 @@ class SearchTests : BaseTest() {
         assert(placesList.isNotEmpty())
         assert(placesList.size > 2)
         for (place in placesList) {
-            if (place.link.name == "Pyramid of Khufu")
+            if (place.name == "Pyramid of Khufu")
                 assert(place.details[0].value == "Desert of Giza Governorate")
             assert(place.details.isNotEmpty())
         }

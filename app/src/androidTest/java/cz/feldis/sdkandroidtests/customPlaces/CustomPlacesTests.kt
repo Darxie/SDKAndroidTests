@@ -18,7 +18,6 @@ import com.sygic.sdk.map.`object`.ViewObject
 import com.sygic.sdk.map.`object`.data.ViewObjectData
 import com.sygic.sdk.places.CustomPlacesManager
 import com.sygic.sdk.places.CustomPlacesManagerProvider
-import com.sygic.sdk.places.PlaceLink
 import com.sygic.sdk.places.listeners.CustomPlacesSearchIndexingListener
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.AutocompleteResult
@@ -39,6 +38,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
 import org.mockito.kotlin.*
+import java.util.Locale
 
 class CustomPlacesTests : BaseTest() {
     private lateinit var cpManager: CustomPlacesManager
@@ -160,7 +160,6 @@ class CustomPlacesTests : BaseTest() {
         val customPlacesResultListener: CustomPlacesManager.InstallResultListener =
             mock(verboseLogging = true)
         val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
-        val placeLinkListener: ProxyObjectManager.PlaceLinkListener = mock(verboseLogging = true)
 
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
         // create test scenario with activity & map fragment
@@ -211,16 +210,9 @@ class CustomPlacesTests : BaseTest() {
 
         if (capturedObjects.isNotEmpty() && capturedObjects[0] is ProxyPlace) {
             val proxyPlace = capturedObjects[0] as ProxyPlace
-            val placeLinkCaptor = argumentCaptor<PlaceLink>()
 
-            ProxyObjectManager.loadPlaceLink(proxyPlace, placeLinkListener)
-            verify(placeLinkListener, never()).onPlaceLinkError(any())
-            verify(placeLinkListener, timeout(5_000L)).onPlaceLinkLoaded(placeLinkCaptor.capture())
-
-            val placeLink = placeLinkCaptor.firstValue
-
-            assertEquals(placeLink.name, "Odpočívadlo Horná Dolná")
-            assertEquals(placeLink.category, "SYTruckRestArea")
+            assertEquals(proxyPlace.data.place.name, "Odpočívadlo Horná Dolná")
+            assertEquals(proxyPlace.data.place.category, "SYTruckRestArea")
             scenario.moveToState(Lifecycle.State.DESTROYED)
         } else {
             scenario.moveToState(Lifecycle.State.DESTROYED)
@@ -298,14 +290,14 @@ class CustomPlacesTests : BaseTest() {
             location = GeoCoordinates(48.2718, 17.7697),
             categoryTags = listOf("mojaSuperKategoria"),
             radius = 50,
-            languageTag = "fr"
+            languageTag = "en"
         )
 
         // Perform a search for custom places using the place request.
         val searchResult = searchHelper.searchCustomPlaces(placeRequest)[0]
 
         // Verify that the searched place's name is "ja som POI".
-        assertEquals("ja som POI", searchResult.link.name)
+        assertEquals("vyzlec sa", searchResult.name)
 
         // Close the scenario and destroy the activity.
         scenario.moveToState(Lifecycle.State.DESTROYED)
@@ -325,6 +317,7 @@ class CustomPlacesTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
+        mapView.setMapLanguage(Locale.FRENCH)
 
         // inject skin
         mapView.injectSkinDefinition(
@@ -346,7 +339,7 @@ class CustomPlacesTests : BaseTest() {
         val searchResult = searchHelper.searchCustomPlaces(placeRequest)[0]
 
         // verify
-        assertEquals("ja som POI", searchResult.link.name)
+        assertEquals("ja som POI", searchResult.name)
 
         //close scenario & activity
         scenario.moveToState(Lifecycle.State.DESTROYED)

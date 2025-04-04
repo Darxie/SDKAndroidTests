@@ -71,7 +71,7 @@ class RouteComputeTests : BaseTest() {
         routeComputeHelper = RouteComputeHelper()
     }
 
-    @Ignore("Does not work")
+    @Ignore("Does not work - works with v3")
     @Test
     fun computeNextDurationsTestOnline() {
         val listener: RouteDurationListener = mock(verboseLogging = true)
@@ -821,7 +821,7 @@ class RouteComputeTests : BaseTest() {
     @Test
     fun preferenceViolationWarningEVTest() {
         disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
+//        mapDownloadHelper.installAndLoadMap("sk")
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.14548507020328, 17.126529723864405)
