@@ -5,6 +5,7 @@ import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
 import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.route.RouteAvoids
 import com.sygic.sdk.route.RouteManeuver
 import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.RoutingOptions
@@ -217,7 +218,7 @@ class HereTests : BaseHereTest() {
     fun testStreetChangedListenerOfflineHere() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
         val navigation = NavigationManagerProvider.getInstance().get()
-        val listener : NavigationManager.StreetChangedListener = mock(verboseLogging = true)
+        val listener: NavigationManager.StreetChangedListener = mock(verboseLogging = true)
 
         val route = routeComputeHelper.offlineRouteCompute(
             GeoCoordinates(48.1209419355147, 17.207606308128618),
@@ -291,6 +292,7 @@ class HereTests : BaseHereTest() {
         navigation.removeOnVehicleAidListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
+
     /***
      * https://jira.sygic.com/browse/SDC-12634
      */
@@ -311,7 +313,7 @@ class HereTests : BaseHereTest() {
         }
 
         val route = routeComputeHelper.offlineRouteCompute(
-            GeoCoordinates(57.46712,12.06938),
+            GeoCoordinates(57.46712, 12.06938),
             GeoCoordinates(57.499780, 12.052100),
             listOf(GeoCoordinates(57.471980, 12.060330)),
             routingOptions = RoutingOptions().apply {
@@ -437,5 +439,86 @@ class HereTests : BaseHereTest() {
         )
     }
 
+    /***
+     * https://jira.sygic.com/browse/SDC-11895
+     * TC856
+     */
+    @Test
+    fun exitFromTheRouteSlovakiaTest() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
 
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Car
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(48.31055, 17.54599),
+            bottomRight = GeoCoordinates(48.30566, 17.57050)
+        )
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            GeoCoordinates(48.213170, 17.265160),
+            GeoCoordinates(48.983180, 18.402170),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        val maneuversInBoundingBox = route.maneuvers.filter { maneuver ->
+            GeoUtils.isPointInBoundingBox(maneuver.position, boundingBox)
+        }
+
+        assertTrue(
+            "Route contains unexpected maneuvers within the bounding box: $maneuversInBoundingBox",
+            maneuversInBoundingBox.isEmpty()
+        )
+
+        val unwantedManeuversInRange = route.maneuvers.filter { maneuver ->
+            maneuver.distanceFromStart in 24000..26000
+        }
+
+        assertTrue(
+            "Unexpected maneuvers found within the suspicious distance range: $unwantedManeuversInRange",
+            unwantedManeuversInRange.isEmpty(),
+        )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-12263
+     * TC867
+     */
+    @Test
+    fun busRoutingAustraliaTest() {
+        mapDownloadHelper.installAndLoadMap("au-05")
+        val start = GeoCoordinates(-27.665280, 153.376730)
+        val destination = GeoCoordinates(-27.669720, 153.378950)
+        val routeCompute = RouteComputeHelper()
+        val routingOptions = RoutingOptions().apply {
+            this.vehicleProfile = VehicleProfile().apply {
+                this.generalVehicleTraits.vehicleType = VehicleType.Bus
+                this.generalVehicleTraits.maximalSpeed = 100
+            }
+            this.napStrategy = NearestAccessiblePointStrategy.Disabled
+            this.useEndpointProtection = true
+            this.useSpeedProfiles = true
+            this.routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+        }
+
+        val routeBus = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+        val estimatedTimeOfArrivalBus =
+            routeBus.routeInfo.waypointDurations.last().withSpeedProfileAndTraffic
+
+        assertTrue(
+            estimatedTimeOfArrivalBus > 120
+        )
+    }
 }
