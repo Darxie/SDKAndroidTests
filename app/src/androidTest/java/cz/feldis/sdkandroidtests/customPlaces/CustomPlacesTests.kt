@@ -298,14 +298,14 @@ class CustomPlacesTests : BaseTest() {
             location = GeoCoordinates(48.2718, 17.7697),
             categoryTags = listOf("mojaSuperKategoria"),
             radius = 50,
-            languageTag = "fr"
+            languageTag = "en"
         )
 
         // Perform a search for custom places using the place request.
         val searchResult = searchHelper.searchCustomPlaces(placeRequest)[0]
 
         // Verify that the searched place's name is "ja som POI".
-        assertEquals("ja som POI", searchResult.link.name)
+        assertEquals("vyzlec sa", searchResult.link.name)
 
         // Close the scenario and destroy the activity.
         scenario.moveToState(Lifecycle.State.DESTROYED)
