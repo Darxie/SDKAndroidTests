@@ -354,6 +354,7 @@ class RouteWarningTests : BaseTest() {
             }
             useEndpointProtection = true
             napStrategy = NearestAccessiblePointStrategy.Disabled
+            arriveInDrivingSide = false
         }
 
         val route = routeComputeHelper.offlineRouteCompute(
