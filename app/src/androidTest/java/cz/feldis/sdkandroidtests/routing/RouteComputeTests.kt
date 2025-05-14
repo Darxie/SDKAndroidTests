@@ -666,6 +666,43 @@ class RouteComputeTests : BaseTest() {
         )
     }
 
+    @Test
+    fun transitCountriesPreserveOrderTest_ThroughLiechtensteinToHungary() {
+        mapDownloadHelper.installAndLoadMap("ch") // Switzerland
+        mapDownloadHelper.installAndLoadMap("li") // Liechtenstein
+        mapDownloadHelper.installAndLoadMap("at") // Austria
+        mapDownloadHelper.installAndLoadMap("sk") // Slovakia
+        mapDownloadHelper.installAndLoadMap("hu") // Hungary
+
+        // Define route: start in Switzerland, end in Hungary
+        val start = GeoCoordinates(47.3769, 8.5417) // Zurich
+        val waypoint1 = GeoCoordinates(47.1416, 9.5215) // Liechtenstein
+        val waypoint2 = GeoCoordinates(47.3878886618401, 13.101404296427072) // Austria
+        val waypoint3 = GeoCoordinates(48.1486, 17.1077) // Slovakia
+        val destination = GeoCoordinates(47.4979, 19.0402) // Budapest
+
+        val route = RouteComputeHelper().offlineRouteCompute(
+            start,
+            destination,
+            waypoints = listOf(waypoint1, waypoint2, waypoint3)
+        )
+
+        // Expected order of transition countries
+        val expectedCountries = listOf(
+            TransitCountryInfo("ch", emptyList()),
+            TransitCountryInfo("li", emptyList()),
+            TransitCountryInfo("at", emptyList()),
+            TransitCountryInfo("sk", emptyList()),
+            TransitCountryInfo("hu", emptyList())
+        )
+
+        // Mock and verify the transit countries info listener
+        val listener: TransitCountriesInfoListener = mock(verboseLogging = true)
+        route.getTransitCountriesInfo(listener)
+
+        verify(listener, timeout(5_000L)).onTransitCountriesInfo(expectedCountries)
+    }
+
     /**
      * https://jira.sygic.com/browse/SDC-13368
      *
@@ -696,10 +733,47 @@ class RouteComputeTests : BaseTest() {
             route.routeRequest.routingOptions.routeAvoids.countryRouteAvoidables
 
         listOf(startCountry, destinationCountry).forEach { country ->
-            countryRouteAvoidables[country]?.let { avoidSet ->
-                avoidSet.forEach { avoidType ->
-                    assert(avoidType != RouteAvoids.Type.Country) { "Country avoidable type found in $country" }
+            countryRouteAvoidables.find { it.first == country }?.second?.forEach { avoidType ->
+                assert(avoidType != RouteAvoids.Type.Country) { "Country avoidable type found in $country" }
+            }
+        }
+    }
+
+    @Test
+    fun avoidableCountryTest_startAndEndCountryMustNotBeAvoided() {
+        mapDownloadHelper.installAndLoadMap("ch") // Switzerland
+        mapDownloadHelper.installAndLoadMap("at") // Austria
+        mapDownloadHelper.installAndLoadMap("sk") // Slovakia
+        mapDownloadHelper.installAndLoadMap("hu") // Hungary
+
+        val start = GeoCoordinates(47.35823094740036, 8.588782585276224) // Zurich
+        val destination = GeoCoordinates(48.607066673016575, 21.3232184832135) // Cana, SVK
+
+        val route = RouteComputeHelper().offlineRouteCompute(
+            start,
+            destination
+        )
+
+        val startCountry = "ch"
+        val destinationCountry = "sk"
+
+        val countryRouteAvoidables: List<Pair<String, Set<RouteAvoids.Type>>> =
+            route.routeRequest.routingOptions.routeAvoids.countryRouteAvoidables
+
+        // ch and sk should not have "Country" avoidables
+        listOf(startCountry, destinationCountry).forEach { country ->
+            countryRouteAvoidables.find { it.first == country }?.second?.forEach { avoidType ->
+                assert(avoidType != RouteAvoids.Type.Country) {
+                    "Country avoidable type should not be applied to $country"
                 }
+            }
+        }
+
+        // at and hu should have "Country" avoidables
+        listOf("at", "hu").forEach { country ->
+            val avoids = countryRouteAvoidables.find { it.first == country }?.second
+            assert(avoids != null && RouteAvoids.Type.Country in avoids) {
+                "Expected $country to be marked as avoidable with type 'Country'"
             }
         }
     }
@@ -821,7 +895,7 @@ class RouteComputeTests : BaseTest() {
     @Test
     fun preferenceViolationWarningEVTest() {
         disableOnlineMaps()
-//        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("sk")
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.14548507020328, 17.126529723864405)
@@ -1331,7 +1405,10 @@ class RouteComputeTests : BaseTest() {
             routingOptions = routingOptions
         )
         val actualLength = route.routeInfo.length
-        assertTrue("Expected route length < 4000, but was $actualLength", route.routeInfo.length < 4000)
+        assertTrue(
+            "Expected route length < 4000, but was $actualLength",
+            route.routeInfo.length < 4000
+        )
     }
 
     private suspend fun getRouteRequest(path: String): RouteRequest =
