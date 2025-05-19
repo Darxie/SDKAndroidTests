@@ -1,0 +1,19 @@
+{
+  "skin": {
+    "poi_categories": {
+      "custom": {
+        "categories": {
+          "SYTruckRestArea": {
+            "groupId": "SYRestArea",
+            "enabled": true,
+            "icon": "0xE327",
+            "color": "0xFFAA00FF",
+            "priority": 0,
+            "zoomLevel": 14,
+            "importance": "Top"
+          }
+        }
+      }
+    }
+  }
+}

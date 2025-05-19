@@ -16,8 +16,10 @@ import com.sygic.sdk.map.MapAnimation
 import com.sygic.sdk.map.MapCenter
 import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
+import com.sygic.sdk.map.MapView.InjectSkinResultListener
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.map.listeners.RequestObjectCallback
+import com.sygic.sdk.map.`object`.Appearance
 import com.sygic.sdk.map.`object`.MapIncident
 import com.sygic.sdk.map.`object`.MapPolygon
 import com.sygic.sdk.map.`object`.MapPolyline
@@ -45,8 +47,8 @@ import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert
 import org.junit.Assert.fail
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.junit.MockitoJUnitRunner
@@ -866,6 +868,116 @@ class MapViewTests : BaseTest() {
             "No ProxyPlace should be present in the returned viewObjects list",
             viewObjects.any { it is ProxyPlace }
         )
+    }
+
+    @Test
+    fun testPoiTopCategory(): Unit = runBlocking {
+        // Create a map fragment with the initial camera state.
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // Launch the activity and add the map fragment.
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity { activity ->
+            activity.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+
+        val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
+        mapView.injectSkinDefinition(
+            readJson("skin_poi_top.json"),
+            injectSkinResultListener
+        )
+
+        verify(
+            injectSkinResultListener,
+            timeout(5_000L)
+        ).onResult(eq(MapView.InjectSkinResult.Success))
+
+        mapView.cameraModel.position = GeoCoordinates(48.09524, 17.21050)
+        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.tilt = 0F
+
+        delay(3000)
+
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        val view = requireNotNull(mapView.view)
+
+        val x: Float = view.width / 2F
+        val y: Float = view.height / 2F
+        val id = mapView.requestObjectsAtPoint(x, y, callback) // click in the middle of the screen
+
+        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(id))
+
+        val capturedObjects = captor.firstValue
+
+        if (capturedObjects.isNotEmpty() && capturedObjects[0] is ProxyPlace) {
+            val proxyPlace = capturedObjects[0] as ProxyPlace
+
+            Assert.assertEquals(proxyPlace.data.appearance.importance, Appearance.Importance.Top)
+            Assert.assertEquals(proxyPlace.data.place.category, "SYPetrolStation")
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Expected object of type ProxyPlace, but found: ${capturedObjects[0]::class.java}")
+        }
+    }
+
+    @Test
+    fun testPoiMinorCategory(): Unit = runBlocking {
+        // Create a map fragment with the initial camera state.
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // Launch the activity and add the map fragment.
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity { activity ->
+            activity.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+
+        val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
+        mapView.injectSkinDefinition(
+            readJson("skin_poi_minor.json"),
+            injectSkinResultListener
+        )
+
+        verify(
+            injectSkinResultListener,
+            timeout(5_000L)
+        ).onResult(eq(MapView.InjectSkinResult.Success))
+
+        mapView.cameraModel.position = GeoCoordinates(48.09524, 17.21050)
+        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.tilt = 0F
+
+        delay(3000)
+
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        val view = requireNotNull(mapView.view)
+
+        val x: Float = view.width / 2F
+        val y: Float = view.height / 2F
+        val id = mapView.requestObjectsAtPoint(x, y, callback) // click in the middle of the screen
+
+        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(id))
+
+        val capturedObjects = captor.firstValue
+
+        if (capturedObjects.isNotEmpty() && capturedObjects[0] is ProxyPlace) {
+            val proxyPlace = capturedObjects[0] as ProxyPlace
+
+            Assert.assertEquals(proxyPlace.data.appearance.importance, Appearance.Importance.Minor)
+            Assert.assertEquals(proxyPlace.data.place.category, "SYPetrolStation")
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Expected object of type ProxyPlace, but found: ${capturedObjects[0]::class.java}")
+        }
     }
 
 

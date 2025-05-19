@@ -12,7 +12,7 @@ import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.MapView.InjectSkinResultListener
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.map.listeners.RequestObjectCallback
-import com.sygic.sdk.map.`object`.ProxyObjectManager
+import com.sygic.sdk.map.`object`.Appearance
 import com.sygic.sdk.map.`object`.ProxyPlace
 import com.sygic.sdk.map.`object`.ViewObject
 import com.sygic.sdk.map.`object`.data.ViewObjectData
@@ -37,7 +37,14 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 import java.util.Locale
 
 class CustomPlacesTests : BaseTest() {
@@ -430,5 +437,71 @@ class CustomPlacesTests : BaseTest() {
         val searchResult = searchHelper.onlineAutocomplete(searchRequest)
         // assert if there is no custom place in the results
         assert(searchResult.find { it.type == ResultType.CUSTOM_PLACE } != null)
+    }
+
+    @Test
+    fun testCustomPoiTopCategory(): Unit = runBlocking {
+        val customPlacesResultListener: CustomPlacesManager.InstallResultListener =
+            mock(verboseLogging = true)
+        // Create a map fragment with the initial camera state.
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // Launch the activity and add the map fragment.
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity { activity ->
+            activity.supportFragmentManager.beginTransaction()
+                .add(R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        CustomPlacesManagerProvider.getInstance().get().installOfflinePlacesFromJson(
+            readJson("svk_custom_places.json"), customPlacesResultListener
+        )
+
+        verify(
+            customPlacesResultListener,
+            timeout(5_000L)
+        ).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), any())
+
+        val mapView = getMapView(mapFragment)
+
+        val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
+        mapView.injectSkinDefinition(
+            readJson("skin_custompoi_top.json"),
+            injectSkinResultListener
+        )
+
+        verify(
+            injectSkinResultListener,
+            timeout(5_000L)
+        ).onResult(eq(MapView.InjectSkinResult.Success))
+
+        mapView.cameraModel.position = GeoCoordinates(48.2587, 17.75712)
+        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.tilt = 0F
+
+        delay(3000)
+
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        val view = requireNotNull(mapView.view)
+
+        val x: Float = view.width / 2F
+        val y: Float = view.height / 2F
+        val id = mapView.requestObjectsAtPoint(x, y, callback) // click in the middle of the screen
+
+        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(id))
+
+        val capturedObjects = captor.firstValue
+
+        if (capturedObjects.isNotEmpty() && capturedObjects[0] is ProxyPlace) {
+            val proxyPlace = capturedObjects[0] as ProxyPlace
+
+            assertEquals(proxyPlace.data.appearance.importance, Appearance.Importance.Top)
+            assertEquals(proxyPlace.data.place.category, "SYTruckRestArea")
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Expected object of type ProxyPlace, but found: ${capturedObjects[0]::class.java}")
+        }
     }
 }

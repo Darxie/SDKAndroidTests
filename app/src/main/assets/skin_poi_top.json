@@ -1,0 +1,19 @@
+{
+  "skin": {
+    "poi_categories": {
+      "intern": {
+        "categories": {
+          "SYPetrolStation": {
+            "groupId": "SYPetrolStation",
+            "enabled": true,
+            "icon": "0xE327",
+            "color": "0xFFAA00FF",
+            "priority": 0,
+            "zoomLevel": 14,
+            "importance": "Top"
+          }
+        }
+      }
+    }
+  }
+}
