@@ -32,6 +32,8 @@ import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
@@ -863,5 +865,20 @@ class OnlineNavigationTests : BaseTest() {
             mapViewCaptor.capture()
         )
         return mapViewCaptor.firstValue
+    }
+
+    @Test
+    fun leichendorfToZirndorfOnline() {
+
+        val start = GeoCoordinates(49.4339, 10.9345)
+        val destination = GeoCoordinates(49.4425, 10.9459)
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.onlineComputeRoute(start, destination)
+
+        assertEquals(6, route.maneuvers.size) // 6 maneuvers since october 2024 maps
+        for (maneuver in route.maneuvers) {
+            assertFalse(maneuver.roadName == "Thomas-Mann-Straße")
+        }
     }
 }
