@@ -36,6 +36,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
+import org.mockito.AdditionalMatchers
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.InOrder
 import org.mockito.Mockito
@@ -880,5 +881,112 @@ class OnlineNavigationTests : BaseTest() {
         for (maneuver in route.maneuvers) {
             assertFalse(maneuver.roadName == "Thomas-Mann-Straße")
         }
+    }
+
+    @Test
+    fun onSharpCurveListenerOnlineTest() = runBlocking {
+
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnSharpCurveListener = mock(verboseLogging = true)
+
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.1384, 17.3184),
+            GeoCoordinates(48.132, 17.3009)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnSharpCurveListener(listener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+
+        Mockito.verify(
+            listener, Mockito.timeout(10_000L)
+        ).onSharpCurveInfoChanged(argThat {
+            if (this.angle != 0.0) {
+                return@argThat true
+            }
+            false
+        })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnSharpCurveListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    /**
+     * Navigation test on direction info changed
+     *
+     * In this test we compute an online route and set it for navigation.
+     * Via simulator provider we set this route and start demonstrate. We verify that onDirectionInfoChanged
+     * contains direction info with primary nextRoadName "Hlavná".
+     */
+    @Test
+    fun onDirectionInfoChangedOnlineTest() = runBlocking {
+
+        val directionListener: NavigationManager.OnDirectionListener = mock(verboseLogging = true)
+        val navigation = NavigationManagerProvider.getInstance().get()
+
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.0977, 17.2382),
+            GeoCoordinates(48.0986, 17.2345)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+        navigation.addOnDirectionListener(directionListener)
+
+        Mockito.verify(
+            directionListener, Mockito.timeout(15_000L)
+        ).onDirectionInfoChanged(argThat {
+            if (this.primary.nextRoadName == "Hlavná") {
+                return@argThat true
+            }
+            false
+        })
+
+        navigation.removeOnDirectionListener(directionListener)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+    }
+
+    /**
+     * Navigation test on route changed
+     *
+     * In this test we compute an online route and set it for navigation.
+     * Using the Nmea Log Recorder we set a route from assets/SVK-Kosicka.nmea and start the simulation.
+     * We verify that the onRouteChanged callback is called and the status is Success.
+     */
+    @Test
+    fun onRouteChangedOnlineTest() = runBlocking {
+
+        val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.1447, 17.1317),
+            GeoCoordinates(48.1461, 17.1285)
+        )
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnRouteChangedListener(listener)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+        Mockito.verify(
+            listener, Mockito.timeout(30_000L).atLeast(1)
+        ).onRouteChanged(
+            AdditionalMatchers.not(eq(route)),
+            eq(NavigationManager.RouteUpdateStatus.Success)
+        )
+
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        navigation.removeOnRouteChangedListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
     }
 }
