@@ -12,6 +12,7 @@ import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManager.OnRouteProgressListener
 import com.sygic.sdk.navigation.NavigationManagerProvider
+import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.RoutingOptions
@@ -43,6 +44,7 @@ import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.atMost
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
@@ -989,4 +991,79 @@ class OnlineNavigationTests : BaseTest() {
         navigation.removeOnRouteChangedListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
+
+    @Test
+    fun onJunctionPassedStandaloneListenerInvocationWithoutRouteOnline() = runBlocking {
+
+        val listener: NavigationManager.JunctionPassedListener = mock(verboseLogging = true)
+        val navigation = NavigationManagerProvider.getInstance().get()
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "rovinka.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 4f)
+        Thread.sleep(3000)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+        navigation.addJunctionPassedListener(listener)
+
+        verify(
+            listener, timeout(60_000L).atLeast(2)
+        ).onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
+        verify(
+            listener, atMost(10)
+        ).onJunctionPassed(eq(StreetDetail.JunctionType.Junction))
+        verify(
+            listener, timeout(60_000L).times(1)
+        ).onJunctionPassed(
+            eq(StreetDetail.JunctionType.EnteringUrbanArea)
+        )
+
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        navigation.removeJunctionPassedListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    /**
+     * Navigation test on lane listener
+     *
+     * In this test we compute route and set it for navigation.
+     * Via simulator provider we set this route and start demonstrate navigation.
+     * We verify that onLaneInfoChanged was invoked.
+     */
+    @Test
+    fun onLaneListenerTestOnline() = runBlocking {
+
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnLaneListener = mock(verboseLogging = true)
+
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.147682401781026, 17.14365655304184),
+            GeoCoordinates(48.15310362223699, 17.147190865317768)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnLaneListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+
+        Mockito.verify(
+            listener, Mockito.timeout(30_000L)
+        ).onLaneInfoChanged(argThat {
+            if (this.simpleLanesInfo?.lanes?.isNotEmpty() == true) {
+                return@argThat true
+            }
+            false
+        })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnLaneListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+
 }
