@@ -10,6 +10,7 @@ import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.listeners.RouteWarningsListener
+import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
@@ -26,7 +27,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 
 class RouteWarningTests : BaseTest() {
@@ -646,6 +646,63 @@ class RouteWarningTests : BaseTest() {
         NavigationManagerProvider.getInstance().get().addOnVehicleZoneListener(vehicleZoneListener)
         verify(vehicleZoneListener, timeout(10_000L)).onVehicleZoneInfo(argThat {
             this.find { it.restriction.type == RestrictionInfo.RestrictionType.CargoTunnel } != null
+        })
+    }
+
+    @Test
+    fun testSpecialTollRoadWarning() = runBlocking {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.1655149641659, 17.151219976297632)
+        val destination = GeoCoordinates(48.376850,17.599600)
+        val routingOptions = RoutingOptions().apply {
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+            vehicleProfile = VehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } != null
+        })
+    }
+
+    @Test
+    fun testSpecialTollRoadWarningCarNegative() = runBlocking {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.1655149641659, 17.151219976297632)
+        val destination = GeoCoordinates(48.376850,17.599600)
+        val routingOptions = RoutingOptions().apply {
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } == null
         })
     }
 }
