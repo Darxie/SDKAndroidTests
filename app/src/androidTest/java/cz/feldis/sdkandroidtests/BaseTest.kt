@@ -45,6 +45,7 @@ abstract class BaseTest {
     open lateinit var appContext: Context
     lateinit var sygicContext: SygicContext
     open lateinit var appDataPath: String
+    protected open val betaRouting: Boolean = false
 
     @get:Rule
     var activityRule: ActivityScenarioRule<SygicActivity> =
@@ -85,7 +86,7 @@ abstract class BaseTest {
             androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
         appDataPath = appContext.getExternalFilesDir(null).toString()
 
-        initializeSdk(loadMaps = true)
+        initializeSdk(loadMaps = true, betaRouting)
     }
 
     @After
@@ -93,11 +94,11 @@ abstract class BaseTest {
         sygicContext.destroy()
     }
 
-    private fun initializeSdk(loadMaps: Boolean) {
+    private fun initializeSdk(loadMaps: Boolean, betaRouting: Boolean = false) {
         val latch = CountDownLatch(1)
 
         val contextInitRequest = SygicContextInitRequest(
-            jsonConfiguration = buildJsonConfig(buildConfig(isUAT = true)) {}.betaRouting(false),
+            jsonConfiguration = buildJsonConfig(buildConfig(isUAT = true)) {}.betaRouting(betaRouting),
             context = appContext,
             logConnector = object : LogConnector() {},
             loadMaps = loadMaps,

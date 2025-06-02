@@ -1,6 +1,15 @@
 package cz.feldis.sdkandroidtests.incidents
 
-import com.sygic.sdk.incidents.*
+import com.sygic.sdk.incidents.Area
+import com.sygic.sdk.incidents.AreaIncident
+import com.sygic.sdk.incidents.IncidentData
+import com.sygic.sdk.incidents.IncidentId
+import com.sygic.sdk.incidents.IncidentType
+import com.sygic.sdk.incidents.IncidentsManager
+import com.sygic.sdk.incidents.IncidentsManagerProvider
+import com.sygic.sdk.incidents.IncidentsResultListener
+import com.sygic.sdk.incidents.SpeedCamera
+import com.sygic.sdk.incidents.TraceIncident
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.explorer.RouteExplorer
@@ -20,10 +29,21 @@ import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.InOrder
 import org.mockito.Mockito
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.inOrder
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.reset
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 
 class IncidentsTests : BaseTest() {
 
@@ -61,7 +81,8 @@ class IncidentsTests : BaseTest() {
             GeoCoordinates(48.10223044006818, 17.23340438881692),
             GeoCoordinates(48.098580331935274, 17.237506607527582)
         )
-        RouteExplorerProvider.getInstance().get().exploreIncidentsOnRoute(route, emptyList(), listener)
+        RouteExplorerProvider.getInstance().get()
+            .exploreIncidentsOnRoute(route, emptyList(), listener)
         val captor = argumentCaptor<List<IncidentInfo>>()
         val progressCaptor = argumentCaptor<Int>()
 
@@ -105,7 +126,8 @@ class IncidentsTests : BaseTest() {
             GeoCoordinates(48.10223044006818, 17.23340438881692),
             GeoCoordinates(48.098580331935274, 17.237506607527582)
         )
-        RouteExplorerProvider.getInstance().get().exploreIncidentsOnRoute(route, emptyList(), listener)
+        RouteExplorerProvider.getInstance().get()
+            .exploreIncidentsOnRoute(route, emptyList(), listener)
 
         verify(
             listener,
@@ -134,7 +156,10 @@ class IncidentsTests : BaseTest() {
         val importedIncidentData4 = IncidentData(importedSpeedCam4, audioNotificationParams)
         incidentsManager.addIncidents(
             listOf(
-                importedIncidentData1, importedIncidentData2, importedIncidentData3, importedIncidentData4
+                importedIncidentData1,
+                importedIncidentData2,
+                importedIncidentData3,
+                importedIncidentData4
             ), listener
         )
 
@@ -401,8 +426,7 @@ class IncidentsTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
     }
-
-    // might fail if there actually is a real incident
+    
     @Test
     fun testTraceIncidentOppositeDirectionPristavnaShouldNotNotify() = runBlocking {
         val importedAreaIncident = getMockPolylineIncidentPristavna()
@@ -414,7 +438,8 @@ class IncidentsTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         navigation.addOnIncidentListener(listener)
-        val nmeaDataProvider = NmeaFileDataProvider(appContext, "pristavnaOppositeRoadTraceIncident.nmea")
+        val nmeaDataProvider =
+            NmeaFileDataProvider(appContext, "pristavnaOppositeRoadTraceIncident.nmea")
         val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 8F)
@@ -423,9 +448,20 @@ class IncidentsTests : BaseTest() {
         val positionSimulatorListener: PositionSimulatorListener = mock(verboseLogging = true)
         logSimulator.addPositionSimulatorListener(positionSimulatorListener)
 
-        verify(positionSimulatorListener, timeout(40_000L)).onSimulatedStateChanged(eq(PositionSimulator.SimulatorState.End))
+        verify(positionSimulatorListener, timeout(40_000L)).onSimulatedStateChanged(
+            eq(
+                PositionSimulator.SimulatorState.End
+            )
+        )
 
-        verify(listener, never()).onIncidentsInfoChanged(argThat { isNotEmpty() })
+        // Capture IncidentInfo changes
+        val incidentInfoCaptor = argumentCaptor<List<IncidentInfo>>()
+        verify(listener, atLeast(0)).onIncidentsInfoChanged(incidentInfoCaptor.capture())
+
+        // Assert that no IncidentInfo has the same ID as the mocked one
+        val capturedIncidents = incidentInfoCaptor.allValues.flatten()
+        val mockedIncidentId = importedAreaIncident.id
+        assertTrue(capturedIncidents.none { it.incident.id == mockedIncidentId })
 
         navigation.removeOnIncidentListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
