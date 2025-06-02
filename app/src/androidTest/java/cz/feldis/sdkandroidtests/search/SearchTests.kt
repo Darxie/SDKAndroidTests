@@ -12,6 +12,7 @@ import com.sygic.sdk.search.PlaceRequest
 import com.sygic.sdk.search.PlacesListener
 import com.sygic.sdk.search.ResultType
 import com.sygic.sdk.search.ReverseGeocoder
+import com.sygic.sdk.search.ReverseGeocoder.ErrorCode
 import com.sygic.sdk.search.ReverseGeocoderProvider
 import com.sygic.sdk.search.SearchManagerProvider
 import com.sygic.sdk.search.SearchRequest
@@ -451,5 +452,40 @@ class SearchTests : BaseTest() {
         assertTrue(
             "The subtitle is not 'Nové Mesto nad Váhom, Slovensko', but is '${result.first().subtitle}'",
             result.any { it.subtitle == "Nové Mesto nad Váhom, Slovensko" })
+    }
+
+    @Test
+    fun reverseGeoExpectNoSelection() {
+        disableOnlineMaps()
+        val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
+            mock(verboseLogging = true)
+
+        ReverseGeocoderProvider.getInstance().get()
+            .reverseGeocode(
+                GeoCoordinates(37.288480477393286, -41.35639017659597),
+                emptySet(),
+                reverseGeoListener
+            )
+
+        verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResultError(
+            eq(ErrorCode.NO_SELECTION)
+        )
+    }
+
+    @Test
+    fun reverseGeoExpectNoSelectionOnlineMaps() {
+        val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
+            mock(verboseLogging = true)
+
+        ReverseGeocoderProvider.getInstance().get()
+            .reverseGeocode(
+                GeoCoordinates(37.288480477393286, -41.35639017659597),
+                emptySet(),
+                reverseGeoListener
+            )
+
+        verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResultError(
+            eq(ErrorCode.NO_SELECTION)
+        )
     }
 }
