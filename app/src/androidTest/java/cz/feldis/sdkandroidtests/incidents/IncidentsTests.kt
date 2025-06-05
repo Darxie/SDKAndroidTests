@@ -468,6 +468,90 @@ class IncidentsTests : BaseTest() {
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
     }
 
+    /**
+     * https://jira.sygic.com/browse/SDC-14456
+     */
+    @Test
+    fun testIncidentWithRadiusOnAnotherRoadStartingOutside() = runBlocking {
+        val importedAreaIncident = getMockRadiusIncidentAnotherRoad()
+        val importedIncidentData = IncidentData(importedAreaIncident, audioNotificationParams)
+        incidentsManager.addIncidents(listOf(importedIncidentData), listener)
+        verify(listener, timeout(TIMEOUT)).onSuccess()
+
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
+
+        val route =
+            routeCompute.onlineComputeRoute(
+                GeoCoordinates(48.09716941959428, 17.236491302530972),
+                GeoCoordinates(48.09349360600483, 17.242717265915495),
+            )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnIncidentListener(listener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        verify(listener, timeout(10_000L)).onIncidentsInfoChanged(argThat {
+            if (this.isNotEmpty()) {
+                this.forEach {
+                    if (it.incident is AreaIncident)
+                        if (it.distance > 0)
+                            return@argThat true
+                }
+            }
+            return@argThat false
+        })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigation.removeOnIncidentListener(listener)
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14456
+     */
+    @Test
+    fun testIncidentWithRadiusOnAnotherRoadStartingInside() = runBlocking {
+        val importedAreaIncident = getMockRadiusIncidentAnotherRoad()
+        val importedIncidentData = IncidentData(importedAreaIncident, audioNotificationParams)
+        incidentsManager.addIncidents(listOf(importedIncidentData), listener)
+        verify(listener, timeout(TIMEOUT)).onSuccess()
+
+        val navigation = NavigationManagerProvider.getInstance().get()
+        val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
+
+        val route =
+            routeCompute.onlineComputeRoute(
+                GeoCoordinates(48.09559365418439, 17.2393755272787),
+                GeoCoordinates(48.09349360600483, 17.242717265915495),
+            )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnIncidentListener(listener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        verify(listener, timeout(10_000L)).onIncidentsInfoChanged(argThat {
+            if (this.isNotEmpty()) {
+                this.forEach {
+                    if (it.incident is AreaIncident)
+                        if (it.distance > 0)
+                            return@argThat true
+                }
+            }
+            return@argThat false
+        })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigation.removeOnIncidentListener(listener)
+    }
+
     companion object {
         private val audioNotificationParams =
             IncidentsManager.AudioNotificationParameters(20, 25)
@@ -551,6 +635,16 @@ class IncidentsTests : BaseTest() {
             return AreaIncident(
                 IncidentId("26a69831-7f82-42ba-8f1d-324811371579"),
                 GeoCoordinates(48.0994, 17.2366),
+                IncidentType.CrashMinor,
+                VALID_TO_TIMESTAMP,
+                Area.Circular(100)
+            )
+        }
+
+        private fun getMockRadiusIncidentAnotherRoad(): AreaIncident {
+            return AreaIncident(
+                IncidentId("26a69831-7f82-42ba-8f1d-324811371579"),
+                GeoCoordinates(48.095835912702874, 17.24017098087522),
                 IncidentType.CrashMinor,
                 VALID_TO_TIMESTAMP,
                 Area.Circular(100)
