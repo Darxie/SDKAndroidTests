@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.routing
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.navigation.NavigationManager.OnVehicleZoneListener
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
@@ -25,10 +24,17 @@ import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
+import kotlin.math.abs
 
 class RouteWarningTests : BaseTest() {
 
@@ -706,6 +712,54 @@ class RouteWarningTests : BaseTest() {
         verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
             this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } == null
         })
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14368
+     */
+    @Test
+    fun coordinatesOfInsufficientBatteryWarning() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.13435749214434, 17.139510367591342)
+        val destination = GeoCoordinates(48.31550136420124, 18.050290453922088)
+
+        val options = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createEVProfileForInsufficientBattery(2f, 2f)
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val captorWarnings = argumentCaptor<List<RouteWarning>>()
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = options
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(10_000L)).onRouteWarnings(captorWarnings.capture())
+
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } == null
+        })
+
+        val warnings = captorWarnings.allValues.flatten()
+        val tolerance = 10e-5
+
+        val batteryWarnings = warnings.filterIsInstance<RouteWarning.LocationWarning.InsufficientBatteryCharge>()
+        assertTrue("Expected at least one InsufficientBatteryCharge warning", batteryWarnings.isNotEmpty())
+
+        for (warning in batteryWarnings) {
+            val warningLocation = warning.location
+            val isAtDestination = abs(warningLocation.latitude - destination.latitude) < tolerance &&
+                    abs(warningLocation.longitude - destination.longitude) < tolerance
+
+            assertFalse("InsufficientBatteryCharge warning should not be at the destination", isAtDestination)
+        }
     }
 }
 
