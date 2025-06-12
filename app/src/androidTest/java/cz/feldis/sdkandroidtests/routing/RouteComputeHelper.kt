@@ -202,4 +202,31 @@ class RouteComputeHelper : BaseTest() {
             powertrainTraits = PowertrainTraits.ElectricPowertrain(battery, connectors, chargingPreferences, consumptionData)
         }
     }
+
+    fun createEVProfileForInsufficientBattery(batteryCapacity: Float, remainingCapacity: Float): VehicleProfile {
+        val battery = Battery(
+            capacity = batteryCapacity,
+            remainingCapacity = remainingCapacity,
+            chargingCurve = mapOf(1.0 to 1.0, 100.0 to 1.0)
+        )
+        val connectors = listOf(
+            Connector(1F, ConnectorType.HouseholdTypeCeeBlue, ChargingCurrent.DC)
+        )
+        val chargingPreferences = ChargingPreferences(
+            fullChargeThreshold = 0.8F,
+            chargingThreshold = 0.2F,
+            reserveThreshold = 0.05F,
+            batteryMinimumDestinationThreshold = 0.3F,
+            powerRange = EnforceableAttribute(PowerRange(500F, 600F), true)
+        )
+        val consumptionData = ConsumptionData(
+            consumptionCurve = mapOf(1.0 to 1.0, 100.0 to 1.0),
+            weightFactors = mapOf(1000.0 to 0.5, 5000.0 to 1.0, 10000.0 to 1.0)
+        )
+
+        return VehicleProfile().apply {
+            generalVehicleTraits.vehicleType = VehicleType.Car
+            powertrainTraits = PowertrainTraits.ElectricPowertrain(battery, connectors, chargingPreferences, consumptionData)
+        }
+    }
 }
