@@ -262,7 +262,8 @@ class RouteWarningTests : BaseTest() {
         val routingOptions = RoutingOptions().apply {
             vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
-                hazmatTraits = HazmatTraits(HazmatTraits.GeneralHazardousMaterialClasses, TunnelCategory.E)
+                hazmatTraits =
+                    HazmatTraits(HazmatTraits.GeneralHazardousMaterialClasses, TunnelCategory.E)
             }
             useEndpointProtection = true
             napStrategy = NearestAccessiblePointStrategy.Disabled
@@ -426,7 +427,8 @@ class RouteWarningTests : BaseTest() {
         val start = GeoCoordinates(48.1083, 17.2206)
         val destination = GeoCoordinates(51.9035, -0.47722)
         val routingOptions = RoutingOptions().apply {
-            routeAvoids.countryRouteAvoids = mutableMapOf("gb" to mutableSetOf(RouteAvoids.Type.Highway))
+            routeAvoids.countryRouteAvoids =
+                mutableMapOf("gb" to mutableSetOf(RouteAvoids.Type.Highway))
         }
 
         val captor = argumentCaptor<List<RouteWarning>>()
@@ -444,7 +446,8 @@ class RouteWarningTests : BaseTest() {
         verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
             this.isNotEmpty()
         })
-        val restriction = captor.allValues.flatten().first() as RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableHighway
+        val restriction = captor.allValues.flatten()
+            .first() as RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableHighway
         assertTrue(restriction.iso == "gb")
     }
 
@@ -461,7 +464,8 @@ class RouteWarningTests : BaseTest() {
         val start = GeoCoordinates(48.11964833044328, 17.211256171240564)
         val destination = GeoCoordinates(48.12286230190469, 17.201664587844974)
         val routingOptions = RoutingOptions().apply {
-            routeAvoids.countryRouteAvoids = mutableMapOf("sk" to mutableSetOf(RouteAvoids.Type.Country))
+            routeAvoids.countryRouteAvoids =
+                mutableMapOf("sk" to mutableSetOf(RouteAvoids.Type.Country))
         }
 
         val route = routeComputeHelper.offlineRouteCompute(
@@ -475,7 +479,8 @@ class RouteWarningTests : BaseTest() {
 
         verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(captor.capture())
 
-        val iso = (captor.firstValue[0] as RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableCountry).iso
+        val iso =
+            (captor.firstValue[0] as RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableCountry).iso
 
         assertEquals("sk", iso)
     }
@@ -632,7 +637,8 @@ class RouteWarningTests : BaseTest() {
             generalVehicleTraits.vehicleType = VehicleType.Truck
             hazmatTraits = HazmatTraits(emptySet(), TunnelCategory.E)
         }
-        NavigationManagerProvider.getInstance().get().setVehicleProfile(vehProf, setVehicleProfileListener)
+        NavigationManagerProvider.getInstance().get()
+            .setVehicleProfile(vehProf, setVehicleProfileListener)
 
         val start = GeoCoordinates(49.0093, 20.8322)
         val destination = GeoCoordinates(49.0086, 20.8657)
@@ -665,7 +671,7 @@ class RouteWarningTests : BaseTest() {
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.1655149641659, 17.151219976297632)
-        val destination = GeoCoordinates(48.376850,17.599600)
+        val destination = GeoCoordinates(48.376850, 17.599600)
         val routingOptions = RoutingOptions().apply {
             routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
             napStrategy = NearestAccessiblePointStrategy.Disabled
@@ -695,7 +701,7 @@ class RouteWarningTests : BaseTest() {
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.1655149641659, 17.151219976297632)
-        val destination = GeoCoordinates(48.376850,17.599600)
+        val destination = GeoCoordinates(48.376850, 17.599600)
         val routingOptions = RoutingOptions().apply {
             routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
             napStrategy = NearestAccessiblePointStrategy.Disabled
@@ -750,16 +756,52 @@ class RouteWarningTests : BaseTest() {
         val warnings = captorWarnings.allValues.flatten()
         val tolerance = 10e-5
 
-        val batteryWarnings = warnings.filterIsInstance<RouteWarning.LocationWarning.InsufficientBatteryCharge>()
-        assertTrue("Expected at least one InsufficientBatteryCharge warning", batteryWarnings.isNotEmpty())
+        val batteryWarnings =
+            warnings.filterIsInstance<RouteWarning.LocationWarning.InsufficientBatteryCharge>()
+        assertTrue(
+            "Expected at least one InsufficientBatteryCharge warning",
+            batteryWarnings.isNotEmpty()
+        )
 
         for (warning in batteryWarnings) {
             val warningLocation = warning.location
-            val isAtDestination = abs(warningLocation.latitude - destination.latitude) < tolerance &&
-                    abs(warningLocation.longitude - destination.longitude) < tolerance
+            val isAtDestination =
+                abs(warningLocation.latitude - destination.latitude) < tolerance &&
+                        abs(warningLocation.longitude - destination.longitude) < tolerance
 
-            assertFalse("InsufficientBatteryCharge warning should not be at the destination", isAtDestination)
+            assertFalse(
+                "InsufficientBatteryCharge warning should not be at the destination",
+                isAtDestination
+            )
         }
+    }
+
+
+    @Test
+    fun preferenceViolationWarningEVTest() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.14548507020328, 17.126529723864405)
+        val destination = GeoCoordinates(48.217657544377715, 17.406051728312903)
+        val options = RoutingOptions().apply {
+            vehicleProfile =
+                routeComputeHelper.createElectricVehicleProfileForPreferenceViolation(50f, 5f)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = options
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.LocationWarning.EVPreferenceViolation } != null
+        })
     }
 }
 

@@ -396,6 +396,7 @@ class HereTests : BaseHereTest() {
      */
     @Test
     fun exitFromTheRouteSwedenDenmarkTest() = runBlocking {
+        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("se")
         mapDownloadHelper.installAndLoadMap("dk")
 

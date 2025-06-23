@@ -59,7 +59,8 @@ class RouteComputeHelper : BaseTest() {
             routeComputeFinishedListener
         )
         verify(listener, timeout(10_000L)).onComputeFinished(
-            captor.capture(), argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
+            captor.capture(),
+            argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
         )
 
         return captor.value
@@ -90,7 +91,8 @@ class RouteComputeHelper : BaseTest() {
             routeComputeFinishedListener
         )
         verify(listener, timeout(100_000L)).onComputeFinished(
-            captor.capture(), argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
+            captor.capture(),
+            argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
         )
         verify(listener, never()).onComputeFinished(eq(null), any())
 
@@ -119,7 +121,10 @@ class RouteComputeHelper : BaseTest() {
         )
     }
 
-    fun createDefaultElectricVehicleProfile(batteryCapacity: Float, remainingCapacity: Float): VehicleProfile {
+    fun createDefaultElectricVehicleProfile(
+        batteryCapacity: Float,
+        remainingCapacity: Float
+    ): VehicleProfile {
         val battery = Battery(
             capacity = batteryCapacity,
             remainingCapacity = remainingCapacity,
@@ -143,11 +148,19 @@ class RouteComputeHelper : BaseTest() {
 
         return VehicleProfile().apply {
             generalVehicleTraits.vehicleType = VehicleType.Car
-            powertrainTraits = PowertrainTraits.ElectricPowertrain(battery, connectors, chargingPreferences, consumptionData)
+            powertrainTraits = PowertrainTraits.ElectricPowertrain(
+                battery,
+                connectors,
+                chargingPreferences,
+                consumptionData
+            )
         }
     }
 
-    fun createElectricVehicleProfileForPreferenceViolation(batteryCapacity: Float, remainingCapacity: Float): VehicleProfile {
+    fun createElectricVehicleProfileForPreferenceViolation(
+        batteryCapacity: Float,
+        remainingCapacity: Float
+    ): VehicleProfile {
         val battery = Battery(
             capacity = batteryCapacity,
             remainingCapacity = remainingCapacity,
@@ -171,11 +184,19 @@ class RouteComputeHelper : BaseTest() {
 
         return VehicleProfile().apply {
             generalVehicleTraits.vehicleType = VehicleType.Car
-            powertrainTraits = PowertrainTraits.ElectricPowertrain(battery, connectors, chargingPreferences, consumptionData)
+            powertrainTraits = PowertrainTraits.ElectricPowertrain(
+                battery,
+                connectors,
+                chargingPreferences,
+                consumptionData
+            )
         }
     }
 
-    fun createElectricVehicleProfileTruck(batteryCapacity: Float = 350f, remainingCapacity: Float = 100f): VehicleProfile {
+    fun createElectricVehicleProfileTruck(
+        batteryCapacity: Float = 350f,
+        remainingCapacity: Float = 100f
+    ): VehicleProfile {
         val battery = Battery(
             capacity = batteryCapacity,
             remainingCapacity = remainingCapacity,
@@ -199,18 +220,31 @@ class RouteComputeHelper : BaseTest() {
 
         return VehicleProfile().apply {
             generalVehicleTraits.vehicleType = VehicleType.Truck
-            powertrainTraits = PowertrainTraits.ElectricPowertrain(battery, connectors, chargingPreferences, consumptionData)
+            powertrainTraits = PowertrainTraits.ElectricPowertrain(
+                battery,
+                connectors,
+                chargingPreferences,
+                consumptionData
+            )
         }
     }
 
-    fun createEVProfileForInsufficientBattery(batteryCapacity: Float, remainingCapacity: Float): VehicleProfile {
+    fun createEVProfileForInsufficientBattery(
+        batteryCapacity: Float,
+        remainingCapacity: Float
+    ): VehicleProfile {
         val battery = Battery(
             capacity = batteryCapacity,
             remainingCapacity = remainingCapacity,
             chargingCurve = mapOf(1.0 to 1.0, 100.0 to 1.0)
         )
         val connectors = listOf(
-            Connector(1F, ConnectorType.HouseholdTypeCeeBlue, ChargingCurrent.DC)
+            Connector(
+                1F,
+                ConnectorType.HouseholdTypeCeeBlue,
+                ConnectorFormat.Cable,
+                ChargingCurrent.DC
+            )
         )
         val chargingPreferences = ChargingPreferences(
             fullChargeThreshold = 0.8F,
@@ -226,7 +260,12 @@ class RouteComputeHelper : BaseTest() {
 
         return VehicleProfile().apply {
             generalVehicleTraits.vehicleType = VehicleType.Car
-            powertrainTraits = PowertrainTraits.ElectricPowertrain(battery, connectors, chargingPreferences, consumptionData)
+            powertrainTraits = PowertrainTraits.ElectricPowertrain(
+                battery,
+                connectors,
+                chargingPreferences,
+                consumptionData
+            )
         }
     }
 }

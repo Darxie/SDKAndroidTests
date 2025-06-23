@@ -152,8 +152,8 @@ abstract class BaseHereTest {
                     offlineMapsApiUrl("https://offlinemaps-uat.api.sygic.com")
                     voicesUrl("https://nonttsvoices-testing.api.sygic.com")
                     placesUrl("https://places-uat.api.sygic.com")
-                    incidents().url("https://incidents-testing.api.sygic.com")
-                    speedCameras().url("https://incidents-testing.api.sygic.com")
+                    incidents().url("https://incidents-uat.api.sygic.com")
+                    speedCameras().url("https://incidents-uat.api.sygic.com")
                 }
             }
             logging {

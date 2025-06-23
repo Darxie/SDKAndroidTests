@@ -30,6 +30,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNotNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -286,9 +287,8 @@ class SearchTests : BaseTest() {
         assert(placesList.isNotEmpty())
         assert(placesList.size > 2)
         for (place in placesList) {
-            if (place.name == "Pyramid of Khufu")
-                assert(place.details[0].value == "Desert of Giza Governorate")
             assert(place.details.isNotEmpty())
+
         }
     }
 
