@@ -18,6 +18,8 @@ import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import junit.framework.Assert.assertNotNull
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Ignore
 import org.junit.Test
@@ -232,6 +234,94 @@ class RouteComputeTestsOnline : BaseTest() {
 
         val maneuvers = route.maneuvers
         assertEquals("gb", maneuvers.last().nextIso)
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-4695
+     * Test Case TC170
+     * Start: 3227 N Oconto Avenue, Chicago, IL
+     * Destination: 5815 S Maryland Avenue, Chicago, IL
+     *
+     * In this test case, we only check that the route is computed.
+     */
+    @Test
+    fun testIllinoisOcontoToMarylandOnline() = runBlocking{
+        val start = GeoCoordinates(41.938650,-87.807700)
+        val destination = GeoCoordinates(41.788500,-87.605030)
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination
+        )
+        assertNotNull(route)
+    }
+
+    /**
+     * https://jira.sygic.com/browse/CI-1580
+     * Test Case TC171
+     *
+     * In this test case, we check that the fastest pedestrian route in city of Frejus is computed.
+     */
+    @Test
+    fun testFastestPedestrianRoutingFrejusOnline() = runBlocking{
+
+        val start = GeoCoordinates(43.4337,6.73637)
+        val destination = GeoCoordinates(43.4335,6.73851)
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = null
+                this.routingType = RoutingOptions.RoutingType.Fastest
+            }
+        )
+        assertNotNull(route)
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-5641
+     * Test Case TC172
+     *
+     * In this test case, we check that the fastest pedestrian route in Bratislava Petržalka is computed.
+     */
+    @Test
+    fun testFastestPedestrianRoutingPetrzalkaOnline() = runBlocking{
+
+        val start = GeoCoordinates(48.0967,17.1192)
+        val destination = GeoCoordinates(48.0988,17.117)
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = null
+                this.routingType = RoutingOptions.RoutingType.Fastest
+            }
+        )
+        assertNotNull(route)
+    }
+
+    /**
+     * Test Case TC173
+     *
+     * In this test case, we check that the fastest pedestrian route in Bratislava (Old town) is computed.
+     */
+    @Test
+    fun testFastestPedestrianRoutingStareMestoOnline() = runBlocking{
+
+        val start = GeoCoordinates(48.1416,17.1097)
+        val destination = GeoCoordinates(48.1444,17.1067)
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = null
+                this.routingType = RoutingOptions.RoutingType.Fastest
+            }
+        )
+        assertNotNull(route)
     }
 
     @Test
