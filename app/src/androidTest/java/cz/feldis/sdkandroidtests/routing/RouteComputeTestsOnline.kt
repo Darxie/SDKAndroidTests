@@ -1,5 +1,6 @@
 package cz.feldis.sdkandroidtests.routing
 
+import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.PrimaryRouteRequest
 import com.sygic.sdk.route.RouteRequest
@@ -14,13 +15,17 @@ import com.sygic.sdk.route.listeners.RouteDurationListener
 import com.sygic.sdk.route.listeners.RouteElementsListener
 import com.sygic.sdk.route.listeners.RouteRequestDeserializedListener
 import com.sygic.sdk.route.listeners.TransitCountriesInfoListener
+import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
+import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import cz.feldis.sdkandroidtests.utils.GeoUtils
 import junit.framework.Assert.assertNotNull
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
@@ -322,6 +327,45 @@ class RouteComputeTestsOnline : BaseTest() {
             }
         )
         assertNotNull(route)
+    }
+
+    /***
+     * https://jira.sygic.com/browse/CI-1668
+     * TC324
+     */
+    @Test
+    fun routingViaRoadsOfLowerQualitySlovakiaOnline() = runBlocking {
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Car
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(48.77439, 21.29253),
+            bottomRight = GeoCoordinates(48.76949, 21.29728)
+        )
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            GeoCoordinates(48.9329, 21.9153),
+            GeoCoordinates(48.7576, 21.2724),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        val maneuversInBoundingBox = route.maneuvers.filter { maneuver ->
+            GeoUtils.isPointInBoundingBox(maneuver.position, boundingBox)
+        }
+
+        assertTrue(
+            "Route contains unexpected maneuvers within the bounding box: $maneuversInBoundingBox",
+            maneuversInBoundingBox.isEmpty()
+        )
+
     }
 
     @Test
