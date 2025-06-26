@@ -25,6 +25,7 @@ import cz.feldis.sdkandroidtests.utils.GeoUtils
 import junit.framework.Assert.assertNotNull
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
@@ -366,6 +367,53 @@ class RouteComputeTestsOnline : BaseTest() {
             maneuversInBoundingBox.isEmpty()
         )
 
+    }
+
+    /**
+     * Test Case TC700, TC701
+     *
+     * In this test case, we check that the fastest and shortest routes in Slovakia are computed and they aren't the same
+     */
+    @Test
+    fun testRoutingInEasternSlovakiaFastestShortestOnline() = runBlocking {
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Car
+            }
+        }
+
+        val start = GeoCoordinates(48.9329, 21.9153)
+        val destination = GeoCoordinates(48.7576, 21.2724)
+
+        val routeFastest = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+            }
+        )
+        val estimatedTimeOfArrivalFastest =
+            routeFastest.routeInfo.waypointDurations.last().withSpeedProfiles
+        assertNotNull(routeFastest)
+
+        val routeShortest = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Shortest
+                this.vehicleProfile = vehicleProfile
+            }
+        )
+        val estimatedTimeOfArrivalShortest =
+            routeShortest.routeInfo.waypointDurations.last().withSpeedProfiles
+        assertNotNull(routeShortest)
+
+        assertNotEquals(
+            "ETA should differ for fastest and shortest routes",
+            estimatedTimeOfArrivalFastest,
+            estimatedTimeOfArrivalShortest
+        )
     }
 
     @Test
