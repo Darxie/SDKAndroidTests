@@ -1,0 +1,38 @@
+{
+    "to_add": [
+        {
+            "search_priority": 11,
+            "display_name": [
+                {
+                    "search_tokens": [
+                        {
+                            "index": "ibi maiga ja som poi"
+                        }
+                    ],
+                    "title": "ja som POI",
+                    "subtitle": "ibi maiga",
+                    "lng": "fr"
+                },
+                {
+                    "search_tokens": [
+                        {
+                            "index": "englicky vyzlec sa"
+                        }
+                    ],
+                    "title": "vyzlec sa",
+                    "subtitle": "ibi maiga",
+                    "lng": "en"
+                }
+            ],
+            "id": "00030300-02c0-00a0-0000-000020e90001",
+            "iso": "sk",
+            "location": "48.2718,17.7697",
+            "category": "mojaSuperKategoria",
+            "dataset": "bf19e514-487b-43c4-b0df-9073b2397dd1"
+        }
+    ],
+    "to_remove": [],
+    "prev_page": "",
+    "next_page": "",
+    "total_records": 1
+}

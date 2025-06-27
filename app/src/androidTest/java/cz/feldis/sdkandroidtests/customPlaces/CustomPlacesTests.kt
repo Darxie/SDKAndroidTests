@@ -279,6 +279,7 @@ class CustomPlacesTests : BaseTest() {
 
         // Get the MapView instance from the TestMapFragment.
         val mapView = getMapView(mapFragment)
+        mapView.setMapLanguage(Locale.ENGLISH)
 
         // Inject a skin definition using a JSON file and the injectSkinResultListener.
         mapView.injectSkinDefinition(
@@ -303,11 +304,11 @@ class CustomPlacesTests : BaseTest() {
         // Perform a search for custom places using the place request.
         val searchResult = searchHelper.searchCustomPlaces(placeRequest)[0]
 
-        // Verify that the searched place's name is "ja som POI".
-        assertEquals("vyzlec sa", searchResult.name)
-
         // Close the scenario and destroy the activity.
         scenario.moveToState(Lifecycle.State.DESTROYED)
+
+        // Verify that the searched place's name is "vyzlec sa".
+        assertEquals("vyzlec sa", searchResult.name)
     }
 
     @Test
@@ -345,11 +346,11 @@ class CustomPlacesTests : BaseTest() {
         )
         val searchResult = searchHelper.searchCustomPlaces(placeRequest)[0]
 
-        // verify
-        assertEquals("ja som POI", searchResult.name)
-
         //close scenario & activity
         scenario.moveToState(Lifecycle.State.DESTROYED)
+
+        // verify
+        assertEquals("ja som POI", searchResult.name)
     }
 
     @Test

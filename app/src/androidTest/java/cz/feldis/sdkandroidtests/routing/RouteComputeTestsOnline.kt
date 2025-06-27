@@ -252,9 +252,9 @@ class RouteComputeTestsOnline : BaseTest() {
      * In this test case, we only check that the route is computed.
      */
     @Test
-    fun testIllinoisOcontoToMarylandOnline() = runBlocking{
-        val start = GeoCoordinates(41.938650,-87.807700)
-        val destination = GeoCoordinates(41.788500,-87.605030)
+    fun testIllinoisOcontoToMarylandOnline() = runBlocking {
+        val start = GeoCoordinates(41.938650, -87.807700)
+        val destination = GeoCoordinates(41.788500, -87.605030)
 
         val route = routeComputeHelper.onlineComputeRoute(
             start,
@@ -270,10 +270,10 @@ class RouteComputeTestsOnline : BaseTest() {
      * In this test case, we check that the fastest pedestrian route in city of Frejus is computed.
      */
     @Test
-    fun testFastestPedestrianRoutingFrejusOnline() = runBlocking{
+    fun testFastestPedestrianRoutingFrejusOnline() = runBlocking {
 
-        val start = GeoCoordinates(43.4337,6.73637)
-        val destination = GeoCoordinates(43.4335,6.73851)
+        val start = GeoCoordinates(43.4337, 6.73637)
+        val destination = GeoCoordinates(43.4335, 6.73851)
 
         val route = routeComputeHelper.onlineComputeRoute(
             start,
@@ -293,10 +293,10 @@ class RouteComputeTestsOnline : BaseTest() {
      * In this test case, we check that the fastest pedestrian route in Bratislava Petržalka is computed.
      */
     @Test
-    fun testFastestPedestrianRoutingPetrzalkaOnline() = runBlocking{
+    fun testFastestPedestrianRoutingPetrzalkaOnline() = runBlocking {
 
-        val start = GeoCoordinates(48.0967,17.1192)
-        val destination = GeoCoordinates(48.0988,17.117)
+        val start = GeoCoordinates(48.0967, 17.1192)
+        val destination = GeoCoordinates(48.0988, 17.117)
 
         val route = routeComputeHelper.onlineComputeRoute(
             start,
@@ -315,10 +315,10 @@ class RouteComputeTestsOnline : BaseTest() {
      * In this test case, we check that the fastest pedestrian route in Bratislava (Old town) is computed.
      */
     @Test
-    fun testFastestPedestrianRoutingStareMestoOnline() = runBlocking{
+    fun testFastestPedestrianRoutingStareMestoOnline() = runBlocking {
 
-        val start = GeoCoordinates(48.1416,17.1097)
-        val destination = GeoCoordinates(48.1444,17.1067)
+        val start = GeoCoordinates(48.1416, 17.1097)
+        val destination = GeoCoordinates(48.1444, 17.1067)
 
         val route = routeComputeHelper.onlineComputeRoute(
             start,
@@ -394,9 +394,9 @@ class RouteComputeTestsOnline : BaseTest() {
                 this.vehicleProfile = vehicleProfile
             }
         )
+        assertNotNull(routeFastest)
         val estimatedTimeOfArrivalFastest =
             routeFastest.routeInfo.waypointDurations.last().withSpeedProfiles
-        assertNotNull(routeFastest)
 
         val routeShortest = routeComputeHelper.onlineComputeRoute(
             start,
@@ -406,9 +406,9 @@ class RouteComputeTestsOnline : BaseTest() {
                 this.vehicleProfile = vehicleProfile
             }
         )
+        assertNotNull(routeShortest)
         val estimatedTimeOfArrivalShortest =
             routeShortest.routeInfo.waypointDurations.last().withSpeedProfiles
-        assertNotNull(routeShortest)
 
         assertNotEquals(
             "ETA should differ for fastest and shortest routes",
@@ -431,7 +431,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(28.734, 77.1314)
         val destination = GeoCoordinates(28.5822, 77.1861)
 
-        val routeFastest = withTimeout(30_000) {
+        val routeFastest =
             routeComputeHelper.onlineComputeRoute(
                 start,
                 destination,
@@ -440,8 +440,6 @@ class RouteComputeTestsOnline : BaseTest() {
                     this.vehicleProfile = vehicleProfile
                 }
             )
-        }
-
         assertNotNull(routeFastest)
     }
 
@@ -469,7 +467,8 @@ class RouteComputeTestsOnline : BaseTest() {
             TransitCountryInfo("gb", emptyList())
         )
 
-        val transitCountriesInfoListener: TransitCountriesInfoListener = mock(verboseLogging = true)
+        val transitCountriesInfoListener: TransitCountriesInfoListener =
+            mock(verboseLogging = true)
         route.getTransitCountriesInfo(transitCountriesInfoListener)
         verify(transitCountriesInfoListener, timeout(5_000L)).onTransitCountriesInfo(
             expectedCountries

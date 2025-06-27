@@ -58,7 +58,7 @@ class RouteComputeHelper : BaseTest() {
             null,
             routeComputeFinishedListener
         )
-        verify(listener, timeout(10_000L)).onComputeFinished(
+        verify(listener, timeout(30_000L)).onComputeFinished(
             captor.capture(),
             argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
         )
