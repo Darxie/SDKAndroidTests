@@ -24,6 +24,7 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.utils.GeoUtils
 import junit.framework.Assert.assertNotNull
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -414,6 +415,34 @@ class RouteComputeTestsOnline : BaseTest() {
             estimatedTimeOfArrivalFastest,
             estimatedTimeOfArrivalShortest
         )
+    }
+
+    /***
+     * TC705
+     */
+    @Test
+    fun testRoutingInIndiaFastestOnline() = runBlocking {
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Car
+            }
+        }
+
+        val start = GeoCoordinates(28.734, 77.1314)
+        val destination = GeoCoordinates(28.5822, 77.1861)
+
+        val routeFastest = withTimeout(30_000) {
+            routeComputeHelper.onlineComputeRoute(
+                start,
+                destination,
+                routingOptions = RoutingOptions().apply {
+                    this.routingType = RoutingOptions.RoutingType.Fastest
+                    this.vehicleProfile = vehicleProfile
+                }
+            )
+        }
+
+        assertNotNull(routeFastest)
     }
 
     @Test
