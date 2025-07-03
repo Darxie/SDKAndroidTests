@@ -2,8 +2,6 @@ package cz.feldis.sdkandroidtests.search
 
 import com.sygic.sdk.places.Place
 import com.sygic.sdk.places.PlaceCategories
-import com.sygic.sdk.places.PlacesManager
-import com.sygic.sdk.places.PlacesManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.CreateSearchCallback
 import com.sygic.sdk.search.HouseNumberResult
@@ -18,12 +16,10 @@ import com.sygic.sdk.search.SearchManagerProvider
 import com.sygic.sdk.search.SearchRequest
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
-import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.any
@@ -355,6 +351,24 @@ class SearchTests : BaseTest() {
         verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
             this.forEach {
                 if ((it.names.houseNumber == "1187") && (it.names.street == "Broadway"))
+                    return@argThat true
+            }
+            return@argThat false
+        })
+    }
+
+    @Test
+    fun reverseGeoBerlin() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("de-04")
+        val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
+            mock(verboseLogging = true)
+
+        ReverseGeocoderProvider.getInstance().get()
+            .reverseGeocode(GeoCoordinates(52.5129, 13.4076), emptySet(), reverseGeoListener)
+        verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
+            this.forEach {
+                if ((it.names.houseNumber == "4") && (it.names.street == "Fischerinsel"))
                     return@argThat true
             }
             return@argThat false
