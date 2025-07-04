@@ -25,6 +25,8 @@ class SearchHelper {
 
     private val searchManager = SearchManagerProvider.getInstance().get()
 
+    class NoResultsException : RuntimeException("Autocomplete returned no results")
+
     fun offlineAutocomplete(searchRequest: SearchRequest): List<AutocompleteResult> {
         val autocompleteResultListener: AutocompleteResultListener = mock(verboseLogging = true)
         val createSearchListener: CreateSearchCallback<OfflineMapSearch> =
@@ -143,6 +145,10 @@ class SearchHelper {
             resultCaptor.capture()
         )
         verify(autocompleteResultListener, never()).onAutocompleteError(any())
+        if (resultCaptor.firstValue.isEmpty()) {
+            session.close()
+            throw NoResultsException()
+        }
         assert(resultCaptor.firstValue[0].type == ResultType.CUSTOM_PLACE) // fail here already
         session.close()
         return resultCaptor.firstValue

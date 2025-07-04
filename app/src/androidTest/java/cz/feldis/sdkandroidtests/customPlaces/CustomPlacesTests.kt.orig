@@ -47,7 +47,10 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+<<<<<<< HEAD
 import java.util.Locale
+=======
+>>>>>>> SDK/28.1
 
 class CustomPlacesTests : BaseTest() {
     private lateinit var cpManager: CustomPlacesManager
