@@ -36,9 +36,18 @@ import cz.feldis.sdkandroidtests.search.SearchHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 
 class CustomPlacesTests : BaseTest() {
     private lateinit var cpManager: CustomPlacesManager
@@ -364,6 +373,102 @@ class CustomPlacesTests : BaseTest() {
         assertEquals("ibi maiga", autocompleteResult.subtitle)
         assertEquals("mojaSuperKategoria", autocompleteResult.categoryTags[0])
         assertEquals("vyzlec sa", autocompleteResult.title)
+    }
+
+    @Test
+    fun testInstallPlacesAndAutocompleteWithCountryIsoFilterOffline2() {
+        installOfflinePlaces("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "vyzlec sa",
+            location = GeoCoordinates(48.2718, 17.7697),
+            countryIsoFilter = listOf("sk")
+        )
+
+        val autocompleteResult = searchHelper.offlineAutocompleteCustomPlaces(searchRequest)[0]
+        assertEquals("ibi maiga", autocompleteResult.subtitle)
+        assertEquals("mojaSuperKategoria", autocompleteResult.categoryTags[0])
+        assertEquals("vyzlec sa", autocompleteResult.title)
+    }
+
+    @Test
+    fun testInstallPlacesAndAutocompleteWithCountryIsoFilterOffline3() {
+        installOfflinePlaces("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "vyzlec sa",
+            location = GeoCoordinates(48.2718, 17.7697),
+            countryIsoFilter = listOf("svk")
+        )
+
+        assertThrows(SearchHelper.NoResultsException::class.java) {
+            searchHelper.offlineAutocompleteCustomPlaces(searchRequest)
+        }
+    }
+
+    @Test
+    fun testAutocompleteWithMultipleCountryIsoFilters() {
+        installOfflinePlaces("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "vyzlec sa",
+            location = GeoCoordinates(48.2718, 17.7697),
+            countryIsoFilter = listOf("cz", "sk")
+        )
+
+        val result = searchHelper.offlineAutocompleteCustomPlaces(searchRequest)
+        assertTrue(result.isNotEmpty())
+    }
+
+    @Test
+    fun testAutocompleteWithEmptySearchInput() {
+        installOfflinePlaces("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "",
+            location = GeoCoordinates(48.2718, 17.7697),
+            countryIsoFilter = listOf("sk")
+        )
+
+        assertThrows(SearchHelper.NoResultsException::class.java) {
+            searchHelper.offlineAutocompleteCustomPlaces(searchRequest)
+        }
+    }
+
+    @Test
+    fun testAutocompleteWithEmptyCountryIsoFilterList() {
+        installOfflinePlaces("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "vyzlec sa",
+            location = GeoCoordinates(48.2718, 17.7697),
+            countryIsoFilter = emptyList()
+        )
+
+        val result = searchHelper.offlineAutocompleteCustomPlaces(searchRequest)
+        assertTrue(result.isNotEmpty())
+    }
+
+    @Test
+    fun testInstallPlacesAndAutocompleteWithCountryIsoFilterOfflineNegative() {
+        installOfflinePlaces("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "vyzlec sa",
+            location = GeoCoordinates(48.2718, 17.7697),
+            countryIsoFilter = listOf("cz")
+        )
+
+        assertThrows(SearchHelper.NoResultsException::class.java) {
+            searchHelper.offlineAutocompleteCustomPlaces(searchRequest)
+        }
+    }
+
+    @Test
+    fun testAutocompleteWithFarAwayLocation() {
+        installOfflinePlaces("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "vyzlec sa",
+            location = GeoCoordinates(52.52, 13.405), // Berlín
+            countryIsoFilter = listOf("sk")
+        )
+
+        val result = searchHelper.offlineAutocompleteCustomPlaces(searchRequest)
+        assertTrue(result.isNotEmpty())
     }
 
     @Test
