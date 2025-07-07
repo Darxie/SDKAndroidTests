@@ -3,11 +3,13 @@ package cz.feldis.sdkandroidtests.routing
 import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.PrimaryRouteRequest
+import com.sygic.sdk.route.RouteManeuver
 import com.sygic.sdk.route.RouteRequest
 import com.sygic.sdk.route.Router
 import com.sygic.sdk.route.RouterProvider
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
+import com.sygic.sdk.route.RoutingOptions.RoutingType
 import com.sygic.sdk.route.TransitCountryInfo
 import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
 import com.sygic.sdk.route.listeners.RouteComputeListener
@@ -24,7 +26,6 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.utils.GeoUtils
 import junit.framework.Assert.assertNotNull
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -441,6 +442,32 @@ class RouteComputeTestsOnline : BaseTest() {
                 }
             )
         assertNotNull(routeFastest)
+    }
+
+    @Test
+    fun shortestRouteInSlovakiaTestOnline() = runBlocking {
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.149240, 17.106990),
+            GeoCoordinates(48.574280, 19.126600),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingType.Shortest
+            }
+        )
+
+        // Check if there's at least one maneuver matching the criteria
+        val hasExpectedRoundabout = route.maneuvers.any { maneuver ->
+            maneuver.type == RouteManeuver.Type.RoundaboutNE &&
+                    maneuver.roundaboutExit == 2 &&
+                    maneuver.roadName == "Senecká cesta"
+        }
+
+        // If no maneuver matches, this assertion will fail
+        assertTrue(
+            "Expected to find a roundabout with exit 2 on 'Senecká cesta' but none was found.",
+            hasExpectedRoundabout
+        )
     }
 
     @Test
