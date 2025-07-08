@@ -374,6 +374,46 @@ class RouteComputeTestsOnline : BaseTest() {
 
     }
 
+    /***
+     * https://jira.sygic.com/browse/SDC-6211
+     * TC431
+     * Online routing. The route can't lead through the road 43.1979,5.70984
+     */
+    @Test
+    fun routingInFranceFastestOnlineTest() = runBlocking {
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Car
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(43.19814, 5.70945),
+            bottomRight = GeoCoordinates(43.19764, 5.71052)
+        )
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            GeoCoordinates(43.1979, 5.71095),
+            GeoCoordinates(43.1983, 5.71006),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        val maneuversInBoundingBox = route.maneuvers.filter { maneuver ->
+            GeoUtils.isPointInBoundingBox(maneuver.position, boundingBox)
+        }
+
+        assertTrue(
+            "Route contains unexpected maneuvers within the bounding box: $maneuversInBoundingBox",
+            maneuversInBoundingBox.isEmpty()
+        )
+
+    }
+
     /**
      * Test Case TC700, TC701
      *
