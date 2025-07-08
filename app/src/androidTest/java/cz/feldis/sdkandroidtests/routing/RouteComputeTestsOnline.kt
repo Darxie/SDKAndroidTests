@@ -3,8 +3,10 @@ package cz.feldis.sdkandroidtests.routing
 import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.PrimaryRouteRequest
+import com.sygic.sdk.route.RouteAvoids
 import com.sygic.sdk.route.RouteManeuver
 import com.sygic.sdk.route.RouteRequest
+import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.Router
 import com.sygic.sdk.route.RouterProvider
 import com.sygic.sdk.route.RoutingOptions
@@ -16,6 +18,7 @@ import com.sygic.sdk.route.listeners.RouteComputeListener
 import com.sygic.sdk.route.listeners.RouteDurationListener
 import com.sygic.sdk.route.listeners.RouteElementsListener
 import com.sygic.sdk.route.listeners.RouteRequestDeserializedListener
+import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.route.listeners.TransitCountriesInfoListener
 import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
@@ -468,6 +471,36 @@ class RouteComputeTestsOnline : BaseTest() {
             "Expected to find a roundabout with exit 2 on 'Senecká cesta' but none was found.",
             hasExpectedRoundabout
         )
+    }
+
+    /**
+     * TC169
+     * In this test we checking that there are no toll roads on the route
+     */
+    @Test
+    fun tollRoadAvoidWarningOnlineTest() {
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.0935, 17.1165)
+        val destination = GeoCoordinates(48.1209, 16.5627)
+        val routingOptions = RoutingOptions().apply {
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
+            this.routingType = RoutingType.Fastest
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } == null
+        })
+
     }
 
     @Test
