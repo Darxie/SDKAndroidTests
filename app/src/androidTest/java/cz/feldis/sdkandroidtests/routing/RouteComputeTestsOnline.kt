@@ -415,6 +415,46 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     /***
+     * https://jira.sygic.com/browse/SDC-11895
+     * TC856
+     * Online routing. The route can't exit from the highway in coordinates 48.3073,17.5595
+     */
+    @Test
+    fun exitsFromTheRouteSlovakiaOnlineTest() = runBlocking {
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Car
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(48.30891, 17.55084),
+            bottomRight = GeoCoordinates(48.30719, 17.56776)
+        )
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            GeoCoordinates(48.211820,17.263800),
+            GeoCoordinates(48.983180,18.402170),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        val maneuversInBoundingBox = route.maneuvers.filter { maneuver ->
+            GeoUtils.isPointInBoundingBox(maneuver.position, boundingBox)
+        }
+
+        assertTrue(
+            "Route contains unexpected maneuvers within the bounding box: $maneuversInBoundingBox",
+            maneuversInBoundingBox.isEmpty()
+        )
+
+    }
+
+    /***
      * https://jira.sygic.com/browse/SDC-6959
      * TC597
      * Online routing. The route can't lead through the road 49.221270,16.582800
@@ -451,6 +491,45 @@ class RouteComputeTestsOnline : BaseTest() {
         assertTrue(
             "Expected at least one LEFT maneuver inside bounding box, but none found.",
             hasLeftTurnInsideBox
+        )
+    }
+
+    /***
+     * TC791
+     * Online routing. The route can't lead through the road 50.8026,-0.04953
+     */
+    @Test
+    fun routingInUnitedKingdomOnlineTest() = runBlocking {
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Car
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(50.80236, -0.05005),
+            bottomRight = GeoCoordinates(50.80165, -0.04889)
+        )
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            GeoCoordinates(50.801700,-0.048000),
+            GeoCoordinates(50.803910,-0.049780),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        val hasRightTurnInsideBox = route.maneuvers.any {
+            it.type == RouteManeuver.Type.Right &&
+                    GeoUtils.isPointInBoundingBox(it.position, boundingBox)
+        }
+
+        assertTrue(
+            "Expected at least one RIGHT maneuver inside bounding box, but none found.",
+            hasRightTurnInsideBox
         )
     }
 
