@@ -1128,6 +1128,47 @@ class RouteComputeTests : BaseTest() {
 
     /**
      * https://jira.sygic.com/browse/SDC-14224
+     * TC892
+     * In this test we check that route doesn't lead through tunnel cat. E by following way:
+     * restricted route and normal route shouldn't have the same length and difference should be > 1 km
+     */
+    @Test
+    fun tunnelCategoryERouteLengthDifferenceTest() {
+        mapDownloadHelper.installAndLoadMap("gb-03")
+
+        val start = GeoCoordinates(51.49906, -0.05638)
+        val destination = GeoCoordinates(51.51246, -0.04123)
+
+        val normalRoute = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination
+        )
+        val lengthNormal = normalRoute.routeInfo.length
+
+        val restrictedRoute = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                    generalVehicleTraits.vehicleType = VehicleType.Truck
+                    hazmatTraits = HazmatTraits(emptySet(), TunnelCategory.E)
+                }
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val lengthRestricted = restrictedRoute.routeInfo.length
+
+        val difference = lengthRestricted - lengthNormal
+
+        assertTrue(
+            "Expected significant difference (> 1000 m) due to tunnel restriction, but got $difference meters",
+            difference > 1_000
+        )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14224
      * TC893
      * In this test we check that route doesn't lead through tunnel cat. C
      */
