@@ -1,5 +1,6 @@
 package cz.feldis.sdkandroidtests.routing
 
+import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.ChargingWaypoint
 import com.sygic.sdk.route.GuidedRouteProfile
@@ -30,12 +31,15 @@ import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.dimensional.Trailer
 import com.sygic.sdk.vehicletraits.general.VehicleType
+import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
+import com.sygic.sdk.vehicletraits.hazmat.TunnelCategory
 import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
 import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
 import com.sygic.sdk.vehicletraits.powertrain.FuelType
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import cz.feldis.sdkandroidtests.utils.GeoUtils
 import junit.framework.Assert.assertNotNull
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
@@ -43,20 +47,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.isNotNull
 import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
-import org.mockito.kotlin.withSettings
 import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -1124,6 +1124,48 @@ class RouteComputeTests : BaseTest() {
         }
 
         assertTrue("Isochrones should be different, but they appear identical.", areDifferent)
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14224
+     * TC893
+     * In this test we check that route doesn't lead through tunnel cat. C
+     */
+    @Test
+    fun tunnelCategoryCTest() {
+        mapDownloadHelper.installAndLoadMap("gb-03")
+
+        val start = GeoCoordinates(51.45571, 0.23953)
+        val destination = GeoCoordinates(51.48845, 0.26980)
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                hazmatTraits = HazmatTraits(emptySet(), TunnelCategory.C)
+            }
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(51.45313, 0.24168),
+            bottomRight = GeoCoordinates(51.45145, 0.24507)
+        )
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val hasExitInsideBox = route.maneuvers.any {
+            (it.type == RouteManeuver.Type.RoundaboutLeftE &&
+                    GeoUtils.isPointInBoundingBox(it.position, boundingBox))
+        }
+
+        assertTrue(
+            "Expected Roundabout exit maneuver inside bounding box, but none found.",
+            hasExitInsideBox
+        )
     }
 
     /**

@@ -24,6 +24,8 @@ import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
+import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
+import com.sygic.sdk.vehicletraits.hazmat.TunnelCategory
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.utils.GeoUtils
@@ -700,6 +702,47 @@ class RouteComputeTestsOnline : BaseTest() {
             this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } == null
         })
 
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14224
+     * TC893
+     * In this test we check that route doesn't lead through tunnel cat. C
+     */
+    @Test
+    fun tunnelCategoryCOnlineTest() {
+
+        val start = GeoCoordinates(51.45571, 0.23953)
+        val destination = GeoCoordinates(51.48845, 0.26980)
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                hazmatTraits = HazmatTraits(emptySet(), TunnelCategory.C)
+            }
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(51.45313, 0.24168),
+            bottomRight = GeoCoordinates(51.45145, 0.24507)
+        )
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val hasExitInsideBox = route.maneuvers.any {
+            (it.type == RouteManeuver.Type.RoundaboutLeftE &&
+                    GeoUtils.isPointInBoundingBox(it.position, boundingBox))
+        }
+
+        assertTrue(
+            "Expected Roundabout exit maneuver inside bounding box, but none found.",
+            hasExitInsideBox
+        )
     }
 
     @Test
