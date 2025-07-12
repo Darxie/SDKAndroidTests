@@ -438,10 +438,11 @@ class RouteComputeTestsOnline : BaseTest() {
             GeoCoordinates(48.211820, 17.263800),
             GeoCoordinates(48.983180, 18.402170),
             routingOptions = RoutingOptions().apply {
-                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.routingType = RoutingType.Fastest
                 this.vehicleProfile = vehicleProfile
                 this.useEndpointProtection = true
                 this.napStrategy = NearestAccessiblePointStrategy.Disabled
+                this.useTraffic = false
             }
         )
 
