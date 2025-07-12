@@ -435,8 +435,8 @@ class RouteComputeTestsOnline : BaseTest() {
         )
 
         val route = routeComputeHelper.onlineComputeRoute(
-            GeoCoordinates(48.211820,17.263800),
-            GeoCoordinates(48.983180,18.402170),
+            GeoCoordinates(48.211820, 17.263800),
+            GeoCoordinates(48.983180, 18.402170),
             routingOptions = RoutingOptions().apply {
                 this.routingType = RoutingOptions.RoutingType.Fastest
                 this.vehicleProfile = vehicleProfile
@@ -514,8 +514,8 @@ class RouteComputeTestsOnline : BaseTest() {
         )
 
         val route = routeComputeHelper.onlineComputeRoute(
-            GeoCoordinates(50.801700,-0.048000),
-            GeoCoordinates(50.803910,-0.049780),
+            GeoCoordinates(50.801700, -0.048000),
+            GeoCoordinates(50.803910, -0.049780),
             routingOptions = RoutingOptions().apply {
                 this.routingType = RoutingOptions.RoutingType.Fastest
                 this.vehicleProfile = vehicleProfile

@@ -1,0 +1,50 @@
+{
+  "add_or_update": [
+    {
+      "id": "10",
+      "category": "moja_ev_kategoria",
+      "location": "48.10201396997687, 17.24821095500223",
+      "entry_location": "48.10201396997687, 17.24821095500223",
+      "iso": "sk",
+      "search_priority": 20,
+      "display_name": [
+        {
+          "lng": "sk",
+          "title": "filkova stanica",
+          "subtitle": "EV_CP",
+          "search_tokens": [
+            {
+              "index": "filkova stanica",
+              "refinement": "eveckooo"
+            }
+          ]
+        }
+      ],
+      "ev_charger": {
+        "evse": [
+          {
+            "authorization_support": [
+              "rfid_chip",
+              "mobile_application"
+            ],
+            "charging_connector": [
+              {
+                "maximal_power": 22001,
+                "connector_type": "type2",
+                "connector_format": "cable",
+                "charging_current": "ac"
+              }
+            ]
+          }
+        ]
+      },
+      "opening_hours": {
+        "nonstop": true
+      },
+      "available_payment_methods": [
+        "credit_card",
+        "paypal"
+      ]
+    }
+  ]
+}

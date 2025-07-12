@@ -203,7 +203,7 @@ class RouteComputeHelper : BaseTest() {
             mapOf()
         )
         val connectors = listOf(
-            Connector(500f, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.AC),
+            Connector(500f, ConnectorType.Type2, ConnectorFormat.Socket, ChargingCurrent.AC),
             Connector(500f, ConnectorType.Ccs2, ConnectorFormat.Unknown, ChargingCurrent.DC)
         )
         val chargingPreferences = ChargingPreferences(
