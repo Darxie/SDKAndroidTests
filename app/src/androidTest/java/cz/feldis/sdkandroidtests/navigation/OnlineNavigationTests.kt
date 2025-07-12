@@ -685,11 +685,14 @@ class OnlineNavigationTests : BaseTest() {
     }
 
     /**
-     * Navigation test on place listener
+     * Verifies Place Listener behavior during online route navigation simulation.
      *
-     * In this test we compute online route and set it for navigation. Via simulator provider we set this route
-     * for simulation and start demonstrate navigation. We verify that onPlaceInfoChanged was invoked
-     * with Place Info. We also verify, that distance to Place on route is increasing.
+     * This test computes an online route and sets it for navigation. It uses a simulated navigation
+     * provider to run the route in demonstrate mode. The test verifies that:
+     *
+     * 1. The `onPlaceInfoChanged` callback is invoked with a non-empty list (indicating the vehicle reached a place),
+     *    followed by an empty list (indicating the place was passed).
+     * 2. The distance to the place decreases over time as the simulation progresses.
      */
     @Test
     fun onPlaceSplitDistanceTestOnline() = runBlocking {
