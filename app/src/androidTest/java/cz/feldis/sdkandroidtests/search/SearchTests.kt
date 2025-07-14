@@ -5,6 +5,7 @@ import com.sygic.sdk.places.PlaceCategories
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.CreateSearchCallback
 import com.sygic.sdk.search.HouseNumberResult
+import com.sygic.sdk.search.OfflineMapSearch
 import com.sygic.sdk.search.OnlineMapSearch
 import com.sygic.sdk.search.PlaceRequest
 import com.sygic.sdk.search.PlacesListener
@@ -215,14 +216,20 @@ class SearchTests : BaseTest() {
     @Test
     fun searchPlacesValidCategoryEVStationOffline() {
         mapDownloadHelper.installAndLoadMap("nl")
+        val searchCallback: CreateSearchCallback<OfflineMapSearch> = mock(verboseLogging = true)
         val listener: PlacesListener = mock(verboseLogging = true)
         val searchManager = SearchManagerProvider.getInstance().get()
 
         val categories = listOf(PlaceCategories.EVStation)
         val request = PlaceRequest(GeoCoordinates(51.6188, 4.72933), categories, 1000)
-        val session = searchManager.newOfflineSession()
 
-        session.searchPlaces(request, listener)
+        val offlineMapSearchCaptor = argumentCaptor<OfflineMapSearch>()
+        searchManager.createOfflineMapSearch(searchCallback)
+        verify(searchCallback, timeout(10_000L)).onSuccess(
+            offlineMapSearchCaptor.capture()
+        )
+        offlineMapSearchCaptor.firstValue.createSession().searchPlaces(request, listener)
+
 
         verify(listener, timeout(10_000L))
             .onPlacesLoaded(argThat {
@@ -265,14 +272,18 @@ class SearchTests : BaseTest() {
     @Test
     fun searchPlacesDetails() {
         mapDownloadHelper.installAndLoadMap("eg")
+        val searchCallback: CreateSearchCallback<OfflineMapSearch> = mock(verboseLogging = true)
         val searchManager = SearchManagerProvider.getInstance().get()
         val listener: PlacesListener = mock(verboseLogging = true)
 
         val categories = listOf(PlaceCategories.ImportantTouristAttraction)
         val request = PlaceRequest(GeoCoordinates(29.9774, 31.1323), categories, 1000)
-        val session = searchManager.newOfflineSession()
-
-        session.searchPlaces(request, listener)
+        val offlineMapSearchCaptor = argumentCaptor<OfflineMapSearch>()
+        searchManager.createOfflineMapSearch(searchCallback)
+        verify(searchCallback, timeout(10_000L)).onSuccess(
+            offlineMapSearchCaptor.capture()
+        )
+        offlineMapSearchCaptor.firstValue.createSession().searchPlaces(request, listener)
 
         val captor = argumentCaptor<List<Place>>()
 
