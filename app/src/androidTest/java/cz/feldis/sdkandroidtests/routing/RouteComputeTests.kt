@@ -1239,6 +1239,45 @@ class RouteComputeTests : BaseTest() {
         )
     }
 
+    @Test
+    fun arriveInDirectionTest() {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val start = GeoCoordinates(48.14689, 17.22613)
+        val destination = GeoCoordinates(48.13879, 17.27926)
+
+        val normalRoute = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                arriveInDrivingSide = false
+            }
+        )
+        val lengthWithoutArriveInDirection = normalRoute.routeInfo.length
+
+        val arriveInDirectionRoute = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                arriveInDrivingSide = true
+            }
+        )
+        val lengthWithArriveInDirection = arriveInDirectionRoute.routeInfo.length
+
+        val difference = lengthWithArriveInDirection - lengthWithoutArriveInDirection
+
+        assertTrue(
+            "Expected significant difference (> 1000 m) due to arrive in direction, but got $difference meters",
+            difference > 1_000
+        )
+    }
+
     private suspend fun getRouteRequest(path: String): RouteRequest =
         suspendCoroutine { continuation ->
             RouterProvider.getInstance().get().createRouteRequestFromJSONString(
