@@ -13,10 +13,12 @@ import com.sygic.sdk.search.ResultType
 import com.sygic.sdk.search.ReverseGeocoder
 import com.sygic.sdk.search.ReverseGeocoder.ErrorCode
 import com.sygic.sdk.search.ReverseGeocoderProvider
+import com.sygic.sdk.search.SearchManager
 import com.sygic.sdk.search.SearchManagerProvider
 import com.sygic.sdk.search.SearchRequest
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -41,12 +43,14 @@ class SearchTests : BaseTest() {
     private lateinit var searchHelper: SearchHelper
     private lateinit var mapDownloadHelper: MapDownloadHelper
     private lateinit var reverseGeocoder: ReverseGeocoder
+    private lateinit var searchManager: SearchManager
 
     override fun setUp() {
         super.setUp()
         searchHelper = SearchHelper()
         mapDownloadHelper = MapDownloadHelper()
-        reverseGeocoder = ReverseGeocoderProvider.getInstance().get()
+        reverseGeocoder = runBlocking { ReverseGeocoderProvider.getInstance() }
+        searchManager = runBlocking { SearchManagerProvider.getInstance() }
     }
 
     @Test
@@ -77,7 +81,7 @@ class SearchTests : BaseTest() {
     @Test
     fun searchEVStationInAreaAndCheckSYMaxPowerOfflineTest() {
         disableOnlineMaps()
-//        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("sk")
         val position = GeoCoordinates(48.11708633532345, 17.216519354470783)
         val categories = listOf(PlaceCategories.EVStation)
         val placeRequest = PlaceRequest(position, categories, 50)
@@ -159,7 +163,6 @@ class SearchTests : BaseTest() {
     @Test
     fun searchPlacesValidCategoryBankOnline() {
         val listener: PlacesListener = mock(verboseLogging = true)
-        val searchManager = SearchManagerProvider.getInstance().get()
         val searchCallback: CreateSearchCallback<OnlineMapSearch> = mock(verboseLogging = true)
 
         val categories = listOf(PlaceCategories.Bank)
@@ -196,7 +199,7 @@ class SearchTests : BaseTest() {
         mapDownloadHelper.installAndLoadMap("sk")
         val listener: ReverseGeocoder.ReverseGeocodingResultListener = mock(verboseLogging = true)
 
-        ReverseGeocoderProvider.getInstance().get()
+        reverseGeocoder
             .reverseGeocode(
                 GeoCoordinates(48.145387813685645, 17.126208780846095),
                 setOf(),
@@ -218,7 +221,6 @@ class SearchTests : BaseTest() {
         mapDownloadHelper.installAndLoadMap("nl")
         val searchCallback: CreateSearchCallback<OfflineMapSearch> = mock(verboseLogging = true)
         val listener: PlacesListener = mock(verboseLogging = true)
-        val searchManager = SearchManagerProvider.getInstance().get()
 
         val categories = listOf(PlaceCategories.EVStation)
         val request = PlaceRequest(GeoCoordinates(51.6188, 4.72933), categories, 1000)
@@ -273,7 +275,6 @@ class SearchTests : BaseTest() {
     fun searchPlacesDetails() {
         mapDownloadHelper.installAndLoadMap("eg")
         val searchCallback: CreateSearchCallback<OfflineMapSearch> = mock(verboseLogging = true)
-        val searchManager = SearchManagerProvider.getInstance().get()
         val listener: PlacesListener = mock(verboseLogging = true)
 
         val categories = listOf(PlaceCategories.ImportantTouristAttraction)
@@ -357,7 +358,7 @@ class SearchTests : BaseTest() {
         val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
             mock(verboseLogging = true)
 
-        ReverseGeocoderProvider.getInstance().get()
+        reverseGeocoder
             .reverseGeocode(GeoCoordinates(40.7456, -73.9888), emptySet(), reverseGeoListener)
         verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
             this.forEach {
@@ -375,7 +376,7 @@ class SearchTests : BaseTest() {
         val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
             mock(verboseLogging = true)
 
-        ReverseGeocoderProvider.getInstance().get()
+        reverseGeocoder
             .reverseGeocode(GeoCoordinates(52.5129, 13.4076), emptySet(), reverseGeoListener)
         verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
             this.forEach {
@@ -393,7 +394,7 @@ class SearchTests : BaseTest() {
         val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
             mock(verboseLogging = true)
 
-        ReverseGeocoderProvider.getInstance().get()
+        reverseGeocoder
             .reverseGeocode(GeoCoordinates(49.8987, -97.1627), emptySet(), reverseGeoListener)
         verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
             this.forEach {
@@ -411,7 +412,7 @@ class SearchTests : BaseTest() {
         val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
             mock(verboseLogging = true)
 
-        ReverseGeocoderProvider.getInstance().get()
+        reverseGeocoder
             .reverseGeocode(GeoCoordinates(48.1476, 17.1046), emptySet(), reverseGeoListener)
         verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
             this.forEach {
@@ -429,7 +430,7 @@ class SearchTests : BaseTest() {
         val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
             mock(verboseLogging = true)
 
-        ReverseGeocoderProvider.getInstance().get()
+        reverseGeocoder
             .reverseGeocode(GeoCoordinates(51.8889, 5.66974), emptySet(), reverseGeoListener)
         verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
             this.forEach {
@@ -503,7 +504,7 @@ class SearchTests : BaseTest() {
         val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
             mock(verboseLogging = true)
 
-        ReverseGeocoderProvider.getInstance().get()
+        reverseGeocoder
             .reverseGeocode(
                 GeoCoordinates(37.288480477393286, -41.35639017659597),
                 emptySet(),
@@ -520,7 +521,7 @@ class SearchTests : BaseTest() {
         val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
             mock(verboseLogging = true)
 
-        ReverseGeocoderProvider.getInstance().get()
+        reverseGeocoder
             .reverseGeocode(
                 GeoCoordinates(37.288480477393286, -41.35639017659597),
                 emptySet(),

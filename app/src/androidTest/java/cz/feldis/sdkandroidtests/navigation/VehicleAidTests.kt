@@ -44,7 +44,7 @@ class VehicleAidTests : BaseTest() {
         routeCompute = RouteComputeHelper()
         mapDownload = MapDownloadHelper()
         disableOnlineMaps()
-        navigation = NavigationManagerProvider.getInstance().get()
+        navigation = runBlocking { NavigationManagerProvider.getInstance() }
     }
 
     @Test
@@ -118,7 +118,7 @@ class VehicleAidTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnVehicleAidListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -168,7 +168,7 @@ class VehicleAidTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnVehicleAidListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -217,7 +217,7 @@ class VehicleAidTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnVehicleAidListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -256,7 +256,7 @@ class VehicleAidTests : BaseTest() {
         navigation.addOnVehicleZoneListener(vehicleZoneListener)
 
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "sitina.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)

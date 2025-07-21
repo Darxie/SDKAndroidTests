@@ -56,7 +56,7 @@ class IncidentsTests : BaseTest() {
     override fun setUp() {
         super.setUp()
         routeCompute = RouteComputeHelper()
-        incidentsManager = IncidentsManagerProvider.getInstance().get()
+        incidentsManager = runBlocking { IncidentsManagerProvider.getInstance() }
         removeAllIncidents()
     }
 
@@ -81,7 +81,7 @@ class IncidentsTests : BaseTest() {
             GeoCoordinates(48.10223044006818, 17.23340438881692),
             GeoCoordinates(48.098580331935274, 17.237506607527582)
         )
-        RouteExplorerProvider.getInstance().get()
+        runBlocking { RouteExplorerProvider.getInstance() }
             .exploreIncidentsOnRoute(route, emptyList(), listener)
         val captor = argumentCaptor<List<IncidentInfo>>()
         val progressCaptor = argumentCaptor<Int>()
@@ -126,7 +126,7 @@ class IncidentsTests : BaseTest() {
             GeoCoordinates(48.10223044006818, 17.23340438881692),
             GeoCoordinates(48.098580331935274, 17.237506607527582)
         )
-        RouteExplorerProvider.getInstance().get()
+        runBlocking { RouteExplorerProvider.getInstance() }
             .exploreIncidentsOnRoute(route, emptyList(), listener)
 
         verify(
@@ -163,7 +163,7 @@ class IncidentsTests : BaseTest() {
             ), listener
         )
 
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
@@ -174,7 +174,7 @@ class IncidentsTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
@@ -197,7 +197,7 @@ class IncidentsTests : BaseTest() {
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
         verify(listener, timeout(TIMEOUT)).onSuccess()
 
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
@@ -208,7 +208,7 @@ class IncidentsTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -236,7 +236,7 @@ class IncidentsTests : BaseTest() {
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
         verify(listener, timeout(TIMEOUT)).onSuccess()
 
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
@@ -247,7 +247,7 @@ class IncidentsTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -278,7 +278,7 @@ class IncidentsTests : BaseTest() {
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
         verify(listener, timeout(TIMEOUT)).onSuccess()
 
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
@@ -289,7 +289,7 @@ class IncidentsTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 6F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -331,13 +331,13 @@ class IncidentsTests : BaseTest() {
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
         verify(listener, timeout(TIMEOUT)).onSuccess()
 
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
 
         navigation.addOnIncidentListener(listener)
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "logLovosice.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
@@ -379,12 +379,12 @@ class IncidentsTests : BaseTest() {
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
         verify(listener, timeout(TIMEOUT)).onSuccess()
 
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         navigation.addOnIncidentListener(listener)
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "logLovosice.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
@@ -408,12 +408,12 @@ class IncidentsTests : BaseTest() {
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
         verify(listener, timeout(TIMEOUT)).onSuccess()
 
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         navigation.addOnIncidentListener(listener)
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "logLovosiceInDirection.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
@@ -426,7 +426,7 @@ class IncidentsTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation)
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
     }
-    
+
     @Test
     fun testTraceIncidentOppositeDirectionPristavnaShouldNotNotify() = runBlocking {
         val importedAreaIncident = getMockPolylineIncidentPristavna()
@@ -434,13 +434,13 @@ class IncidentsTests : BaseTest() {
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
         verify(listener, timeout(TIMEOUT)).onSuccess()
 
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         navigation.addOnIncidentListener(listener)
         val nmeaDataProvider =
             NmeaFileDataProvider(appContext, "pristavnaOppositeRoadTraceIncident.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 8F)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
@@ -478,7 +478,7 @@ class IncidentsTests : BaseTest() {
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
         verify(listener, timeout(TIMEOUT)).onSuccess()
 
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
@@ -489,7 +489,7 @@ class IncidentsTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -520,7 +520,7 @@ class IncidentsTests : BaseTest() {
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
         verify(listener, timeout(TIMEOUT)).onSuccess()
 
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
@@ -531,7 +531,7 @@ class IncidentsTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)

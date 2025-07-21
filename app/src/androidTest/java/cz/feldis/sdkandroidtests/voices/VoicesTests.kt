@@ -21,7 +21,7 @@ class VoicesTests : BaseTest() {
 
     override fun setUp() {
         super.setUp()
-        voicesManager = VoiceManagerProvider.getInstance().get()
+        voicesManager = runBlocking { VoiceManagerProvider.getInstance() }
     }
 
     @Test
@@ -68,7 +68,8 @@ class VoicesTests : BaseTest() {
     fun getVoiceStatusTest() {
         val listener: VoiceDownload.AvailableVoicesCallback = mock(verboseLogging = true)
         val statusCallback: VoiceEntry.OnGetStatusCallback = mock(verboseLogging = true)
-        VoiceDownloadProvider.getInstance().get().getAvailableVoiceList(listener)
+        runBlocking { VoiceDownloadProvider.getInstance() }
+            .getAvailableVoiceList(listener)
 
         val captor = argumentCaptor<List<VoiceEntry>>()
         verify(listener, timeout(10_000L)).onAvailableVoiceList(
@@ -91,7 +92,7 @@ class VoicesTests : BaseTest() {
     fun getPermanentIdTest() {
         val listener: VoiceDownload.AvailableVoicesCallback = mock(verboseLogging = true)
         val statusCallback: VoiceEntry.OnGetPermanentIdCallback = mock(verboseLogging = true)
-        VoiceDownloadProvider.getInstance().get().getAvailableVoiceList(listener)
+        runBlocking { VoiceDownloadProvider.getInstance() }.getAvailableVoiceList(listener)
 
         val captor = argumentCaptor<List<VoiceEntry>>()
         verify(listener, timeout(10_000L)).onAvailableVoiceList(

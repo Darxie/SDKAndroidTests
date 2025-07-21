@@ -50,18 +50,19 @@ class RouteComputeTestsOnline : BaseTest() {
     private lateinit var mapDownloadHelper: MapDownloadHelper
     private lateinit var routeComputeHelper: RouteComputeHelper
     override val betaRouting = true
+    private lateinit var router: Router
 
     override fun setUp() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
         mapDownloadHelper.unloadAllMaps()
+        router = runBlocking { RouterProvider.getInstance() }
     }
 
     @Test
     fun computeNextDurationsTestOnline() {
         val listener: RouteDurationListener = mock(verboseLogging = true)
-        val router = RouterProvider.getInstance().get()
 
         val start = GeoCoordinates(48.145718, 17.118669)
         val destination = GeoCoordinates(48.190322, 16.401080)
@@ -132,8 +133,6 @@ class RouteComputeTestsOnline : BaseTest() {
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
 
-        val router = RouterProvider.getInstance().get()
-
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
 
         verify(listener, Mockito.timeout(10_000L)).onComputeFinished(
@@ -152,7 +151,7 @@ class RouteComputeTestsOnline : BaseTest() {
 
         val routeJson = originalRoute.serializeToBriefJSON()
 
-        RouterProvider.getInstance().get()
+        router
             .createRouteRequestFromJSONString(json = routeJson, listener)
         verify(listener, timeout(1_000L)).onSuccess(
             argThat {
@@ -192,7 +191,6 @@ class RouteComputeTestsOnline : BaseTest() {
         }
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
 
@@ -225,7 +223,6 @@ class RouteComputeTestsOnline : BaseTest() {
         }
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
 

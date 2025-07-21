@@ -67,7 +67,7 @@ class MapViewTests : BaseTest() {
 
     override fun setUp() {
         super.setUp()
-        incidentsManager = IncidentsManagerProvider.getInstance().get()
+        incidentsManager = runBlocking { IncidentsManagerProvider.getInstance() }
     }
 
     @Test
@@ -244,7 +244,7 @@ class MapViewTests : BaseTest() {
         mapView.cameraModel.zoomLevel = 15F
         mapView.cameraModel.tilt = 0F
 
-        RouterProvider.getInstance().get().computeEVRange(
+        runBlocking { RouterProvider.getInstance() }.computeEVRange(
             GeoCoordinates(48.10095535808773, 17.234824479529344),
             listOf(3.0),
             RoutingOptions().apply {
@@ -744,7 +744,7 @@ class MapViewTests : BaseTest() {
 
         val listener: SetVisibleCategoriesListener = mock(verboseLogging = true)
 
-        PlacesManagerProvider.getInstance().get().setVisibleCategories(
+        runBlocking { PlacesManagerProvider.getInstance() }.setVisibleCategories(
             listOf(
                 PlaceCategoryGroupVisibility(
                     "SYPetrolStation",
@@ -813,7 +813,7 @@ class MapViewTests : BaseTest() {
     fun checkVisibilityOfPOIsBeforeFirstScenario(): Unit = runBlocking {
         val listener: SetVisibleCategoriesListener = mock(verboseLogging = true)
 
-        PlacesManagerProvider.getInstance().get().setVisibleCategories(
+        runBlocking { PlacesManagerProvider.getInstance() }.setVisibleCategories(
             listOf(
                 PlaceCategoryGroupVisibility(
                     "SYPetrolStation",

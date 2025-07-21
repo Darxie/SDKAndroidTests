@@ -26,6 +26,7 @@ import com.sygic.sdk.search.CreateSearchCallback
 import com.sygic.sdk.search.CustomPlacesSearch
 import com.sygic.sdk.search.PlaceRequest
 import com.sygic.sdk.search.ResultType
+import com.sygic.sdk.search.SearchManager
 import com.sygic.sdk.search.SearchManagerProvider
 import com.sygic.sdk.search.SearchRequest
 import com.sygic.sdk.vehicletraits.listeners.SetVehicleProfileListener
@@ -54,12 +55,14 @@ import java.util.Locale
 class CustomPlacesTests : BaseTest() {
     private lateinit var cpManager: CustomPlacesManager
     private lateinit var searchHelper: SearchHelper
+    private lateinit var searchManager: SearchManager
     private val defaultDataset = "bf19e514-487b-43c4-b0df-9073b2397dd1"
 
     override fun setUp() {
         super.setUp()
         searchHelper = SearchHelper()
-        cpManager = CustomPlacesManagerProvider.getInstance().get()
+        cpManager = runBlocking { CustomPlacesManagerProvider.getInstance() }
+        searchManager = runBlocking { SearchManagerProvider.getInstance() }
         cpManager.setMode(CustomPlacesManager.Mode.OFFLINE)
         uninstallOfflinePlaces("sk")
     }
@@ -143,7 +146,7 @@ class CustomPlacesTests : BaseTest() {
     @Test
     fun testInstallCustomPlacesAndVerifyIndexing() {
         val searchCallback: CreateSearchCallback<CustomPlacesSearch> = mock(verboseLogging = true)
-        SearchManagerProvider.getInstance().get().createCustomPlacesSearch(searchCallback)
+        searchManager.createCustomPlacesSearch(searchCallback)
 
         verify(searchCallback, timeout(10_000L)).onSuccess(
             any()
@@ -514,7 +517,7 @@ class CustomPlacesTests : BaseTest() {
             mock(verboseLogging = true)
         val searchCaptor = argumentCaptor<CustomPlacesSearch>()
         val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
-        SearchManagerProvider.getInstance().get().createCustomPlacesSearch(createSearchListener)
+        searchManager.createCustomPlacesSearch(createSearchListener)
         verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
         val search = searchCaptor.lastValue
 
@@ -553,7 +556,7 @@ class CustomPlacesTests : BaseTest() {
                 .commitNow()
         }
 
-        CustomPlacesManagerProvider.getInstance().get().installOfflinePlacesFromJson(
+        cpManager.installOfflinePlacesFromJson(
             readJson("svk_custom_places.json"), customPlacesResultListener
         )
 
@@ -619,7 +622,7 @@ class CustomPlacesTests : BaseTest() {
                 .commitNow()
         }
 
-        CustomPlacesManagerProvider.getInstance().get().installOfflinePlacesFromJson(
+        cpManager.installOfflinePlacesFromJson(
             readJson("CP_compatibleEVcharger.json"), customPlacesResultListener
         )
 
@@ -694,7 +697,7 @@ class CustomPlacesTests : BaseTest() {
                 .commitNow()
         }
 
-        CustomPlacesManagerProvider.getInstance().get().installOfflinePlacesFromJson(
+        cpManager.installOfflinePlacesFromJson(
             readJson("CP_incompatibleEVcharger.json"), customPlacesResultListener
         )
 
@@ -769,7 +772,7 @@ class CustomPlacesTests : BaseTest() {
                 .commitNow()
         }
 
-        CustomPlacesManagerProvider.getInstance().get().installOfflinePlacesFromJson(
+        cpManager.installOfflinePlacesFromJson(
             readJson("CP_preferredEVcharger.json"), customPlacesResultListener
         )
 

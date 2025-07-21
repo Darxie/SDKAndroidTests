@@ -53,7 +53,7 @@ class HereTests : BaseHereTest() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
-        navigation = NavigationManagerProvider.getInstance().get()
+        navigation = runBlocking { NavigationManagerProvider.getInstance() }
         disableOnlineMaps()
     }
 
@@ -138,7 +138,7 @@ class HereTests : BaseHereTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnVehicleAidListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -191,7 +191,7 @@ class HereTests : BaseHereTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnVehicleAidListener(listener)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -225,7 +225,7 @@ class HereTests : BaseHereTest() {
     @Test
     fun testStreetChangedListenerOfflineHere() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.StreetChangedListener = mock(verboseLogging = true)
 
         val route = routeComputeHelper.offlineRouteCompute(
@@ -236,7 +236,7 @@ class HereTests : BaseHereTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addStreetChangedListener(listener)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -285,7 +285,7 @@ class HereTests : BaseHereTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnVehicleAidListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)

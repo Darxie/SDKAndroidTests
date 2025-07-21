@@ -628,7 +628,7 @@ class RouteWarningTests : BaseTest() {
     @Test
     fun testVehicleZonesBranisko() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
 
         val setVehicleProfileListener: SetVehicleProfileListener = mock(verboseLogging = true)
         val vehicleZoneListener: OnVehicleZoneListener = mock(verboseLogging = true)
@@ -637,7 +637,7 @@ class RouteWarningTests : BaseTest() {
             generalVehicleTraits.vehicleType = VehicleType.Truck
             hazmatTraits = HazmatTraits(emptySet(), TunnelCategory.E)
         }
-        NavigationManagerProvider.getInstance().get()
+        navigation
             .setVehicleProfile(vehProf, setVehicleProfileListener)
 
         val start = GeoCoordinates(49.0093, 20.8322)
@@ -657,7 +657,7 @@ class RouteWarningTests : BaseTest() {
         assertNotNull(route)
         navigationManagerKtx.setRouteForNavigation(route, navigation)
 
-        NavigationManagerProvider.getInstance().get().addOnVehicleZoneListener(vehicleZoneListener)
+        navigation.addOnVehicleZoneListener(vehicleZoneListener)
         verify(vehicleZoneListener, timeout(10_000L)).onVehicleZoneInfo(argThat {
             this.find { it.restriction.type == RestrictionInfo.RestrictionType.CargoTunnel } != null
         })

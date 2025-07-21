@@ -64,11 +64,13 @@ import kotlin.coroutines.suspendCoroutine
 class RouteComputeTests : BaseTest() {
     private lateinit var mapDownloadHelper: MapDownloadHelper
     private lateinit var routeComputeHelper: RouteComputeHelper
+    private lateinit var router: Router
 
     override fun setUp() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
+        router = runBlocking { RouterProvider.getInstance() }
     }
 
     @Test
@@ -76,7 +78,6 @@ class RouteComputeTests : BaseTest() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
         val listener: RouteDurationListener = mock(verboseLogging = true)
-        val router = RouterProvider.getInstance().get()
 
         val start = GeoCoordinates(48.145718, 17.118669)
         val destination = GeoCoordinates(48.190322, 16.401080)
@@ -206,8 +207,6 @@ class RouteComputeTests : BaseTest() {
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
 
-        val router = RouterProvider.getInstance().get()
-
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
 
         verify(listener, Mockito.timeout(50_000L)).onComputeFinished(
@@ -238,7 +237,6 @@ class RouteComputeTests : BaseTest() {
         }
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
 
@@ -270,7 +268,6 @@ class RouteComputeTests : BaseTest() {
         }
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
 
         val task = router.computeRouteWithAlternatives(
             primaryRouteRequest,
@@ -296,7 +293,6 @@ class RouteComputeTests : BaseTest() {
         val routeRequest = RouteRequest(guidedRouteProfile)
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
         verify(listener, timeout(10_000L)).onComputeFinished(
@@ -324,7 +320,6 @@ class RouteComputeTests : BaseTest() {
         val routeRequest = RouteRequest(guidedRouteProfile)
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
         verify(listener, timeout(10_000L)).onComputeFinished(
@@ -585,7 +580,7 @@ class RouteComputeTests : BaseTest() {
         val captor = argumentCaptor<Route>()
         val captorWarnings = argumentCaptor<List<RouteWarning>>()
 
-        RouterProvider.getInstance().get().computeRouteWithAlternatives(
+        router.computeRouteWithAlternatives(
             primaryRouteRequest,
             null,
             routeComputeFinishedListener
@@ -647,7 +642,7 @@ class RouteComputeTests : BaseTest() {
         val captor = argumentCaptor<Route>()
         val captorWarnings = argumentCaptor<List<RouteWarning>>()
 
-        RouterProvider.getInstance().get().computeRouteWithAlternatives(
+        router.computeRouteWithAlternatives(
             primaryRouteRequest,
             null,
             routeComputeFinishedListener
@@ -845,7 +840,7 @@ class RouteComputeTests : BaseTest() {
         val captor = argumentCaptor<Route>()
         val captorWarnings = argumentCaptor<List<RouteWarning>>()
 
-        RouterProvider.getInstance().get().computeRouteWithAlternatives(
+        router.computeRouteWithAlternatives(
             primaryRouteRequest,
             null,
             routeComputeFinishedListener
@@ -1082,7 +1077,7 @@ class RouteComputeTests : BaseTest() {
                 }
             }
 
-        RouterProvider.getInstance().get().computeEVRange(
+        router.computeEVRange(
             GeoCoordinates(48.10095535808773, 17.234824479529344),
             listOf(5.0),
             RoutingOptions().apply {
@@ -1098,7 +1093,7 @@ class RouteComputeTests : BaseTest() {
 
         val listener2: EVRangeListener = mock(verboseLogging = true)
 
-        RouterProvider.getInstance().get().computeEVRange(
+        router.computeEVRange(
             GeoCoordinates(48.10095535808773, 17.234824479529344),
             listOf(5.0),
             RoutingOptions().apply {
@@ -1280,7 +1275,7 @@ class RouteComputeTests : BaseTest() {
 
     private suspend fun getRouteRequest(path: String): RouteRequest =
         suspendCoroutine { continuation ->
-            RouterProvider.getInstance().get().createRouteRequestFromJSONString(
+            router.createRouteRequestFromJSONString(
                 readJson(path),
                 object : RouteRequestDeserializedListener {
                     override fun onError(error: RouteDeserializerError) {

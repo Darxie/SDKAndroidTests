@@ -21,6 +21,7 @@ import com.sygic.sdk.online.OnlineManagerProvider
 import com.sygic.sdk.online.listeners.SetActiveMapProviderListener
 import com.sygic.sdk.position.PositionManager
 import com.sygic.sdk.position.PositionManagerProvider
+import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert
@@ -46,6 +47,8 @@ abstract class BaseTest {
     lateinit var sygicContext: SygicContext
     open lateinit var appDataPath: String
     protected open val betaRouting: Boolean = false
+    private lateinit var positionManager: PositionManager
+    private lateinit var onlineManager: OnlineManager
 
     @get:Rule
     var activityRule: ActivityScenarioRule<SygicActivity> =
@@ -98,7 +101,9 @@ abstract class BaseTest {
         val latch = CountDownLatch(1)
 
         val contextInitRequest = SygicContextInitRequest(
-            jsonConfiguration = buildJsonConfig(buildConfig(isUAT = true)) {}.betaRouting(betaRouting),
+            jsonConfiguration = buildJsonConfig(buildConfig(isUAT = true)) {}.betaRouting(
+                betaRouting
+            ),
             context = appContext,
             logConnector = object : LogConnector() {},
             loadMaps = loadMaps,
@@ -114,7 +119,9 @@ abstract class BaseTest {
             override fun onInstance(instance: SygicContext) {
                 sygicContext = instance
                 isEngineInitialized = true
-                PositionManagerProvider.getInstance().get().openGpsConnection()
+                runBlocking {
+                    PositionManagerProvider.getInstance().openGpsConnection()
+                }
                 latch.countDown()
             }
         })
@@ -176,7 +183,7 @@ abstract class BaseTest {
     }
 
     open fun disableOnlineMaps() {
-        val onlineManager = OnlineManagerProvider.getInstance().get()
+        val onlineManager = runBlocking { OnlineManagerProvider.getInstance() }
         if (!onlineManager.isOnlineMapStreamingEnabled()) return
 
         val listener = mock<OnlineManager.MapStreamingListener>()
@@ -188,7 +195,8 @@ abstract class BaseTest {
     }
 
     open fun enableOnlineMaps() {
-        val onlineManager = OnlineManagerProvider.getInstance().get()
+        val onlineManager = runBlocking { OnlineManagerProvider.getInstance() }
+
         if (onlineManager.isOnlineMapStreamingEnabled()) return
 
         val listener = mock<OnlineManager.MapStreamingListener>()
@@ -203,7 +211,7 @@ abstract class BaseTest {
         val listener = mock<SetActiveMapProviderListener>()
         whenever(listener.onActiveProviderSet())
 
-        OnlineManagerProvider.getInstance().get()
+        runBlocking { OnlineManagerProvider.getInstance() }
             .setActiveMapProvider(MapProvider(providerName), listener)
 
         verify(listener, timeout(5000L)).onActiveProviderSet()
@@ -212,7 +220,7 @@ abstract class BaseTest {
     open fun startPositionUpdating() {
         val listener = mock<PositionManager.OnOperationComplete>()
 
-        PositionManagerProvider.getInstance().get().startPositionUpdating(listener)
+        runBlocking { PositionManagerProvider.getInstance() }.startPositionUpdating(listener)
 
         verify(listener, timeout(5000L)).onComplete()
     }
@@ -221,7 +229,7 @@ abstract class BaseTest {
         val listener = mock<PositionManager.OnOperationComplete>()
         whenever(listener.onComplete())
 
-        PositionManagerProvider.getInstance().get().stopPositionUpdating(listener)
+        runBlocking { PositionManagerProvider.getInstance() }.stopPositionUpdating(listener)
 
         verify(listener, timeout(5000L)).onComplete()
     }

@@ -58,12 +58,12 @@ class AuxiliaryTests : BaseTest() {
         routeCompute = RouteComputeHelper()
         mapDownload = MapDownloadHelper()
         disableOnlineMaps()
-        navigation = NavigationManagerProvider.getInstance().get()
+        navigation = runBlocking { NavigationManagerProvider.getInstance() }
     }
 
     @Test
     @Ignore("run this only when needed")
-    fun testJustNavigationWithMap():Unit = runBlocking {
+    fun testJustNavigationWithMap(): Unit = runBlocking {
         mapDownload.installAndLoadMap("sk")
 
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
@@ -86,8 +86,6 @@ class AuxiliaryTests : BaseTest() {
 
         val mapView = getMapView(mapFragment)
 
-        val navigation = NavigationManagerProvider.getInstance().get()
-
         val route = routeCompute.offlineRouteCompute(
             GeoCoordinates(48.14562613458992, 17.126682063470636),
             GeoCoordinates(48.390008550344, 17.58597217027952),
@@ -96,16 +94,19 @@ class AuxiliaryTests : BaseTest() {
             }
         )
 
-        mapView.setVehicleProfile(vehicleProfile, object: SetVehicleProfileListener {
+        mapView.setVehicleProfile(vehicleProfile, object : SetVehicleProfileListener {
             override fun onSuccess() {
             }
+
             override fun onError() {
             }
         })
-        mapView.mapDataModel.addMapObject(MapRoute.from(route).setType(MapRoute.RouteType.Primary).build())
+        mapView.mapDataModel.addMapObject(
+            MapRoute.from(route).setType(MapRoute.RouteType.Primary).build()
+        )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 

@@ -63,8 +63,8 @@ class OnlineNavigationTests : BaseTest() {
         super.setUp()
         routeCompute = RouteComputeHelper()
         mapDownload = MapDownloadHelper()
+        navigation = runBlocking { NavigationManagerProvider.getInstance() }
         mapDownload.unloadAllMaps()
-        navigation = NavigationManagerProvider.getInstance().get()
     }
 
     @Test
@@ -77,7 +77,7 @@ class OnlineNavigationTests : BaseTest() {
         val route = routeCompute.onlineComputeRoute(start, destination)
         navigationManagerKtx.setRouteForNavigation(route, navigation)
 
-        NavigationManagerProvider.getInstance().get().getRouteProgress(
+        navigation.getRouteProgress(
             listener
         )
 
@@ -101,7 +101,7 @@ class OnlineNavigationTests : BaseTest() {
             )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
         navigation.addOnSignpostListener(listener)
@@ -142,7 +142,7 @@ class OnlineNavigationTests : BaseTest() {
         Assert.assertNotNull(route)
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
         navigation.addOnDirectionListener(listener)
@@ -179,7 +179,7 @@ class OnlineNavigationTests : BaseTest() {
             )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -219,7 +219,7 @@ class OnlineNavigationTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnRailwayCrossingListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
@@ -258,7 +258,7 @@ class OnlineNavigationTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnHighwayExitListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
@@ -299,7 +299,7 @@ class OnlineNavigationTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
         navigation.addOnRouteChangedListener(listener)
@@ -380,7 +380,7 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnLaneListener(listener)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -420,7 +420,7 @@ class OnlineNavigationTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnSharpCurveListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
@@ -461,7 +461,7 @@ class OnlineNavigationTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
@@ -495,7 +495,7 @@ class OnlineNavigationTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnPlaceListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
@@ -532,7 +532,7 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnRouteRecomputeProgressListener(listener)
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
@@ -618,7 +618,7 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnRouteRecomputeProgressListener(listener)
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
         delay(2000)
@@ -668,7 +668,7 @@ class OnlineNavigationTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnWaypointPassListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -705,7 +705,7 @@ class OnlineNavigationTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnPlaceListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
@@ -756,7 +756,7 @@ class OnlineNavigationTests : BaseTest() {
 
     @Test
     fun passTwoWaypointsOnline() = runBlocking {
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
         val waypoints = listOf(
             GeoCoordinates(48.148760, 17.124930), // Waypoint 1
@@ -781,7 +781,7 @@ class OnlineNavigationTests : BaseTest() {
         navigation.addOnWaypointPassListener(listener)
 
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "sygic-legionarska.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 3F)
@@ -810,9 +810,8 @@ class OnlineNavigationTests : BaseTest() {
                 GeoCoordinates(48.147260, 17.150520),
                 GeoCoordinates(48.413651171955465, 16.927561108197466)
             )
-        val navigation = NavigationManagerProvider.getInstance().get()
         navigationManagerKtx.setRouteForNavigation(route, navigation)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -823,7 +822,7 @@ class OnlineNavigationTests : BaseTest() {
 
     @Test
     fun testStreetChangedListenerOnline() = runBlocking {
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.StreetChangedListener = mock(verboseLogging = true)
 
         val route = routeCompute.onlineComputeRoute(
@@ -834,7 +833,7 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addStreetChangedListener(listener)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -867,10 +866,9 @@ class OnlineNavigationTests : BaseTest() {
     fun onJunctionPassedStandaloneListenerInvocationWithoutRouteOnline() = runBlocking {
 
         val listener: NavigationManager.JunctionPassedListener = mock(verboseLogging = true)
-        val navigation = NavigationManagerProvider.getInstance().get()
 
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "rovinka.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 4f)
         Thread.sleep(3000)

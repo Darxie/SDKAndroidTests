@@ -9,14 +9,22 @@ import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
-import org.junit.Ignore
 import org.junit.Test
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 import timber.log.Timber
 import java.util.Timer
 import kotlin.concurrent.schedule
@@ -24,12 +32,14 @@ import kotlin.concurrent.schedule
 class MapDownloadTests : BaseTest() {
 
     private lateinit var mapDownloadHelper: MapDownloadHelper
+    private lateinit var mapInstaller: MapInstaller
 
     override fun setUp() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         mapDownloadHelper.resetMapLocale()
         mapDownloadHelper.clearCache()
+        mapInstaller = runBlocking { MapInstallerProvider.getInstance() }
     }
 
     @Test
@@ -39,10 +49,9 @@ class MapDownloadTests : BaseTest() {
         mapDownloadHelper.ensureMapNotInstalled("va")
         mapDownloadHelper.installAndLoadMap("va")
         mapDownloadHelper.uninstallMap("va")
-        val installer = MapInstallerProvider.getInstance().get()
         val listener: MapListResultListener = mock(verboseLogging = true)
         val captor = argumentCaptor<List<String>>()
-        installer.getAvailableCountries(true, listener)
+        mapInstaller.getAvailableCountries(true, listener)
         verify(listener, timeout(10_000L)).onMapListResult(
             captor.capture(),
             eq(MapInstaller.LoadResult.Success)
@@ -52,10 +61,9 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun getFranceCountryDetailsTest() {
-        val installer = MapInstallerProvider.getInstance().get()
         val listener: MapCountryDetailsListener = mock(verboseLogging = true)
         val countryCaptor = argumentCaptor<CountryDetails>()
-        installer.getCountryDetails("fr", false, listener)
+        mapInstaller.getCountryDetails("fr", false, listener)
         verify(listener, timeout(30_000L)).onCountryDetails(countryCaptor.capture())
 
         verify(
@@ -74,9 +82,8 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun getCountryDetailsFail() {
-        val installer = MapInstallerProvider.getInstance().get()
         val listener: MapCountryDetailsListener = mock(verboseLogging = true)
-        installer.getCountryDetails("xr", true, listener)
+        mapInstaller.getCountryDetails("xr", true, listener)
         verify(
             listener,
             timeout(30_000L)
@@ -91,15 +98,13 @@ class MapDownloadTests : BaseTest() {
         mapDownloadHelper.ensureMapNotInstalled("ad")
         mapDownloadHelper.ensureMapNotInstalled("us-dc")
 
-        val installer = MapInstallerProvider.getInstance().get()
-
         val spyListenerGI = createSpyListener()
         val spyListenerUSDC = createSpyListener()
         val spyListenerAD = createSpyListener()
 
-        installer.installMap("gi", spyListenerGI)
-        installer.installMap("ad", spyListenerAD)
-        val task = installer.installMap("us-dc", spyListenerUSDC)
+        mapInstaller.installMap("gi", spyListenerGI)
+        mapInstaller.installMap("ad", spyListenerAD)
+        val task = mapInstaller.installMap("us-dc", spyListenerUSDC)
         Timer().schedule(2000) {
             task.cancel()
         }
@@ -120,9 +125,8 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun getAvailableCountriesTest() {
-        val installer = MapInstallerProvider.getInstance().get()
         val listener: MapListResultListener = mock(verboseLogging = true)
-        installer.getAvailableCountries(false, listener)
+        mapInstaller.getAvailableCountries(false, listener)
         verify(listener, timeout(15000).only()).onMapListResult(
             argThat { isNotEmpty() },
             argThat { this == MapInstaller.LoadResult.Success })
@@ -130,9 +134,8 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun detectCurrentCountryTest() {
-        val installer = MapInstallerProvider.getInstance().get()
         val listener: MapResultListener = mock(verboseLogging = true)
-        installer.detectCurrentCountry("sk", listener)
+        mapInstaller.detectCurrentCountry("sk", listener)
         verify(listener, timeout(15_000L).only()).onMapResult(
             eq("sk"),
             eq(MapInstaller.LoadResult.Success)
@@ -144,17 +147,16 @@ class MapDownloadTests : BaseTest() {
     fun installIcelandTest() {
         assumeTrue(!isRunningOnEmulator())
         mapDownloadHelper.ensureMapNotInstalled("is")
-        val installer = MapInstallerProvider.getInstance().get()
 
         val listener: MapResultListener = mock(verboseLogging = true)
-        installer.installMap("is", listener)
+        mapInstaller.installMap("is", listener)
         verify(listener, timeout(60_000L)).onMapResult(
             eq("is"),
             eq(MapInstaller.LoadResult.Success)
         )
 
         val installedMapsListener: MapListResultListener = mock(verboseLogging = true)
-        installer.getAvailableCountries(true, installedMapsListener)
+        mapInstaller.getAvailableCountries(true, installedMapsListener)
         var installedMaps = emptyList<String>()
 
         verify(installedMapsListener, timeout(15000)).onMapListResult(argThat {
@@ -167,7 +169,7 @@ class MapDownloadTests : BaseTest() {
 
         val loadListener: MapResultListener = mock(verboseLogging = true)
         val installedMap = installedMaps.first()
-        installer.loadMap(installedMap, loadListener)
+        mapInstaller.loadMap(installedMap, loadListener)
         verify(loadListener, timeout(15000)).onMapResult(any(), eq(MapInstaller.LoadResult.Success))
     }
 
@@ -188,9 +190,8 @@ class MapDownloadTests : BaseTest() {
 
     @Test
     fun setUnsupportedLocaleExpectErrorTest() {
-        val installer = MapInstallerProvider.getInstance().get()
         val listener: ResultListener = mock(verboseLogging = true)
-        installer.setLocale("invalid", listener)
+        mapInstaller.setLocale("invalid", listener)
         verify(listener, timeout(20_000L).times(1))
             .onResult(eq(MapInstaller.LoadResult.UnsupportedLocale))
     }
@@ -198,17 +199,16 @@ class MapDownloadTests : BaseTest() {
     @Test
     fun setLocaleTest() {
         // cache is cleared during setUp() and locale set to en-en
-        val installer = MapInstallerProvider.getInstance().get()
         val listener: ResultListener = mock(verboseLogging = true)
 
-        installer.setLocale("sk-sk", listener)
+        mapInstaller.setLocale("sk-sk", listener)
         verify(listener, timeout(20_000L).times(1))
             .onResult(eq(MapInstaller.LoadResult.Success))
 
         val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         val detailsCaptor = argumentCaptor<CountryDetails>()
 
-        installer.getCountryDetails("sk", true, cdListener)
+        mapInstaller.getCountryDetails("sk", true, cdListener)
         verify(cdListener, timeout(20_000L)).onCountryDetails(detailsCaptor.capture())
         assertTrue(detailsCaptor.firstValue.name == "Slovensko")
         assertTrue(detailsCaptor.firstValue.continentName == "Európa")
@@ -218,7 +218,7 @@ class MapDownloadTests : BaseTest() {
     fun verifyProviderOfInstalledMapTest() {
         val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         mapDownloadHelper.installAndLoadMap("is")
-        MapInstallerProvider.getInstance().get().getCountryDetails("is", true, cdListener)
+        mapInstaller.getCountryDetails("is", true, cdListener)
         val captor = argumentCaptor<CountryDetails>()
         verify(cdListener, timeout(10_000L)).onCountryDetails(captor.capture())
         verify(cdListener, never()).onCountryDetailsError(any())
@@ -230,7 +230,7 @@ class MapDownloadTests : BaseTest() {
     fun verifyProviderOfNotInstalledMapCountrySplit() {
         val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         mapDownloadHelper.ensureMapNotInstalled("de-02")
-        MapInstallerProvider.getInstance().get().getCountryDetails("de-02", false, cdListener)
+        mapInstaller.getCountryDetails("de-02", false, cdListener)
         val captor = argumentCaptor<CountryDetails>()
         verify(cdListener, timeout(10_000L)).onCountryDetails(captor.capture())
         verify(cdListener, never()).onCountryDetailsError(any())
@@ -241,7 +241,7 @@ class MapDownloadTests : BaseTest() {
     @Test
     fun verifyNonExistentCountryDetailsOfResourceMap() {
         val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
-        MapInstallerProvider.getInstance().get().getCountryDetails("de-01", false, cdListener)
+        mapInstaller.getCountryDetails("de-01", false, cdListener)
         verify(cdListener, never()).onCountryDetails(any())
         verify(
             cdListener,
@@ -255,7 +255,7 @@ class MapDownloadTests : BaseTest() {
         }
     }
 
-    fun createSpyListener(): MapResultListener {
+    private fun createSpyListener(): MapResultListener {
         return spy(TestMapResultListener())
     }
 }

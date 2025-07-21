@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.routing
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.PrimaryRouteRequest
 import com.sygic.sdk.route.Route
@@ -27,10 +26,18 @@ import com.sygic.sdk.vehicletraits.powertrain.FuelType
 import com.sygic.sdk.vehicletraits.powertrain.PowerRange
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
+import kotlinx.coroutines.runBlocking
 import org.mockito.ArgumentCaptor
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 
 class RouteComputeHelper : BaseTest() {
-    private val mRouter = RouterProvider.getInstance().get()
+    private val router = runBlocking { RouterProvider.getInstance() }
 
     fun onlineComputeRoute(
         start: GeoCoordinates,
@@ -53,7 +60,7 @@ class RouteComputeHelper : BaseTest() {
 
         val captor: ArgumentCaptor<Route> = ArgumentCaptor.forClass(Route::class.java)
 
-        mRouter.computeRouteWithAlternatives(
+        router.computeRouteWithAlternatives(
             primaryRouteRequest,
             null,
             routeComputeFinishedListener
@@ -85,7 +92,7 @@ class RouteComputeHelper : BaseTest() {
 
         val captor: ArgumentCaptor<Route> = ArgumentCaptor.forClass(Route::class.java)
 
-        mRouter.computeRouteWithAlternatives(
+        router.computeRouteWithAlternatives(
             primaryRouteRequest,
             null,
             routeComputeFinishedListener
