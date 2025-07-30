@@ -1239,6 +1239,75 @@ class RouteComputeTests : BaseTest() {
         )
     }
 
+    /**
+     * https://jira.sygic.com/browse/SDC-14656
+     * TC895
+     * In this test we check that route length is < 80 km (because leads through shortest mountain road)
+     */
+    @Test
+    fun fuzzyDomainFranceTest() {
+        disableOnlineMaps()
+        MapDownloadHelper().installAndLoadMap("fr-06")
+
+        val start = GeoCoordinates(45.822810, 6.533240)
+        val destination = GeoCoordinates(45.594250, 6.880690)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                    generalVehicleTraits.vehicleType = VehicleType.Car
+                    generalVehicleTraits.maximalSpeed = 150
+                }
+                useEndpointProtection = true
+                useTraffic = false
+                useSpeedProfiles = false
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val actualLength = route.routeInfo.length
+        assertTrue(
+            "Expected route length < 80 km, but was $actualLength",
+            route.routeInfo.length < 80000
+        )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SN-35601
+     * TC899
+     * In this test we check that route length is < 30 km
+     * (because leads through shortest mountain road)
+     */
+    @Test
+    fun fuzzyDomainSloveniaTest() {
+        disableOnlineMaps()
+        MapDownloadHelper().installAndLoadMap("si")
+
+        val start = GeoCoordinates(46.484720, 13.782650)
+        val destination = GeoCoordinates(46.357730, 13.702640)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                    generalVehicleTraits.vehicleType = VehicleType.Car
+                    generalVehicleTraits.maximalSpeed = 150
+                }
+                useEndpointProtection = true
+                useTraffic = false
+                useSpeedProfiles = false
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val actualLength = route.routeInfo.length
+        assertTrue(
+            "Expected route length < 30 km, but was $actualLength",
+            route.routeInfo.length < 30000
+        )
+    }
+
     @Test
     fun arriveInDirectionTest() {
         mapDownloadHelper.installAndLoadMap("sk")

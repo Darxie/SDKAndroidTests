@@ -563,7 +563,7 @@ class HereTests : BaseHereTest() {
         navigation.addOnVehicleAidListener(listener)
         navigation.addOnVehicleZoneListener(listenerzone)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
