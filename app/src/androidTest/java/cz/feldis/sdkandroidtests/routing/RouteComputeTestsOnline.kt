@@ -494,6 +494,73 @@ class RouteComputeTestsOnline : BaseTest() {
         )
     }
 
+    /**
+     * https://jira.sygic.com/browse/SDC-14656
+     * TC895
+     * In this test we check that online route length is < 82 km
+     * (because leads through shortest mountain road)
+     */
+    @Test
+    fun fuzzyDomainFranceTestOnline() {
+
+        val start = GeoCoordinates(45.822810, 6.533240)
+        val destination = GeoCoordinates(45.594250, 6.880690)
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                    generalVehicleTraits.vehicleType = VehicleType.Car
+                    generalVehicleTraits.maximalSpeed = 150
+                }
+                useEndpointProtection = true
+                useTraffic = false
+                useSpeedProfiles = false
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val actualLength = route.routeInfo.length
+        assertTrue(
+            "Expected route length < 82 km, but was $actualLength",
+            route.routeInfo.length < 82000
+        )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SN-35606
+     * TC896
+     * In this test we check that online route length is < 105 km
+     * (because leads through shortest mountain road)
+     */
+    @Test
+    fun fuzzyDomainUSATestOnline() {
+
+        val start = GeoCoordinates(45.194770, -109.246780)
+        val destination = GeoCoordinates(45.019490, -109.934500)
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                    generalVehicleTraits.vehicleType = VehicleType.Car
+                    generalVehicleTraits.maximalSpeed = 150
+                }
+                useEndpointProtection = true
+                useTraffic = false
+                useSpeedProfiles = false
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val actualLength = route.routeInfo.length
+        assertTrue(
+            "Expected route length < 105 km, but was $actualLength",
+            route.routeInfo.length < 105000
+        )
+    }
+
+
     /***
      * TC791
      * Online routing. The route can't lead through the road 50.8026,-0.04953

@@ -38,6 +38,7 @@ import org.junit.Ignore
 import org.junit.Test
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
@@ -530,5 +531,54 @@ class HereTests : BaseHereTest() {
         assertTrue(
             estimatedTimeOfArrivalBus > 120
         )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14634
+     * No congestion charge warnings should be returned if the truck is electric.
+     */
+    @Test
+    fun vehicleAidZoneEmission() = runBlocking {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("gb-03")
+        val vehicleProfile = RouteComputeHelper().createElectricVehicleProfileTruck().apply {
+            this.dimensionalTraits = DimensionalTraits(totalWeight = 40000F)
+        }
+
+        val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
+        val listenerzone = mock<NavigationManager.OnVehicleZoneListener>(verboseLogging = true)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start = GeoCoordinates(51.50278, -0.12617),
+            destination = GeoCoordinates(51.50653, -0.12729),
+            routingOptions = RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile
+                routingService = RoutingService.Offline
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnVehicleAidListener(listener)
+        navigation.addOnVehicleZoneListener(listenerzone)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        verify(listener, timeout(6_000)).onVehicleAidInfo(argThat { aidInfoList ->
+            aidInfoList.any { vehicleAidInfo ->
+                vehicleAidInfo.restriction.type != RestrictionInfo.RestrictionType.ZonePaid
+            }
+        })
+
+        verify(listenerzone, timeout(6_000L)).onVehicleZoneInfo(eq(emptyList()))
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnVehicleAidListener(listener)
+        navigation.removeOnVehicleZoneListener(listenerzone)
+        navigationManagerKtx.stopNavigation(navigation)
     }
 }
