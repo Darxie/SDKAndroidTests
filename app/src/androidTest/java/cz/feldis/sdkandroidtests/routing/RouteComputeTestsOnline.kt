@@ -32,6 +32,7 @@ import cz.feldis.sdkandroidtests.utils.GeoUtils
 import junit.framework.Assert.assertNotNull
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
@@ -455,6 +456,231 @@ class RouteComputeTestsOnline : BaseTest() {
             maneuversInBoundingBox.isEmpty()
         )
 
+    }
+
+    /***
+     * https://jira.sygic.com/browse/CI-3488
+     * TC900
+     * Online routing. The route can't exit from the highway in coordinates 53.28470, -6.45511
+     */
+    @Test
+    fun exitsFromTheRouteIrelandOnlineTest() = runBlocking {
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Truck
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(53.28592, -6.46541),
+            bottomRight = GeoCoordinates(53.28261, -6.45114)
+        )
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            GeoCoordinates(53.291460, -6.438910),
+            GeoCoordinates(53.279980, -6.483670),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+                this.useTraffic = true
+                this.useSpeedProfiles = true
+            }
+        )
+
+        val maneuversInBoundingBox = route.maneuvers.filter { maneuver ->
+            GeoUtils.isPointInBoundingBox(maneuver.position, boundingBox)
+        }
+
+        assertTrue(
+            "Route contains unexpected maneuvers within the bounding box: $maneuversInBoundingBox",
+            maneuversInBoundingBox.isEmpty()
+        )
+
+    }
+
+    /***
+     * https://jira.sygic.com/browse/CI-3488
+     * TC901 (is a part of TC900)
+     * Online routing. The route can't exit from the highway in coordinates 52.39942, -7.91721
+     */
+    @Test
+    fun exitsFromTheRouteIreland2OnlineTest() = runBlocking {
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Truck
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(52.40341, -7.92215),
+            bottomRight = GeoCoordinates(52.39568, -7.90871)
+        )
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            GeoCoordinates(52.391330, -7.927900),
+            GeoCoordinates(52.410620, -7.913030),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.napStrategy = NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
+                this.useTraffic = false
+                this.useSpeedProfiles = false
+            }
+        )
+
+        val maneuversInBoundingBox = route.maneuvers.filter { maneuver ->
+            GeoUtils.isPointInBoundingBox(maneuver.position, boundingBox)
+        }
+
+        assertTrue(
+            "Route contains unexpected maneuvers within the bounding box: $maneuversInBoundingBox",
+            maneuversInBoundingBox.isEmpty()
+        )
+
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-12572
+     * TC832
+     * Route should go straight and should no have any detours (which would most likely be to the right).
+     * Therefore we check that there is no right turn.
+     */
+    @Test
+    fun lowerHeavyTruckPenaltiesSwedenOnlineTest() = runBlocking {
+
+        val vehicleProfile = VehicleProfile().apply {
+            this.dimensionalTraits = DimensionalTraits().apply {
+                this.totalWeight = 30000.0F
+                this.totalLength = 18000
+                this.totalHeight = 4000
+                this.totalWidth = 2500
+            }
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                this.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            GeoCoordinates(58.351620, 11.845900),
+            GeoCoordinates(58.347790, 11.792080),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.useSpeedProfiles = false
+                this.useTraffic = false
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val unwantedManeuver = route.maneuvers.any { maneuver ->
+            maneuver.type == RouteManeuver.Type.Right
+        }
+
+        assertFalse(
+            "Route contains an unwanted RIGHT maneuver.", unwantedManeuver,
+        )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14494
+     * TC902
+     * There are no warnings in Routing-Summary window
+     */
+    @Test
+    fun computeWithoutWarningsTestOnline() {
+        val start = GeoCoordinates(48.146400, 17.106870)
+        val destination = GeoCoordinates(48.373510, 17.594620)
+        val listener =
+            Mockito.mock(RouteComputeListener::class.java, withSettings().verboseLogging())
+        val routeComputeFinishedListener = Mockito.mock(RouteComputeFinishedListener::class.java)
+        val options = RoutingOptions()
+        options.apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Car
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalWeight = 30_000F
+                    totalLength = 18000
+                    totalWidth = 2500
+                    totalHeight = 4000
+                }
+                routingService = RoutingOptions.RoutingService.Online
+                napStrategy = NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
+                useSpeedProfiles = true
+                useTraffic = true
+            }
+            val routeRequest = RouteRequest()
+            routeRequest.apply {
+                setStart(start)
+                setDestination(destination)
+                routingOptions = options
+            }
+
+            val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
+
+            val router = RouterProvider.getInstance().get()
+
+            router.computeRouteWithAlternatives(
+                primaryRouteRequest,
+                null,
+                routeComputeFinishedListener
+            )
+
+            verify(listener, Mockito.timeout(10_000L)).onComputeFinished(
+                isNotNull(),
+                argThat { this == Router.RouteComputeStatus.Success }
+            )
+        }
+    }
+
+    /**
+     * https://jira.sygic.com/browse/CI-3366
+     * TC903
+     * There are no Truck warnings for vehicle type Bus in Routing-Summary window
+     */
+    @Test
+    fun computeWithoutTruckWarningsForBusTestOnline() {
+        val start = GeoCoordinates(47.773290, 12.009410)
+        val destination = GeoCoordinates(48.131460, 11.575850)
+        val listener =
+            Mockito.mock(RouteComputeListener::class.java, withSettings().verboseLogging())
+        val routeComputeFinishedListener = Mockito.mock(RouteComputeFinishedListener::class.java)
+        val options = RoutingOptions()
+        options.apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Bus
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalWeight = 15_500F
+                }
+                routingService = RoutingOptions.RoutingService.Online
+                napStrategy = NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
+                useSpeedProfiles = true
+                useTraffic = true
+            }
+            val routeRequest = RouteRequest()
+            routeRequest.apply {
+                setStart(start)
+                setDestination(destination)
+                routingOptions = options
+            }
+
+            val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
+
+            val router = RouterProvider.getInstance().get()
+
+            router.computeRouteWithAlternatives(
+                primaryRouteRequest,
+                null,
+                routeComputeFinishedListener
+            )
+
+            verify(listener, Mockito.timeout(10_000L)).onComputeFinished(
+                isNotNull(),
+                argThat { this == Router.RouteComputeStatus.Success }
+            )
+        }
     }
 
     /***
