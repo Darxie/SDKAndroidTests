@@ -587,7 +587,7 @@ class RouteComputeTestsOnline : BaseTest() {
     /**
      * https://jira.sygic.com/browse/SDC-14494
      * TC902
-     * There are no warnings in Routing-Summary window
+     * There are no warnings after route compute
      */
     @Test
     fun computeWithoutWarningsTestOnline() {
@@ -631,6 +631,57 @@ class RouteComputeTestsOnline : BaseTest() {
             verify(listener, Mockito.timeout(10_000L)).onComputeFinished(
                 isNotNull(),
                 argThat { this == Router.RouteComputeStatus.Success }
+            )
+        }
+    }
+
+    /**
+     * https://jira.sygic.com/browse/CI-2891
+     * TC906
+     * In this test we check that the route is compute in 3 seconds
+     */
+    @Test
+    fun computeIn3SecondsTestOnline() {
+        val start = GeoCoordinates(48.599070, 17.830600)
+        val destination = GeoCoordinates(52.235600, 21.010370)
+        val listener =
+            Mockito.mock(RouteComputeListener::class.java, withSettings().verboseLogging())
+        val routeComputeFinishedListener = Mockito.mock(RouteComputeFinishedListener::class.java)
+        val options = RoutingOptions()
+        options.apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalWeight = 10_000F
+                    totalLength = 16500
+                    totalWidth = 2500
+                    totalHeight = 3000
+                }
+                routingService = RoutingOptions.RoutingService.Online
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                useSpeedProfiles = true
+                useTraffic = true
+            }
+            val routeRequest = RouteRequest()
+            routeRequest.apply {
+                setStart(start)
+                setDestination(destination)
+                routingOptions = options
+            }
+
+            val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
+
+            val router = RouterProvider.getInstance().get()
+
+            router.computeRouteWithAlternatives(
+                primaryRouteRequest,
+                null,
+                routeComputeFinishedListener
+            )
+
+            verify(listener, Mockito.timeout(3_000L)).onComputeFinished(
+                isNotNull(),
+                argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings  }
             )
         }
     }
@@ -681,6 +732,104 @@ class RouteComputeTestsOnline : BaseTest() {
                 argThat { this == Router.RouteComputeStatus.Success }
             )
         }
+    }
+
+    /***
+    * https://jira.sygic.com/browse/CI-3023
+    * TC907
+    * Online routing. The route must include left maneuver in bounding box
+    */
+    @Test
+    fun routingThroughIntersectionSlovakiaOnlineTest() = runBlocking {
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Car
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(48.11995, 17.11774),
+            bottomRight = GeoCoordinates(48.11929, 17.11949)
+        )
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            GeoCoordinates(48.117600, 17.120250),
+            GeoCoordinates(48.118920, 17.115830),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+                this.useTraffic = true
+                this.useSpeedProfiles = true
+            }
+        )
+
+        val hasLeftTurnInsideBox = route.maneuvers.any {
+            it.type == RouteManeuver.Type.Left &&
+                    GeoUtils.isPointInBoundingBox(it.position, boundingBox)
+        }
+
+        assertTrue(
+            "Expected at least one LEFT maneuver inside bounding box, but none found.",
+            hasLeftTurnInsideBox
+        )
+    }
+
+    /***
+     * https://jira.sygic.com/browse/CI-3487
+     * TC909
+     * Online routing. The route can't exit from the highway in coordinates 52.64845, -0.50727
+     */
+    @Test
+    fun exitsFromTheRouteUKOnlineTest() = runBlocking {
+
+        val vehicleProfile = VehicleProfile().apply {
+            this.dimensionalTraits = DimensionalTraits().apply {
+                this.totalWeight = 40000.0F
+                this.totalLength = 16500
+                this.totalHeight = 4000
+                this.totalWidth = 2500
+            }
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                this.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(52.64931, -0.51330),
+            bottomRight = GeoCoordinates(52.64499, -0.49927)
+        )
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            GeoCoordinates(53.516590, -1.130280),
+            GeoCoordinates(52.571690, -0.243670),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+                this.useTraffic = true
+                this.useSpeedProfiles = true
+            }
+        )
+
+        val maneuversInBoundingBox = route.maneuvers.filter { maneuver ->
+            GeoUtils.isPointInBoundingBox(maneuver.position, boundingBox)
+        }
+
+        val actualLength = route.routeInfo.length
+
+        assertTrue(
+            "Route contains unexpected maneuvers within the bounding box: $maneuversInBoundingBox",
+            maneuversInBoundingBox.isEmpty()
+        )
+
+        assertTrue(
+            "Route length more that expected (142 km): $actualLength",
+            actualLength < 142000
+        )
+
     }
 
     /***

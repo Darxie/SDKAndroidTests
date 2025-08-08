@@ -685,6 +685,43 @@ class OnlineNavigationTests : BaseTest() {
     }
 
     /**
+     * Navigation test on waypoint pass
+     * TC905
+     * https://jira.sygic.com/browse/SDC-13951
+     *
+     * In this test we compute route with waypoint and set it for navigation.
+     * Via simulator provider we set this route for simulation and start demonstrate navigation.
+     * We verify that onWaypointPassed was invoked.
+     */
+    @Test
+    fun onWaypointPassInRestrictionTestOnline() = runBlocking {
+        val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
+
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.152580, 17.113530),
+            GeoCoordinates(48.147460, 17.110280),
+            listOf(GeoCoordinates(48.148540, 17.112430))
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnWaypointPassListener(listener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        Mockito.verify(
+            listener,
+            Mockito.timeout(STATUS_TIMEOUT)
+        )
+            .onWaypointPassed(any())
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnWaypointPassListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    /**
      * Verifies Place Listener behavior during online route navigation simulation.
      *
      * This test computes an online route and sets it for navigation. It uses a simulated navigation
