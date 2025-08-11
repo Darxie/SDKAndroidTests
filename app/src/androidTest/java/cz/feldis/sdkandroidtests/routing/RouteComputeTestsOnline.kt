@@ -681,7 +681,7 @@ class RouteComputeTestsOnline : BaseTest() {
 
             verify(listener, Mockito.timeout(3_000L)).onComputeFinished(
                 isNotNull(),
-                argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings  }
+                argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
             )
         }
     }
@@ -735,10 +735,10 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     /***
-    * https://jira.sygic.com/browse/CI-3023
-    * TC907
-    * Online routing. The route must include left maneuver in bounding box
-    */
+     * https://jira.sygic.com/browse/CI-3023
+     * TC907
+     * Online routing. The route must include left maneuver in bounding box
+     */
     @Test
     fun routingThroughIntersectionSlovakiaOnlineTest() = runBlocking {
         val vehicleProfile = VehicleProfile().apply {
@@ -854,9 +854,11 @@ class RouteComputeTestsOnline : BaseTest() {
             GeoCoordinates(40.717030, -73.502540),
             GeoCoordinates(40.732270, -73.448270),
             routingOptions = RoutingOptions().apply {
-                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.routingType = RoutingType.Fastest
                 this.vehicleProfile = vehicleProfile
                 this.useEndpointProtection = true
+                this.useTraffic = false
+                this.useSpeedProfiles = false
                 this.napStrategy = NearestAccessiblePointStrategy.Disabled
             }
         )

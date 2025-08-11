@@ -1319,7 +1319,6 @@ class RouteComputeTests : BaseTest() {
             start,
             destination,
             routingOptions = RoutingOptions().apply {
-                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
                 useEndpointProtection = true
                 napStrategy = NearestAccessiblePointStrategy.Disabled
                 arriveInDrivingSide = false
@@ -1331,7 +1330,6 @@ class RouteComputeTests : BaseTest() {
             start,
             destination,
             routingOptions = RoutingOptions().apply {
-                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
                 useEndpointProtection = true
                 napStrategy = NearestAccessiblePointStrategy.Disabled
                 arriveInDrivingSide = true
