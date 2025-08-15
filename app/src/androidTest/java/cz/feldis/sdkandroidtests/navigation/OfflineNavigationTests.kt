@@ -570,6 +570,11 @@ class OfflineNavigationTests : BaseTest() {
         assertEquals(finalRoute.waypoints[0].status, Waypoint.Status.Reached)
         assertEquals(finalRoute.waypoints[1].status, Waypoint.Status.Reached)
         assertEquals(finalRoute.waypoints[2].status, Waypoint.Status.Ahead)
+
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        navigation.removeOnWaypointPassListener(waypointPassListener)
+        navigation.removeOnRouteChangedListener(routeChangedListener)
+        navigationManagerKtx.stopNavigation(navigation)
     }
 
     @Test

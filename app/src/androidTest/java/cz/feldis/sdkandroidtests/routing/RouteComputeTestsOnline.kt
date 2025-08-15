@@ -617,8 +617,6 @@ class RouteComputeTestsOnline : BaseTest() {
 
             val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
 
-            val router = RouterProvider.getInstance().get()
-
             router.computeRouteWithAlternatives(
                 primaryRouteRequest,
                 null,
@@ -668,8 +666,6 @@ class RouteComputeTestsOnline : BaseTest() {
 
             val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
 
-            val router = RouterProvider.getInstance().get()
-
             router.computeRouteWithAlternatives(
                 primaryRouteRequest,
                 null,
@@ -715,8 +711,6 @@ class RouteComputeTestsOnline : BaseTest() {
             }
 
             val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-
-            val router = RouterProvider.getInstance().get()
 
             router.computeRouteWithAlternatives(
                 primaryRouteRequest,
