@@ -47,6 +47,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
+import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.any
@@ -58,6 +59,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import timber.log.Timber
+import java.util.Date
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -1314,7 +1316,6 @@ class RouteComputeTests : BaseTest() {
             start,
             destination,
             routingOptions = RoutingOptions().apply {
-                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
                 useEndpointProtection = true
                 napStrategy = NearestAccessiblePointStrategy.Disabled
                 arriveInDrivingSide = false
@@ -1326,7 +1327,6 @@ class RouteComputeTests : BaseTest() {
             start,
             destination,
             routingOptions = RoutingOptions().apply {
-                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
                 useEndpointProtection = true
                 napStrategy = NearestAccessiblePointStrategy.Disabled
                 arriveInDrivingSide = true
@@ -1339,6 +1339,48 @@ class RouteComputeTests : BaseTest() {
         assertTrue(
             "Expected significant difference (> 1000 m) due to arrive in direction, but got $difference meters",
             difference > 1_000
+        )
+    }
+
+
+    /***
+     * https://eurowag-cloud.atlassian.net/browse/NE-190
+     * The ferry doesn't operate between 10pm-06am and therefore the route computed at this time
+     * should be MUCH longer.
+     */
+    @Test
+    @Ignore("is not fixed, yet")
+    fun ferryComputedInTimeDifference() {
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("at")
+        val start = GeoCoordinates(48.38222326230946, 16.838396718192747)
+        val destination = GeoCoordinates(48.38053985562736, 16.828783604161984)
+        val routeCompute = RouteComputeHelper()
+        val routingOptions = RoutingOptions().apply {
+            this.departureTime = Date(1755213023) // 2025-08-15 01:10:23
+        }
+
+        val routeAtNight = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+        val timeToEndAtNight = routeAtNight.routeInfo.waypointDurations.last().withSpeedProfiles
+
+        routingOptions.apply {
+            this.departureTime = Date(1755178839) // 2025-08-14 15:40:39
+        }
+
+        val routeDay = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+        val timeToEndDay = routeDay.routeInfo.waypointDurations.last().withSpeedProfiles
+
+        assertTrue(
+            "day: $timeToEndDay, night: $timeToEndAtNight",
+            timeToEndDay < timeToEndAtNight
         )
     }
 
