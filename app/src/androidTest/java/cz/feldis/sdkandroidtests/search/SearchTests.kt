@@ -532,4 +532,22 @@ class SearchTests : BaseTest() {
             eq(ErrorCode.NO_SELECTION)
         )
     }
+
+    @Test
+    fun reverseGeoCanadaManitoba() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("ca-08")
+        val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
+            mock(verboseLogging = true)
+
+        reverseGeocoder
+            .reverseGeocode(GeoCoordinates(49.8987,-97.1627), emptySet(), reverseGeoListener)
+        verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
+            this.forEach {
+                if ((it.names.houseNumber == "684") && (it.names.street == "Victor St"))
+                    return@argThat true
+            }
+            return@argThat false
+        })
+    }
 }
