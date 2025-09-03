@@ -885,6 +885,9 @@ class RouteComputeTests : BaseTest() {
         val route = routeCompute.offlineRouteCompute(
             start,
             destination,
+            routingOptions = RoutingOptions().apply {
+                this.arriveInDrivingSide = false
+            }
         )
 
         assertEquals(6, route.maneuvers.size) // 6 maneuvers since october 2024 maps
