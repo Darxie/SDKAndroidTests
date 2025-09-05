@@ -40,6 +40,7 @@ import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -784,19 +785,15 @@ class OfflineNavigationTests : BaseTest() {
             val incidentsFlow = NavigationManagerProvider.getInstance().incidents()
             val targetIncident = withTimeout(20_000) {
                 incidentsFlow
-                    .onEach { list -> Timber.d("Emit zoznam incidentov (size=${list.size}): ids=${list.map { it.incident.id }}") }
-                    .map { list ->
-                        list.firstOrNull()
-                    }
-                    .filterNotNull()
-                    .onEach { Timber.d("Prvý incident = id=${it.incident.id}, distance=${it.distance}") }
+                    .filter { it.isNotEmpty() }
+                    .map { it.first() }
                     .first()
             }
 
             var lastDistance = Int.MAX_VALUE
             var seenAtLeastOnce = false
 
-            withTimeout(60_000) {
+            withTimeout(20_000) {
                 incidentsFlow
                     .map { list ->
                         // nájdi ten istý incident v najnovšom emite
