@@ -1,7 +1,17 @@
 package cz.feldis.sdkandroidtests.navigation
 
 import android.graphics.Color
+import androidx.lifecycle.Lifecycle
+import androidx.test.core.app.ActivityScenario
 import com.sygic.sdk.incidents.SpeedCamera
+import com.sygic.sdk.map.Camera
+import com.sygic.sdk.map.CameraState
+import com.sygic.sdk.map.IncidentWarningSettings
+import com.sygic.sdk.map.MapAnimation
+import com.sygic.sdk.map.MapCenter
+import com.sygic.sdk.map.MapCenterSettings
+import com.sygic.sdk.map.MapView
+import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
@@ -20,15 +30,25 @@ import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.listeners.SetVehicleProfileListener
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.NmeaFileDataProvider
+import cz.feldis.sdkandroidtests.SygicActivity
+import cz.feldis.sdkandroidtests.TestMapFragment
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.AdditionalMatchers
@@ -44,6 +64,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import timber.log.Timber
 
 class OfflineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -730,5 +751,118 @@ class OfflineNavigationTests : BaseTest() {
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
         navigation.removeOnRouteChangedListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    @OptIn(FlowPreview::class)
+    @Test
+    fun setIncidentWarningSettingsAfterPassingSpeedCam(): Unit = runBlocking {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "speedcamnmnv.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+
+        try {
+            val mapView = getMapView(mapFragment)
+            mapDownload.installAndLoadMap("sk")
+
+            navigationManagerKtx.startSimulator(logSimulatorAdapter)
+            navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
+
+            mapView.cameraModel.movementMode = Camera.MovementMode.FollowGpsPosition
+            mapView.cameraModel.rotationMode = Camera.RotationMode.Vehicle
+            mapView.cameraModel.zoomLevel = 19F
+            mapView.cameraModel.tilt = 45F
+
+            val incidentsFlow = NavigationManagerProvider.getInstance().incidents()
+            val targetIncident = withTimeout(20_000) {
+                incidentsFlow
+                    .onEach { list -> Timber.d("Emit zoznam incidentov (size=${list.size}): ids=${list.map { it.incident.id }}") }
+                    .map { list ->
+                        list.firstOrNull()
+                    }
+                    .filterNotNull()
+                    .onEach { Timber.d("Prvý incident = id=${it.incident.id}, distance=${it.distance}") }
+                    .first()
+            }
+
+            var lastDistance = Int.MAX_VALUE
+            var seenAtLeastOnce = false
+
+            withTimeout(60_000) {
+                incidentsFlow
+                    .map { list ->
+                        // nájdi ten istý incident v najnovšom emite
+                        list.find { it.incident.id == targetIncident.incident.id }
+                    }
+                    .onEach { Timber.d("Nájdený incident pre ID=${targetIncident.incident.id}: $it") }
+                    .debounce(200)
+                    .onEach { info ->
+                        if (info != null) {
+                            seenAtLeastOnce = true
+                            val d = info.distance
+                            Timber.d("Distance k incidentu: $d (last=$lastDistance)")
+                            // tolerancia na šum, napr. +5 m
+                            assertTrue(
+                                "Distance by sa mala znižovať (predtým=$lastDistance, teraz=$d)",
+                                d <= lastDistance
+
+                            )
+                            lastDistance = d
+                        }
+                    }
+                    .debounce(1000)
+                    .first { info -> seenAtLeastOnce && info == null }
+            }
+
+            delay(2_000)
+
+            val incidentWarningSettings = IncidentWarningSettings()
+            mapView.setIncidentWarningSettings(incidentWarningSettings)
+
+            delay(2_000)
+
+
+        } finally {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        }
+    }
+
+    private fun getInitialCameraState(): CameraState {
+        return CameraState.Builder().apply {
+            setPosition(GeoCoordinates(48.15132, 17.07665))
+            setMapCenterSettings(
+                MapCenterSettings(
+                    MapCenter(0.5f, 0.5f),
+                    MapCenter(0.5f, 0.5f),
+                    MapAnimation.NONE, MapAnimation.NONE
+                )
+            )
+            setMapPadding(0.0f, 0.0f, 0.0f, 0.0f)
+            setRotation(0f)
+            setZoomLevel(14F)
+            setMovementMode(Camera.MovementMode.Free)
+            setRotationMode(Camera.RotationMode.Free)
+            setTilt(0f)
+        }.build()
+    }
+
+    private fun getMapView(mapFragment: TestMapFragment): MapView {
+        val mapInitListener: OnMapInitListener = mock(verboseLogging = true)
+        val mapViewCaptor = argumentCaptor<MapView>()
+
+        mapFragment.getMapAsync(mapInitListener)
+        verify(mapInitListener, timeout(5_000L)).onMapReady(
+            mapViewCaptor.capture()
+        )
+        return mapViewCaptor.firstValue
     }
 }

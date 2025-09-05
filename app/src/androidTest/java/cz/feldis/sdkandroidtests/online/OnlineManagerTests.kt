@@ -37,7 +37,6 @@ class OnlineManagerTests : BaseTest() {
             onlineManager.enableOnlineMapStreaming(listener)
             Mockito.verify(listener, Mockito.timeout(STATUS_TIMEOUT))
                 .onSuccess()
-            onlineManager.removeMapFlagSettingErrorListener(listener)
         }
 
         val listener2: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
@@ -47,7 +46,6 @@ class OnlineManagerTests : BaseTest() {
         Mockito.verify(listener2, Mockito.timeout(STATUS_TIMEOUT))
             .onError(eq(OnlineManager.MapStreamingError.ModeAlreadyInUse))
 
-        onlineManager.removeMapFlagSettingErrorListener(listener2)
     }
 
     /**
