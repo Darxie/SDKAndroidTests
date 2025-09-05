@@ -1,0 +1,37 @@
+{
+  "skin": {
+    "poi_categories": {
+      "custom": {
+        "categories": {
+          "moja_ev_kategoria": {
+            "color": "0x3370d1ff",
+            "enabled": true,
+            "externIconsFont": false,
+            "icon": "0xe31a",
+            "importance": "Minor",
+            "priority": 5,
+            "showWithoutText": true,
+            "zoomLevel": 12.7,
+            "conditions": [
+              {
+                "type": "ev_connector_match",
+                "preferred": {
+                  "color": "0x4cb500ff"
+                },
+                "compatible": {
+                  "color": "0x000000ff"
+                },
+                "other": {
+                  "color": "0x808080ff"
+                },
+                "default": {
+                  "color": "0x4cb500ff"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

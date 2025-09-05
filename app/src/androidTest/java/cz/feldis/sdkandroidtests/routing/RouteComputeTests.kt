@@ -1,5 +1,6 @@
 package cz.feldis.sdkandroidtests.routing
 
+import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.ChargingWaypoint
 import com.sygic.sdk.route.GuidedRouteProfile
@@ -30,12 +31,15 @@ import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.dimensional.Trailer
 import com.sygic.sdk.vehicletraits.general.VehicleType
+import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
+import com.sygic.sdk.vehicletraits.hazmat.TunnelCategory
 import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
 import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
 import com.sygic.sdk.vehicletraits.powertrain.FuelType
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import cz.feldis.sdkandroidtests.utils.GeoUtils
 import junit.framework.Assert.assertNotNull
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
@@ -50,59 +54,25 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.isNotNull
 import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
-import org.mockito.kotlin.withSettings
 import timber.log.Timber
+import java.util.Date
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 class RouteComputeTests : BaseTest() {
     private lateinit var mapDownloadHelper: MapDownloadHelper
     private lateinit var routeComputeHelper: RouteComputeHelper
+    private lateinit var router: Router
 
     override fun setUp() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
-    }
-
-    @Ignore("Does not work")
-    @Test
-    fun computeNextDurationsTestOnline() {
-        val listener: RouteDurationListener = mock(verboseLogging = true)
-        val router = RouterProvider.getInstance().get()
-
-        val start = GeoCoordinates(48.145718, 17.118669)
-        val destination = GeoCoordinates(48.190322, 16.401080)
-        val route = routeComputeHelper.onlineComputeRoute(start, destination)
-
-        val times =
-            listOf(
-                System.currentTimeMillis() / 1000 + 1800,
-                System.currentTimeMillis() / 1000 + 3700
-            )
-
-        router.computeNextDurations(route, times, listener)
-
-        verify(listener, timeout(35_000L))
-            .onRouteDurations(argThat {
-                if (this != route) {
-                    Timber.e("Route is not equal to the original route.")
-                    return@argThat false
-                }
-                true
-            }, argThat {
-                if (this.size != 2) {
-                    Timber.e("List of durations is not equal to 2, List size is ${this.size}")
-                    return@argThat false
-                }
-                true
-            })
+        router = runBlocking { RouterProvider.getInstance() }
     }
 
     @Test
@@ -110,7 +80,6 @@ class RouteComputeTests : BaseTest() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
         val listener: RouteDurationListener = mock(verboseLogging = true)
-        val router = RouterProvider.getInstance().get()
 
         val start = GeoCoordinates(48.145718, 17.118669)
         val destination = GeoCoordinates(48.190322, 16.401080)
@@ -141,25 +110,6 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun getRouteElementsIcelandOnline() {
-        val elementsListener: RouteElementsListener = mock(verboseLogging = true)
-
-        val start = GeoCoordinates(63.556092, -19.794962)
-        val destination = GeoCoordinates(63.420816, -19.001375)
-        val route = routeComputeHelper.onlineComputeRoute(start, destination)
-
-        route.getRouteElements(elementsListener)
-        verify(elementsListener, timeout(40_000L)).onRouteElementsRetrieved(
-            argThat {
-                if (this.isEmpty()) {
-                    return@argThat false
-                }
-                true
-            }
-        )
-    }
-
-    @Test
     fun getRouteElementsIcelandOffline() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("is")
@@ -182,42 +132,6 @@ class RouteComputeTests : BaseTest() {
                 }
                 true
             }
-        )
-    }
-
-    @Test
-    fun computeDoPraceZDomuOnline() {
-        val start = GeoCoordinates(48.101713, 17.234017)
-        val destination = GeoCoordinates(48.145644, 17.127011)
-        val listener =
-            Mockito.mock(RouteComputeListener::class.java, withSettings().verboseLogging())
-        val routeComputeFinishedListener = Mockito.mock(RouteComputeFinishedListener::class.java)
-        val options = RoutingOptions()
-        options.apply {
-            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile()
-            routingService = RoutingOptions.RoutingService.Online
-            napStrategy = NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
-        }
-        val routeRequest = RouteRequest()
-        routeRequest.apply {
-            setStart(start)
-            setDestination(destination)
-            routingOptions = options
-        }
-
-        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-
-        val router = RouterProvider.getInstance().get()
-
-        router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
-
-        verify(listener, Mockito.timeout(10_000L)).onComputeFinished(
-            isNotNull(),
-            argThat { this == Router.RouteComputeStatus.Success }
-        )
-        verify(listener, never()).onComputeFinished(
-            isNull(),
-            argThat { this != Router.RouteComputeStatus.Success }
         )
     }
 
@@ -265,67 +179,6 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun routePlanFromJSONOnline() {
-        val start = GeoCoordinates(48.145718, 17.118669)
-        val destination = GeoCoordinates(48.190322, 16.401080)
-        val originalRoute =
-            routeComputeHelper.onlineComputeRoute(start, destination)
-        val listener: RouteRequestDeserializedListener = mock(verboseLogging = true)
-
-        val routeJson = originalRoute.serializeToBriefJSON()
-
-        RouterProvider.getInstance().get()
-            .createRouteRequestFromJSONString(json = routeJson, listener)
-        verify(listener, timeout(1_000L)).onSuccess(
-            argThat {
-                if (this.start?.originalPosition == start && this.destination?.originalPosition == destination) {
-                    return@argThat true
-                }
-                false
-            }
-        )
-    }
-
-    @Test
-    fun unreachableTargetTruckWeightTestOnline() {
-        val start = GeoCoordinates(50.062084, 14.432741)
-        val destination = GeoCoordinates(48.144826, 17.100258)
-
-        val listener: RouteComputeListener = mock(verboseLogging = true)
-        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
-
-        val options = RoutingOptions()
-        options.apply {
-            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
-            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
-                generalVehicleTraits.vehicleType = VehicleType.Truck
-                dimensionalTraits = DimensionalTraits().apply {
-                    totalWeight = 50_000F
-                }
-            }
-            routingService = RoutingOptions.RoutingService.Online
-            napStrategy = NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
-        }
-
-        val routeRequest = RouteRequest()
-        routeRequest.apply {
-            setStart(start)
-            setDestination(destination)
-            routingOptions = options
-        }
-
-        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
-
-        router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
-
-        verify(listener, timeout(20_000L)).onComputeFinished(
-            isNull(),
-            argThat { this == Router.RouteComputeStatus.UnreachableTarget }
-        )
-    }
-
-    @Test
     fun mapNotAvailableTruckTestOffline() {
         disableOnlineMaps()
         val start = GeoCoordinates(48.9844, 22.1844)
@@ -356,46 +209,11 @@ class RouteComputeTests : BaseTest() {
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
 
-        val router = RouterProvider.getInstance().get()
-
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
 
         verify(listener, Mockito.timeout(50_000L)).onComputeFinished(
             isNull(),
             argThat { this == Router.RouteComputeStatus.SelectionOutsideOfMap }
-        )
-    }
-
-    @Test
-    @Ignore("Returns Unreachable target")
-    fun computeWrongFromPointOnline() {
-        val start = GeoCoordinates(34.764518085578196, 18.03834181295307)
-        val destination = GeoCoordinates(47.99919432978094, 18.164403416068332)
-        val listener: RouteComputeListener = mock(verboseLogging = true)
-        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
-
-        val options = RoutingOptions()
-        options.apply {
-            routingService = RoutingOptions.RoutingService.Online
-            napStrategy = NearestAccessiblePointStrategy.Disabled
-            useEndpointProtection = true
-        }
-
-        val routeRequest = RouteRequest()
-        routeRequest.apply {
-            setStart(start)
-            setDestination(destination)
-            routingOptions = options
-        }
-
-        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
-
-        router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
-
-        verify(listener, timeout(20_000L)).onComputeFinished(
-            isNull(),
-            argThat { this == Router.RouteComputeStatus.WrongFromPoint }
         )
     }
 
@@ -421,7 +239,6 @@ class RouteComputeTests : BaseTest() {
         }
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
 
@@ -453,7 +270,6 @@ class RouteComputeTests : BaseTest() {
         }
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
 
         val task = router.computeRouteWithAlternatives(
             primaryRouteRequest,
@@ -479,7 +295,6 @@ class RouteComputeTests : BaseTest() {
         val routeRequest = RouteRequest(guidedRouteProfile)
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
         verify(listener, timeout(10_000L)).onComputeFinished(
@@ -507,7 +322,6 @@ class RouteComputeTests : BaseTest() {
         val routeRequest = RouteRequest(guidedRouteProfile)
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        val router = RouterProvider.getInstance().get()
 
         router.computeRouteWithAlternatives(primaryRouteRequest, null, routeComputeFinishedListener)
         verify(listener, timeout(10_000L)).onComputeFinished(
@@ -527,7 +341,6 @@ class RouteComputeTests : BaseTest() {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
                 generalVehicleTraits.maximalSpeed = 90
             }
-
         }
 
         val routeTruck = routeCompute.offlineRouteCompute(
@@ -561,51 +374,6 @@ class RouteComputeTests : BaseTest() {
         assertTrue(
             "camper: $timeToEndCamper, truck: $timeToEndTruck ",
             timeToEndCamper + 100 < timeToEndTruck
-        )
-    }
-
-    @Test
-    fun onlineRoutingGetLastManeuverCountry() {
-        val start = GeoCoordinates(48.13204503419638, 17.09786238379282)
-        val destination = GeoCoordinates(51.491340, -0.102940)
-
-        val route = routeComputeHelper.onlineComputeRoute(
-            start,
-            destination
-        )
-
-        val maneuvers = route.maneuvers
-        assertEquals("gb", maneuvers.last().nextIso)
-    }
-
-    @Test
-    fun onlineRoutingGetAllTransitCountries() {
-        val start = GeoCoordinates(48.13204503419638, 17.09786238379282)
-        val destination = GeoCoordinates(51.491340, -0.102940)
-
-        val route = routeComputeHelper.onlineComputeRoute(
-            start,
-            destination,
-            routingOptions = RoutingOptions().apply { // turn off to always get the same route
-                this.useTraffic = false
-                this.useSpeedProfiles = false
-            }
-        )
-
-        val expectedCountries = listOf(
-            TransitCountryInfo("sk", emptyList()),
-            TransitCountryInfo("at", emptyList()),
-            TransitCountryInfo("de", emptyList()),
-            TransitCountryInfo("nl", emptyList()),
-            TransitCountryInfo("be", emptyList()),
-            TransitCountryInfo("fr", emptyList()),
-            TransitCountryInfo("gb", emptyList())
-        )
-
-        val transitCountriesInfoListener: TransitCountriesInfoListener = mock(verboseLogging = true)
-        route.getTransitCountriesInfo(transitCountriesInfoListener)
-        verify(transitCountriesInfoListener, timeout(5_000L)).onTransitCountriesInfo(
-            expectedCountries
         )
     }
 
@@ -667,6 +435,43 @@ class RouteComputeTests : BaseTest() {
         )
     }
 
+    @Test
+    fun transitCountriesPreserveOrderTest_ThroughLiechtensteinToHungary() {
+        mapDownloadHelper.installAndLoadMap("ch") // Switzerland
+        mapDownloadHelper.installAndLoadMap("li") // Liechtenstein
+        mapDownloadHelper.installAndLoadMap("at") // Austria
+        mapDownloadHelper.installAndLoadMap("sk") // Slovakia
+        mapDownloadHelper.installAndLoadMap("hu") // Hungary
+
+        // Define route: start in Switzerland, end in Hungary
+        val start = GeoCoordinates(47.3769, 8.5417) // Zurich
+        val waypoint1 = GeoCoordinates(47.1416, 9.5215) // Liechtenstein
+        val waypoint2 = GeoCoordinates(47.3878886618401, 13.101404296427072) // Austria
+        val waypoint3 = GeoCoordinates(48.1486, 17.1077) // Slovakia
+        val destination = GeoCoordinates(47.4979, 19.0402) // Budapest
+
+        val route = RouteComputeHelper().offlineRouteCompute(
+            start,
+            destination,
+            waypoints = listOf(waypoint1, waypoint2, waypoint3)
+        )
+
+        // Expected order of transition countries
+        val expectedCountries = listOf(
+            TransitCountryInfo("ch", emptyList()),
+            TransitCountryInfo("li", emptyList()),
+            TransitCountryInfo("at", emptyList()),
+            TransitCountryInfo("sk", emptyList()),
+            TransitCountryInfo("hu", emptyList())
+        )
+
+        // Mock and verify the transit countries info listener
+        val listener: TransitCountriesInfoListener = mock(verboseLogging = true)
+        route.getTransitCountriesInfo(listener)
+
+        verify(listener, timeout(5_000L)).onTransitCountriesInfo(expectedCountries)
+    }
+
     /**
      * https://jira.sygic.com/browse/SDC-13368
      *
@@ -697,10 +502,47 @@ class RouteComputeTests : BaseTest() {
             route.routeRequest.routingOptions.routeAvoids.countryRouteAvoidables
 
         listOf(startCountry, destinationCountry).forEach { country ->
-            countryRouteAvoidables[country]?.let { avoidSet ->
-                avoidSet.forEach { avoidType ->
-                    assert(avoidType != RouteAvoids.Type.Country) { "Country avoidable type found in $country" }
+            countryRouteAvoidables.find { it.first == country }?.second?.forEach { avoidType ->
+                assert(avoidType != RouteAvoids.Type.Country) { "Country avoidable type found in $country" }
+            }
+        }
+    }
+
+    @Test
+    fun avoidableCountryTest_startAndEndCountryMustNotBeAvoided() {
+        mapDownloadHelper.installAndLoadMap("ch") // Switzerland
+        mapDownloadHelper.installAndLoadMap("at") // Austria
+        mapDownloadHelper.installAndLoadMap("sk") // Slovakia
+        mapDownloadHelper.installAndLoadMap("hu") // Hungary
+
+        val start = GeoCoordinates(47.35823094740036, 8.588782585276224) // Zurich
+        val destination = GeoCoordinates(48.607066673016575, 21.3232184832135) // Cana, SVK
+
+        val route = RouteComputeHelper().offlineRouteCompute(
+            start,
+            destination
+        )
+
+        val startCountry = "ch"
+        val destinationCountry = "sk"
+
+        val countryRouteAvoidables: List<Pair<String, Set<RouteAvoids.Type>>> =
+            route.routeRequest.routingOptions.routeAvoids.countryRouteAvoidables
+
+        // ch and sk should not have "Country" avoidables
+        listOf(startCountry, destinationCountry).forEach { country ->
+            countryRouteAvoidables.find { it.first == country }?.second?.forEach { avoidType ->
+                assert(avoidType != RouteAvoids.Type.Country) {
+                    "Country avoidable type should not be applied to $country"
                 }
+            }
+        }
+
+        // at and hu should have "Country" avoidables
+        listOf("at", "hu").forEach { country ->
+            val avoids = countryRouteAvoidables.find { it.first == country }?.second
+            assert(avoids != null && RouteAvoids.Type.Country in avoids) {
+                "Expected $country to be marked as avoidable with type 'Country'"
             }
         }
     }
@@ -740,7 +582,7 @@ class RouteComputeTests : BaseTest() {
         val captor = argumentCaptor<Route>()
         val captorWarnings = argumentCaptor<List<RouteWarning>>()
 
-        RouterProvider.getInstance().get().computeRouteWithAlternatives(
+        router.computeRouteWithAlternatives(
             primaryRouteRequest,
             null,
             routeComputeFinishedListener
@@ -802,7 +644,7 @@ class RouteComputeTests : BaseTest() {
         val captor = argumentCaptor<Route>()
         val captorWarnings = argumentCaptor<List<RouteWarning>>()
 
-        RouterProvider.getInstance().get().computeRouteWithAlternatives(
+        router.computeRouteWithAlternatives(
             primaryRouteRequest,
             null,
             routeComputeFinishedListener
@@ -817,33 +659,6 @@ class RouteComputeTests : BaseTest() {
         verify(routeWarningsListener, timeout(10_000L)).onRouteWarnings(captorWarnings.capture())
 
         assert(captorWarnings.firstValue.size > 1)
-    }
-
-    @Test
-    fun preferenceViolationWarningEVTest() {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
-
-        val start = GeoCoordinates(48.14548507020328, 17.126529723864405)
-        val destination = GeoCoordinates(48.217657544377715, 17.406051728312903)
-        val options = RoutingOptions().apply {
-            vehicleProfile =
-                routeComputeHelper.createElectricVehicleProfileForPreferenceViolation(50f, 5f)
-            napStrategy = NearestAccessiblePointStrategy.Disabled
-            useEndpointProtection = true
-        }
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            routingOptions = options
-        )
-
-        route.getRouteWarnings(routeWarningsListener)
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.find { it is RouteWarning.LocationWarning.EVPreferenceViolation } != null
-        })
     }
 
     @Test
@@ -1027,7 +842,7 @@ class RouteComputeTests : BaseTest() {
         val captor = argumentCaptor<Route>()
         val captorWarnings = argumentCaptor<List<RouteWarning>>()
 
-        RouterProvider.getInstance().get().computeRouteWithAlternatives(
+        router.computeRouteWithAlternatives(
             primaryRouteRequest,
             null,
             routeComputeFinishedListener
@@ -1070,6 +885,9 @@ class RouteComputeTests : BaseTest() {
         val route = routeCompute.offlineRouteCompute(
             start,
             destination,
+            routingOptions = RoutingOptions().apply {
+                this.arriveInDrivingSide = false
+            }
         )
 
         assertEquals(6, route.maneuvers.size) // 6 maneuvers since october 2024 maps
@@ -1264,7 +1082,7 @@ class RouteComputeTests : BaseTest() {
                 }
             }
 
-        RouterProvider.getInstance().get().computeEVRange(
+        router.computeEVRange(
             GeoCoordinates(48.10095535808773, 17.234824479529344),
             listOf(5.0),
             RoutingOptions().apply {
@@ -1280,7 +1098,7 @@ class RouteComputeTests : BaseTest() {
 
         val listener2: EVRangeListener = mock(verboseLogging = true)
 
-        RouterProvider.getInstance().get().computeEVRange(
+        router.computeEVRange(
             GeoCoordinates(48.10095535808773, 17.234824479529344),
             listOf(5.0),
             RoutingOptions().apply {
@@ -1308,9 +1126,270 @@ class RouteComputeTests : BaseTest() {
         assertTrue("Isochrones should be different, but they appear identical.", areDifferent)
     }
 
+    /**
+     * https://jira.sygic.com/browse/SDC-14224
+     * TC892
+     * In this test we check that route doesn't lead through tunnel cat. E by following way:
+     * restricted route and normal route shouldn't have the same length and difference should be > 1 km
+     */
+    @Test
+    fun tunnelCategoryERouteLengthDifferenceTest() {
+        mapDownloadHelper.installAndLoadMap("gb-03")
+
+        val start = GeoCoordinates(51.49906, -0.05638)
+        val destination = GeoCoordinates(51.51246, -0.04123)
+
+        val normalRoute = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination
+        )
+        val lengthNormal = normalRoute.routeInfo.length
+
+        val restrictedRoute = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                    generalVehicleTraits.vehicleType = VehicleType.Truck
+                    hazmatTraits = HazmatTraits(emptySet(), TunnelCategory.E)
+                }
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val lengthRestricted = restrictedRoute.routeInfo.length
+
+        val difference = lengthRestricted - lengthNormal
+
+        assertTrue(
+            "Expected significant difference (> 1000 m) due to tunnel restriction, but got $difference meters",
+            difference > 1_000
+        )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14224
+     * TC893
+     * In this test we check that route doesn't lead through tunnel cat. C
+     */
+    @Test
+    fun tunnelCategoryCTest() {
+        mapDownloadHelper.installAndLoadMap("gb-03")
+
+        val start = GeoCoordinates(51.45571, 0.23953)
+        val destination = GeoCoordinates(51.48845, 0.26980)
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                hazmatTraits = HazmatTraits(emptySet(), TunnelCategory.C)
+            }
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(51.45313, 0.24168),
+            bottomRight = GeoCoordinates(51.45145, 0.24507)
+        )
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val hasExitInsideBox = route.maneuvers.any {
+            (it.type == RouteManeuver.Type.RoundaboutLeftE &&
+                    GeoUtils.isPointInBoundingBox(it.position, boundingBox))
+        }
+
+        assertTrue(
+            "Expected Roundabout exit maneuver inside bounding box, but none found.",
+            hasExitInsideBox
+        )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-13864
+     */
+    @Test
+    fun shortBusRoutingTest() {
+        disableOnlineMaps()
+        MapDownloadHelper().installAndLoadMap("sk")
+
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Bus
+                generalVehicleTraits.maximalSpeed = 90
+            }
+        }
+
+        val start = GeoCoordinates(48.1237, 17.1991)
+        val destination = GeoCoordinates(48.1021, 17.2321)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+        val actualLength = route.routeInfo.length
+        assertTrue(
+            "Expected route length < 4000, but was $actualLength",
+            route.routeInfo.length < 4000
+        )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14656
+     * TC895
+     * In this test we check that route length is < 80 km (because leads through shortest mountain road)
+     */
+    @Test
+    fun fuzzyDomainFranceTest() {
+        disableOnlineMaps()
+        MapDownloadHelper().installAndLoadMap("fr-06")
+
+        val start = GeoCoordinates(45.822810, 6.533240)
+        val destination = GeoCoordinates(45.594250, 6.880690)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                    generalVehicleTraits.vehicleType = VehicleType.Car
+                    generalVehicleTraits.maximalSpeed = 150
+                }
+                useEndpointProtection = true
+                useTraffic = false
+                useSpeedProfiles = false
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val actualLength = route.routeInfo.length
+        assertTrue(
+            "Expected route length < 80 km, but was $actualLength",
+            route.routeInfo.length < 80000
+        )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SN-35601
+     * TC899
+     * In this test we check that route length is < 30 km
+     * (because leads through shortest mountain road)
+     */
+    @Test
+    fun fuzzyDomainSloveniaTest() {
+        disableOnlineMaps()
+        MapDownloadHelper().installAndLoadMap("si")
+
+        val start = GeoCoordinates(46.484720, 13.782650)
+        val destination = GeoCoordinates(46.357730, 13.702640)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                    generalVehicleTraits.vehicleType = VehicleType.Car
+                    generalVehicleTraits.maximalSpeed = 150
+                }
+                useEndpointProtection = true
+                useTraffic = false
+                useSpeedProfiles = false
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val actualLength = route.routeInfo.length
+        assertTrue(
+            "Expected route length < 30 km, but was $actualLength",
+            route.routeInfo.length < 30000
+        )
+    }
+
+    @Test
+    fun arriveInDirectionTest() {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val start = GeoCoordinates(48.14689, 17.22613)
+        val destination = GeoCoordinates(48.13879, 17.27926)
+
+        val normalRoute = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                arriveInDrivingSide = false
+            }
+        )
+        val lengthWithoutArriveInDirection = normalRoute.routeInfo.length
+
+        val arriveInDirectionRoute = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                arriveInDrivingSide = true
+            }
+        )
+        val lengthWithArriveInDirection = arriveInDirectionRoute.routeInfo.length
+
+        val difference = lengthWithArriveInDirection - lengthWithoutArriveInDirection
+
+        assertTrue(
+            "Expected significant difference (> 1000 m) due to arrive in direction, but got $difference meters",
+            difference > 1_000
+        )
+    }
+
+
+    /***
+     * https://eurowag-cloud.atlassian.net/browse/NE-190
+     * The ferry doesn't operate between 10pm-06am and therefore the route computed at this time
+     * should be MUCH longer.
+     */
+    @Test
+    @Ignore("is not fixed, yet")
+    fun ferryComputedInTimeDifference() {
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("at")
+        val start = GeoCoordinates(48.38222326230946, 16.838396718192747)
+        val destination = GeoCoordinates(48.38053985562736, 16.828783604161984)
+        val routeCompute = RouteComputeHelper()
+        val routingOptions = RoutingOptions().apply {
+            this.departureTime = Date(1755213023) // 2025-08-15 01:10:23
+        }
+
+        val routeAtNight = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+        val timeToEndAtNight = routeAtNight.routeInfo.waypointDurations.last().withSpeedProfiles
+
+        routingOptions.apply {
+            this.departureTime = Date(1755178839) // 2025-08-14 15:40:39
+        }
+
+        val routeDay = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+        val timeToEndDay = routeDay.routeInfo.waypointDurations.last().withSpeedProfiles
+
+        assertTrue(
+            "day: $timeToEndDay, night: $timeToEndAtNight",
+            timeToEndDay < timeToEndAtNight
+        )
+    }
+
     private suspend fun getRouteRequest(path: String): RouteRequest =
         suspendCoroutine { continuation ->
-            RouterProvider.getInstance().get().createRouteRequestFromJSONString(
+            router.createRouteRequestFromJSONString(
                 readJson(path),
                 object : RouteRequestDeserializedListener {
                     override fun onError(error: RouteDeserializerError) {

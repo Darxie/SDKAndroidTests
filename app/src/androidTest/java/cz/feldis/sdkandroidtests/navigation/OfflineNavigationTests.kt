@@ -1,14 +1,23 @@
 package cz.feldis.sdkandroidtests.navigation
 
 import android.graphics.Color
+import androidx.lifecycle.Lifecycle
+import androidx.test.core.app.ActivityScenario
 import com.sygic.sdk.incidents.SpeedCamera
+import com.sygic.sdk.map.Camera
+import com.sygic.sdk.map.CameraState
+import com.sygic.sdk.map.IncidentWarningSettings
+import com.sygic.sdk.map.MapAnimation
+import com.sygic.sdk.map.MapCenter
+import com.sygic.sdk.map.MapCenterSettings
+import com.sygic.sdk.map.MapView
+import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.Route
-import com.sygic.sdk.route.RouteManeuver
 import com.sygic.sdk.route.Router
 import com.sygic.sdk.route.RouterProvider
 import com.sygic.sdk.route.RoutingOptions
@@ -21,18 +30,26 @@ import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.listeners.SetVehicleProfileListener
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.NmeaFileDataProvider
+import cz.feldis.sdkandroidtests.SygicActivity
+import cz.feldis.sdkandroidtests.TestMapFragment
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.AdditionalMatchers
 import org.mockito.InOrder
@@ -44,12 +61,15 @@ import org.mockito.kotlin.atMost
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import timber.log.Timber
 
 class OfflineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
     private lateinit var mapDownload: MapDownloadHelper
+    private lateinit var navigation: NavigationManager
     private val navigationManagerKtx = NavigationManagerKtx()
 
     @Before
@@ -57,13 +77,13 @@ class OfflineNavigationTests : BaseTest() {
         super.setUp()
         routeCompute = RouteComputeHelper()
         mapDownload = MapDownloadHelper()
+        navigation = runBlocking { NavigationManagerProvider.getInstance() }
         disableOnlineMaps()
     }
 
     @Test
     fun onSharpCurveListenerTest() = runBlocking {
         mapDownload.installAndLoadMap("sk")
-        val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnSharpCurveListener = mock(verboseLogging = true)
 
         val route = routeCompute.offlineRouteCompute(
@@ -73,7 +93,7 @@ class OfflineNavigationTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnSharpCurveListener(listener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
@@ -103,7 +123,6 @@ class OfflineNavigationTests : BaseTest() {
     fun onDirectionInfoChangedTest() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val directionListener: NavigationManager.OnDirectionListener = mock(verboseLogging = true)
-        val navigation = NavigationManagerProvider.getInstance().get()
 
         val route = routeCompute.offlineRouteCompute(
             GeoCoordinates(48.0977, 17.2382),
@@ -111,7 +130,7 @@ class OfflineNavigationTests : BaseTest() {
         )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
         navigation.addOnDirectionListener(directionListener)
@@ -141,7 +160,6 @@ class OfflineNavigationTests : BaseTest() {
     fun onDirectionInfoChangedCheckColorsTest() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val directionListener: NavigationManager.OnDirectionListener = mock(verboseLogging = true)
-        val navigation = NavigationManagerProvider.getInstance().get()
         val expectedBorderColor = Color.WHITE
         val expectedBackgroundColor = 0xff009966.toInt()
         val expectedTextColor = Color.WHITE
@@ -153,7 +171,7 @@ class OfflineNavigationTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnDirectionListener(directionListener)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
@@ -182,14 +200,13 @@ class OfflineNavigationTests : BaseTest() {
     fun onRouteChangedTest() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
-        val navigation = NavigationManagerProvider.getInstance().get()
         val route = routeCompute.offlineRouteCompute(
             GeoCoordinates(48.1447, 17.1317),
             GeoCoordinates(48.1461, 17.1285)
         )
 
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
         navigationManagerKtx.setRouteForNavigation(route, navigation)
@@ -203,7 +220,6 @@ class OfflineNavigationTests : BaseTest() {
             eq(NavigationManager.RouteUpdateStatus.Success)
         )
 
-
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
         navigation.removeOnRouteChangedListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
@@ -213,10 +229,9 @@ class OfflineNavigationTests : BaseTest() {
     fun onJunctionPassedStandaloneListenerInvocationWithoutRoute() = runBlocking {
         mapDownload.installAndLoadMap("sk")
         val listener: NavigationManager.JunctionPassedListener = mock(verboseLogging = true)
-        val navigation = NavigationManagerProvider.getInstance().get()
 
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "rovinka.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 4f)
         Thread.sleep(3000)
@@ -251,7 +266,6 @@ class OfflineNavigationTests : BaseTest() {
     @Test
     fun onLaneListenerTestOffline() = runBlocking {
         mapDownload.installAndLoadMap("sk")
-        val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnLaneListener = mock(verboseLogging = true)
 
         val route = routeCompute.offlineRouteCompute(
@@ -262,7 +276,7 @@ class OfflineNavigationTests : BaseTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnLaneListener(listener)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -285,7 +299,6 @@ class OfflineNavigationTests : BaseTest() {
     @Test
     fun sectionCameraTest() = runBlocking {
         mapDownload.installAndLoadMap("be")
-        val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route = routeCompute.offlineRouteCompute(
@@ -296,7 +309,7 @@ class OfflineNavigationTests : BaseTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -318,7 +331,6 @@ class OfflineNavigationTests : BaseTest() {
     @Test
     fun checkSpeedLimitOfRealCamera() = runBlocking {
         mapDownload.installAndLoadMap("sk")
-        val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route = routeCompute.offlineRouteCompute(
@@ -329,7 +341,7 @@ class OfflineNavigationTests : BaseTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnIncidentListener(listener)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -355,7 +367,6 @@ class OfflineNavigationTests : BaseTest() {
         }
 
         mapDownload.installAndLoadMap("sk")
-        val navigation = NavigationManagerProvider.getInstance().get()
         navigation.setVehicleProfile(vehicleProfile, profileListener)
         verify(profileListener, timeout(5_000L)).onSuccess()
         val listener: NavigationManager.OnSpeedLimitListener = mock(verboseLogging = true)
@@ -371,7 +382,7 @@ class OfflineNavigationTests : BaseTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnSpeedLimitListener(listener)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -391,7 +402,6 @@ class OfflineNavigationTests : BaseTest() {
     @Test
     fun onWaypointAndFinishReached() = runBlocking {
         mapDownload.installAndLoadMap("sk")
-        val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
 
         val route = routeCompute.offlineRouteCompute(
@@ -403,7 +413,7 @@ class OfflineNavigationTests : BaseTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnWaypointPassListener(listener)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -432,7 +442,6 @@ class OfflineNavigationTests : BaseTest() {
     @Test
     fun onHighwayExitTest() = runBlocking {
         mapDownload.installAndLoadMap("sk")
-        val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnHighwayExitListener = mock(verboseLogging = true)
         val route =
             routeCompute.offlineRouteCompute(
@@ -443,7 +452,7 @@ class OfflineNavigationTests : BaseTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnHighwayExitListener(listener)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
@@ -468,13 +477,12 @@ class OfflineNavigationTests : BaseTest() {
     @Test
     fun onHighwayExitTestWithoutRoute() = runBlocking {
         mapDownload.installAndLoadMap("sk")
-        val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnHighwayExitListener = mock(verboseLogging = true)
 
         navigation.addOnHighwayExitListener(listener)
 
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "highwayExitWithoutRoute.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
@@ -498,7 +506,6 @@ class OfflineNavigationTests : BaseTest() {
     @Test
     fun testWaypointPassAudioNotification() = runBlocking {
         mapDownload.installAndLoadMap("sk")
-        val navigation = NavigationManagerProvider.getInstance().get()
         val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
 
         val route = routeCompute.offlineRouteCompute(
@@ -510,7 +517,7 @@ class OfflineNavigationTests : BaseTest() {
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnWaypointPassListener(listener)
 
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
@@ -549,13 +556,12 @@ class OfflineNavigationTests : BaseTest() {
                 destination = GeoCoordinates(48.14648207079094, 17.138648964532695)
             )
 
-        val navigation = NavigationManagerProvider.getInstance().get()
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnRouteChangedListener(routeChangedListener)
         navigation.addOnWaypointPassListener(waypointPassListener)
 
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "precision_hdop_output.nmea")
-        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider).get()
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 4F)
         navigationManagerKtx.setRouteForNavigation(route, navigation)
@@ -575,7 +581,7 @@ class OfflineNavigationTests : BaseTest() {
 
         val routeCaptor = argumentCaptor<Route>()
 
-        RouterProvider.getInstance().get()
+        runBlocking { RouterProvider.getInstance() }
             .computeRouteFromJSONString(briefJson, routeComputeListener)
         verify(routeComputeListener, timeout(10_000L)).onComputeFinished(
             routeCaptor.capture(), eq(Router.RouteComputeStatus.Success)
@@ -585,6 +591,11 @@ class OfflineNavigationTests : BaseTest() {
         assertEquals(finalRoute.waypoints[0].status, Waypoint.Status.Reached)
         assertEquals(finalRoute.waypoints[1].status, Waypoint.Status.Reached)
         assertEquals(finalRoute.waypoints[2].status, Waypoint.Status.Ahead)
+
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        navigation.removeOnWaypointPassListener(waypointPassListener)
+        navigation.removeOnRouteChangedListener(routeChangedListener)
+        navigationManagerKtx.stopNavigation(navigation)
     }
 
     @Test
@@ -596,14 +607,262 @@ class OfflineNavigationTests : BaseTest() {
                 GeoCoordinates(48.147260, 17.150520),
                 GeoCoordinates(48.147230, 17.150120)
             )
-        val navigation = NavigationManagerProvider.getInstance().get()
         navigationManagerKtx.setRouteForNavigation(route, navigation)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
         delay(2000)
         navigationManagerKtx.stopNavigation(navigation) // shouldn't crash
         delay(500)
+    }
+
+    @Test
+    fun testStreetChangedListenerOffline() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val listener: NavigationManager.StreetChangedListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.1209419355147, 17.207606308128618),
+            GeoCoordinates(48.12276083935055, 17.207632634218143),
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addStreetChangedListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        verify(listener, timeout(10_000L)).onStreetChanged(argThat {
+            return@argThat this.street == "Mramorová"
+        })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeStreetChangedListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    /**
+     * Navigation test on route recompute progress
+     *
+     * In this test we compute online route and set it for navigation.
+     * Via Nmea Log Recorder we set route from assets/SVK-Kosicka.nmea and start nmea log simulation.
+     * We verify that the recompute started, was in progress from 0 to 100 and then finished without error.
+     */
+    @Test
+    fun onRouteRecomputeProgressOffline() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val listener: NavigationManager.OnRouteRecomputeListener =
+            mock(verboseLogging = true)
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.1447, 17.1317),
+            GeoCoordinates(48.1461, 17.1285)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnRouteRecomputeProgressListener(listener)
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+        val recomputeStartedData = NavigationManager.OnRouteRecomputeListener.RecomputeStartedData(
+            route, NavigationManager.RouteRecomputeReason.VehicleOutOfRoute
+        )
+        val recomputeProgressData1 =
+            NavigationManager.OnRouteRecomputeListener.RecomputeProgressData(
+                route, 0
+            )
+        val recomputeProgressData2 =
+            NavigationManager.OnRouteRecomputeListener.RecomputeProgressData(
+                route, 100
+            )
+        val recomputeFinishedData =
+            NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData(
+                route, NavigationManager.RouteRecomputeResult.Success
+            )
+        val recomputeFinishedFailedData =
+            NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData(
+                route,
+                NavigationManager.RouteRecomputeResult.Error(
+                    NavigationManager.RouteRecomputeResult.Error.Reason.Failed,
+                    "Recompute failed"
+                )
+            )
+
+        Mockito.verify(
+            listener, Mockito.timeout(20_000L).times(1)
+        ).onRouteRecomputeStarted(eq(recomputeStartedData))
+
+        Mockito.verify(
+            listener, Mockito.timeout(20_000L).times(1)
+        )
+            .onRouteRecomputeProgress(eq(recomputeProgressData1))
+
+        Mockito.verify(
+            listener, Mockito.timeout(20_000L).times(1)
+        )
+            .onRouteRecomputeProgress(eq(recomputeProgressData2))
+
+        Mockito.verify(
+            listener, Mockito.timeout(20_000L).times(1)
+        )
+            .onRouteRecomputeFinished(eq(recomputeFinishedData))
+
+        Mockito.verify(
+            listener, never()
+        )
+            .onRouteRecomputeFinished(eq(recomputeFinishedFailedData))
+
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        navigation.removeOnRouteRecomputeProgressListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    @Test
+    fun onRouteChangedTestPedestrian() = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+        val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.1447, 17.1317),
+            GeoCoordinates(48.1461, 17.1285),
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = null
+            }
+        )
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 3F)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnRouteChangedListener(listener)
+        navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+        Mockito.verify(
+            listener, Mockito.timeout(30_000L).atLeast(1)
+        ).onRouteChanged(
+            AdditionalMatchers.not(eq(route)),
+            eq(NavigationManager.RouteUpdateStatus.Success)
+        )
+
+        navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        navigation.removeOnRouteChangedListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    @OptIn(FlowPreview::class)
+    @Test
+    fun setIncidentWarningSettingsAfterPassingSpeedCam(): Unit = runBlocking {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val nmeaDataProvider = NmeaFileDataProvider(appContext, "speedcamnmnv.nmea")
+        val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
+        val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+
+        try {
+            val mapView = getMapView(mapFragment)
+            mapDownload.installAndLoadMap("sk")
+
+            navigationManagerKtx.startSimulator(logSimulatorAdapter)
+            navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
+
+            mapView.cameraModel.movementMode = Camera.MovementMode.FollowGpsPosition
+            mapView.cameraModel.rotationMode = Camera.RotationMode.Vehicle
+            mapView.cameraModel.zoomLevel = 19F
+            mapView.cameraModel.tilt = 45F
+
+            val incidentsFlow = NavigationManagerProvider.getInstance().incidents()
+            val targetIncident = withTimeout(20_000) {
+                incidentsFlow
+                    .onEach { list -> Timber.d("Emit zoznam incidentov (size=${list.size}): ids=${list.map { it.incident.id }}") }
+                    .map { list ->
+                        list.firstOrNull()
+                    }
+                    .filterNotNull()
+                    .onEach { Timber.d("Prvý incident = id=${it.incident.id}, distance=${it.distance}") }
+                    .first()
+            }
+
+            var lastDistance = Int.MAX_VALUE
+            var seenAtLeastOnce = false
+
+            withTimeout(60_000) {
+                incidentsFlow
+                    .map { list ->
+                        // nájdi ten istý incident v najnovšom emite
+                        list.find { it.incident.id == targetIncident.incident.id }
+                    }
+                    .onEach { Timber.d("Nájdený incident pre ID=${targetIncident.incident.id}: $it") }
+                    .debounce(200)
+                    .onEach { info ->
+                        if (info != null) {
+                            seenAtLeastOnce = true
+                            val d = info.distance
+                            Timber.d("Distance k incidentu: $d (last=$lastDistance)")
+                            // tolerancia na šum, napr. +5 m
+                            assertTrue(
+                                "Distance by sa mala znižovať (predtým=$lastDistance, teraz=$d)",
+                                d <= lastDistance
+
+                            )
+                            lastDistance = d
+                        }
+                    }
+                    .debounce(1000)
+                    .first { info -> seenAtLeastOnce && info == null }
+            }
+
+            delay(2_000)
+
+            val incidentWarningSettings = IncidentWarningSettings()
+            mapView.setIncidentWarningSettings(incidentWarningSettings)
+
+            delay(2_000)
+
+
+        } finally {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+        }
+    }
+
+    private fun getInitialCameraState(): CameraState {
+        return CameraState.Builder().apply {
+            setPosition(GeoCoordinates(48.15132, 17.07665))
+            setMapCenterSettings(
+                MapCenterSettings(
+                    MapCenter(0.5f, 0.5f),
+                    MapCenter(0.5f, 0.5f),
+                    MapAnimation.NONE, MapAnimation.NONE
+                )
+            )
+            setMapPadding(0.0f, 0.0f, 0.0f, 0.0f)
+            setRotation(0f)
+            setZoomLevel(14F)
+            setMovementMode(Camera.MovementMode.Free)
+            setRotationMode(Camera.RotationMode.Free)
+            setTilt(0f)
+        }.build()
+    }
+
+    private fun getMapView(mapFragment: TestMapFragment): MapView {
+        val mapInitListener: OnMapInitListener = mock(verboseLogging = true)
+        val mapViewCaptor = argumentCaptor<MapView>()
+
+        mapFragment.getMapAsync(mapInitListener)
+        verify(mapInitListener, timeout(5_000L)).onMapReady(
+            mapViewCaptor.capture()
+        )
+        return mapViewCaptor.firstValue
     }
 }

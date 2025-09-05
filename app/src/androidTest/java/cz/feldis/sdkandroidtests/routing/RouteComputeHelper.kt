@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.routing
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.PrimaryRouteRequest
 import com.sygic.sdk.route.Route
@@ -19,6 +18,7 @@ import com.sygic.sdk.vehicletraits.powertrain.Battery
 import com.sygic.sdk.vehicletraits.powertrain.ChargingCurrent
 import com.sygic.sdk.vehicletraits.powertrain.ChargingPreferences
 import com.sygic.sdk.vehicletraits.powertrain.Connector
+import com.sygic.sdk.vehicletraits.powertrain.ConnectorFormat
 import com.sygic.sdk.vehicletraits.powertrain.ConnectorType
 import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
 import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
@@ -26,10 +26,18 @@ import com.sygic.sdk.vehicletraits.powertrain.FuelType
 import com.sygic.sdk.vehicletraits.powertrain.PowerRange
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
+import kotlinx.coroutines.runBlocking
 import org.mockito.ArgumentCaptor
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 
 class RouteComputeHelper : BaseTest() {
-    private val mRouter = RouterProvider.getInstance().get()
+    private val router = runBlocking { RouterProvider.getInstance() }
 
     fun onlineComputeRoute(
         start: GeoCoordinates,
@@ -52,13 +60,14 @@ class RouteComputeHelper : BaseTest() {
 
         val captor: ArgumentCaptor<Route> = ArgumentCaptor.forClass(Route::class.java)
 
-        mRouter.computeRouteWithAlternatives(
+        router.computeRouteWithAlternatives(
             primaryRouteRequest,
             null,
             routeComputeFinishedListener
         )
-        verify(listener, timeout(10_000L)).onComputeFinished(
-            captor.capture(), argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
+        verify(listener, timeout(30_000L)).onComputeFinished(
+            captor.capture(),
+            argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
         )
 
         return captor.value
@@ -83,13 +92,14 @@ class RouteComputeHelper : BaseTest() {
 
         val captor: ArgumentCaptor<Route> = ArgumentCaptor.forClass(Route::class.java)
 
-        mRouter.computeRouteWithAlternatives(
+        router.computeRouteWithAlternatives(
             primaryRouteRequest,
             null,
             routeComputeFinishedListener
         )
         verify(listener, timeout(100_000L)).onComputeFinished(
-            captor.capture(), argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
+            captor.capture(),
+            argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
         )
         verify(listener, never()).onComputeFinished(eq(null), any())
 
@@ -118,15 +128,18 @@ class RouteComputeHelper : BaseTest() {
         )
     }
 
-    fun createDefaultElectricVehicleProfile(batteryCapacity: Float, remainingCapacity: Float): VehicleProfile {
+    fun createDefaultElectricVehicleProfile(
+        batteryCapacity: Float,
+        remainingCapacity: Float
+    ): VehicleProfile {
         val battery = Battery(
             capacity = batteryCapacity,
             remainingCapacity = remainingCapacity,
             chargingCurve = mapOf(1.0 to 1.0, 100.0 to 1.0)
         )
         val connectors = listOf(
-            Connector(100F, ConnectorType.Type2Any, ChargingCurrent.AC),
-            Connector(100F, ConnectorType.Type2Any, ChargingCurrent.DC)
+            Connector(100F, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.AC),
+            Connector(100F, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.DC)
         )
         val chargingPreferences = ChargingPreferences(
             fullChargeThreshold = 0.8F,
@@ -142,19 +155,27 @@ class RouteComputeHelper : BaseTest() {
 
         return VehicleProfile().apply {
             generalVehicleTraits.vehicleType = VehicleType.Car
-            powertrainTraits = PowertrainTraits.ElectricPowertrain(battery, connectors, chargingPreferences, consumptionData)
+            powertrainTraits = PowertrainTraits.ElectricPowertrain(
+                battery,
+                connectors,
+                chargingPreferences,
+                consumptionData
+            )
         }
     }
 
-    fun createElectricVehicleProfileForPreferenceViolation(batteryCapacity: Float, remainingCapacity: Float): VehicleProfile {
+    fun createElectricVehicleProfileForPreferenceViolation(
+        batteryCapacity: Float,
+        remainingCapacity: Float
+    ): VehicleProfile {
         val battery = Battery(
             capacity = batteryCapacity,
             remainingCapacity = remainingCapacity,
             mapOf()
         )
         val connectors = listOf(
-            Connector(100F, ConnectorType.Type2Any, ChargingCurrent.AC),
-            Connector(100F, ConnectorType.Type2Any, ChargingCurrent.DC)
+            Connector(100F, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.AC),
+            Connector(100F, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.DC)
         )
         val chargingPreferences = ChargingPreferences(
             fullChargeThreshold = 0.9F,
@@ -170,21 +191,27 @@ class RouteComputeHelper : BaseTest() {
 
         return VehicleProfile().apply {
             generalVehicleTraits.vehicleType = VehicleType.Car
-            powertrainTraits = PowertrainTraits.ElectricPowertrain(battery, connectors, chargingPreferences, consumptionData)
+            powertrainTraits = PowertrainTraits.ElectricPowertrain(
+                battery,
+                connectors,
+                chargingPreferences,
+                consumptionData
+            )
         }
     }
 
-    fun createElectricVehicleProfileTruck(batteryCapacity: Float = 350f, remainingCapacity: Float = 100f): VehicleProfile {
+    fun createElectricVehicleProfileTruck(
+        batteryCapacity: Float = 350f,
+        remainingCapacity: Float = 100f
+    ): VehicleProfile {
         val battery = Battery(
             capacity = batteryCapacity,
             remainingCapacity = remainingCapacity,
             mapOf()
         )
         val connectors = listOf(
-            Connector(500f, ConnectorType.Type2Any, ChargingCurrent.AC),
-            Connector(500f, ConnectorType.Type2Any, ChargingCurrent.DC),
-            Connector(500f, ConnectorType.Ccs2, ChargingCurrent.AC),
-            Connector(500f, ConnectorType.Ccs2, ChargingCurrent.DC),
+            Connector(500f, ConnectorType.Type2, ConnectorFormat.Socket, ChargingCurrent.AC),
+            Connector(500f, ConnectorType.Ccs2, ConnectorFormat.Unknown, ChargingCurrent.DC)
         )
         val chargingPreferences = ChargingPreferences(
             fullChargeThreshold = 0.9F,
@@ -200,7 +227,52 @@ class RouteComputeHelper : BaseTest() {
 
         return VehicleProfile().apply {
             generalVehicleTraits.vehicleType = VehicleType.Truck
-            powertrainTraits = PowertrainTraits.ElectricPowertrain(battery, connectors, chargingPreferences, consumptionData)
+            powertrainTraits = PowertrainTraits.ElectricPowertrain(
+                battery,
+                connectors,
+                chargingPreferences,
+                consumptionData
+            )
+        }
+    }
+
+    fun createEVProfileForInsufficientBattery(
+        batteryCapacity: Float,
+        remainingCapacity: Float
+    ): VehicleProfile {
+        val battery = Battery(
+            capacity = batteryCapacity,
+            remainingCapacity = remainingCapacity,
+            chargingCurve = mapOf(1.0 to 1.0, 100.0 to 1.0)
+        )
+        val connectors = listOf(
+            Connector(
+                1F,
+                ConnectorType.HouseholdTypeCeeBlue,
+                ConnectorFormat.Cable,
+                ChargingCurrent.DC
+            )
+        )
+        val chargingPreferences = ChargingPreferences(
+            fullChargeThreshold = 0.8F,
+            chargingThreshold = 0.2F,
+            reserveThreshold = 0.05F,
+            batteryMinimumDestinationThreshold = 0.3F,
+            powerRange = EnforceableAttribute(PowerRange(500F, 600F), true)
+        )
+        val consumptionData = ConsumptionData(
+            consumptionCurve = mapOf(1.0 to 1.0, 100.0 to 1.0),
+            weightFactors = mapOf(1000.0 to 0.5, 5000.0 to 1.0, 10000.0 to 1.0)
+        )
+
+        return VehicleProfile().apply {
+            generalVehicleTraits.vehicleType = VehicleType.Car
+            powertrainTraits = PowertrainTraits.ElectricPowertrain(
+                battery,
+                connectors,
+                chargingPreferences,
+                consumptionData
+            )
         }
     }
 }

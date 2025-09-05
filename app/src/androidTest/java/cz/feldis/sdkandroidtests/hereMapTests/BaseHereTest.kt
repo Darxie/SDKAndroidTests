@@ -22,6 +22,7 @@ import com.sygic.sdk.position.PositionManager
 import com.sygic.sdk.position.PositionManagerProvider
 import cz.feldis.sdkandroidtests.BuildConfig
 import cz.feldis.sdkandroidtests.SygicActivity
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -31,7 +32,9 @@ import org.junit.rules.TestWatcher
 import org.junit.rules.Timeout
 import org.junit.runner.Description
 import org.mockito.Mockito
-import org.mockito.kotlin.*
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -110,7 +113,9 @@ abstract class BaseHereTest {
             override fun onInstance(instance: SygicContext) {
                 sygicContext = instance
                 isEngineInitialized = true
-                PositionManagerProvider.getInstance().get().openGpsConnection()
+                runBlocking {
+                    PositionManagerProvider.getInstance().openGpsConnection()
+                }
                 latch.countDown()
             }
         })
@@ -152,8 +157,8 @@ abstract class BaseHereTest {
                     offlineMapsApiUrl("https://offlinemaps-uat.api.sygic.com")
                     voicesUrl("https://nonttsvoices-testing.api.sygic.com")
                     placesUrl("https://places-uat.api.sygic.com")
-                    incidents().url("https://incidents-testing.api.sygic.com")
-                    speedCameras().url("https://incidents-testing.api.sygic.com")
+                    incidents().url("https://incidents-uat.api.sygic.com")
+                    speedCameras().url("https://incidents-uat.api.sygic.com")
                 }
             }
             logging {
@@ -172,7 +177,7 @@ abstract class BaseHereTest {
     }
 
     open fun disableOnlineMaps() {
-        val onlineManager = OnlineManagerProvider.getInstance().get()
+        val onlineManager = runBlocking { OnlineManagerProvider.getInstance() }
         if (!onlineManager.isOnlineMapStreamingEnabled()) return
 
         val listener = Mockito.mock<OnlineManager.MapStreamingListener>()
@@ -184,7 +189,7 @@ abstract class BaseHereTest {
     }
 
     open fun enableOnlineMaps() {
-        val onlineManager = OnlineManagerProvider.getInstance().get()
+        val onlineManager = runBlocking { OnlineManagerProvider.getInstance() }
         if (onlineManager.isOnlineMapStreamingEnabled()) return
 
         val listener = Mockito.mock<OnlineManager.MapStreamingListener>()
@@ -199,7 +204,7 @@ abstract class BaseHereTest {
         val listener = Mockito.mock<SetActiveMapProviderListener>()
         whenever(listener.onActiveProviderSet())
 
-        OnlineManagerProvider.getInstance().get()
+        runBlocking { OnlineManagerProvider.getInstance() }
             .setActiveMapProvider(MapProvider(providerName), listener)
 
         verify(listener, timeout(5000L)).onActiveProviderSet()
@@ -208,7 +213,7 @@ abstract class BaseHereTest {
     open fun startPositionUpdating() {
         val listener = Mockito.mock<PositionManager.OnOperationComplete>()
 
-        PositionManagerProvider.getInstance().get().startPositionUpdating(listener)
+        runBlocking { PositionManagerProvider.getInstance() }.startPositionUpdating(listener)
 
         verify(listener, timeout(5000L)).onComplete()
     }
@@ -217,7 +222,7 @@ abstract class BaseHereTest {
         val listener = Mockito.mock<PositionManager.OnOperationComplete>()
         whenever(listener.onComplete())
 
-        PositionManagerProvider.getInstance().get().stopPositionUpdating(listener)
+        runBlocking { PositionManagerProvider.getInstance() }.stopPositionUpdating(listener)
 
         verify(listener, timeout(5000L)).onComplete()
     }

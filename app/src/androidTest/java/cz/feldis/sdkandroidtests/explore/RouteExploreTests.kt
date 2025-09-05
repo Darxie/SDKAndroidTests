@@ -40,11 +40,13 @@ class RouteExploreTests : BaseTest() {
     private val navigationManagerKtx = NavigationManagerKtx()
     private val trafficManagerKtx = TrafficManagerKtx()
     private lateinit var trafficManager: TrafficManager
+    private lateinit var routeExplorer: RouteExplorer
 
     override fun setUp() {
         super.setUp()
         routeCompute = RouteComputeHelper()
-        trafficManager = TrafficManagerProvider.getInstance().get()
+        trafficManager = runBlocking { TrafficManagerProvider.getInstance() }
+        routeExplorer = runBlocking { RouteExplorerProvider.getInstance() }
     }
 
     @Test
@@ -59,7 +61,7 @@ class RouteExploreTests : BaseTest() {
             GeoCoordinates(48.289024, 17.264717)
         )
 
-        RouteExplorerProvider.getInstance().get().exploreTrafficOnRoute(route, listener)
+        routeExplorer.exploreTrafficOnRoute(route, listener)
 
         verify(listener, Mockito.timeout(10_000L))
             .onExploreTrafficLoaded(any())
@@ -81,7 +83,7 @@ class RouteExploreTests : BaseTest() {
             GeoCoordinates(48.289024, 17.264717)
         )
 
-        RouteExplorerProvider.getInstance().get().exploreTrafficOnRoute(route, listener)
+        routeExplorer.exploreTrafficOnRoute(route, listener)
 
         verify(listener, never())
             .onExploreTrafficLoaded(any())
@@ -108,7 +110,7 @@ class RouteExploreTests : BaseTest() {
             )
         val list = listOf("SYRestArea", "SYPetrolStation")
 
-        RouteExplorerProvider.getInstance().get().explorePlacesOnRoute(route, list, listener)
+        routeExplorer.explorePlacesOnRoute(route, list, listener)
 
         verify(
             listener,
@@ -128,7 +130,7 @@ class RouteExploreTests : BaseTest() {
             GeoCoordinates(48.7429, 17.8603),
             GeoCoordinates(48.7457, 17.86)
         )
-        RouteExplorerProvider.getInstance().get().exploreIncidentsOnRoute(route, emptyList(), listener)
+        routeExplorer.exploreIncidentsOnRoute(route, emptyList(), listener)
 
         verify(
             listener,
@@ -146,7 +148,7 @@ class RouteExploreTests : BaseTest() {
         disableOnlineMaps()
         val listener: NavigationManager.OnPlaceListener = mock(verboseLogging = true)
         val completeListener: PositionSimulator.OnOperationComplete = mock(verboseLogging = true)
-        val navigation = NavigationManagerProvider.getInstance().get()
+        val navigation = NavigationManagerProvider.getInstance()
 
         val mapDownloadHelper = MapDownloadHelper()
         mapDownloadHelper.installAndLoadMap("sk")
@@ -161,7 +163,7 @@ class RouteExploreTests : BaseTest() {
 
         navigation.addOnPlaceListener(listener)
         navigationManagerKtx.setRouteForNavigation(route, navigation)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route).get()
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val simulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(simulatorAdapter)
 
@@ -234,7 +236,7 @@ class RouteExploreTests : BaseTest() {
             }
         }.whenever(listener).onExploreChargingStationsLoaded(any(), any())
 
-        RouteExplorerProvider.getInstance().get().exploreChargingStationsOnRoute(
+        routeExplorer.exploreChargingStationsOnRoute(
             route,
             RouteComputeHelper().createDefaultElectricVehicleProfile(50f, 50f),
             listener

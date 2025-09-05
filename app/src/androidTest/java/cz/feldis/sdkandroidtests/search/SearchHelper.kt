@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.search
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.places.Place
 import com.sygic.sdk.search.AutocompleteResult
 import com.sygic.sdk.search.AutocompleteResultListener
@@ -18,12 +17,23 @@ import com.sygic.sdk.search.ResultStatus
 import com.sygic.sdk.search.ResultType
 import com.sygic.sdk.search.SearchManagerProvider
 import com.sygic.sdk.search.SearchRequest
+import kotlinx.coroutines.runBlocking
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 import java.nio.ByteBuffer
 import java.util.UUID
 
 class SearchHelper {
 
-    private val searchManager = SearchManagerProvider.getInstance().get()
+    private val searchManager = runBlocking { SearchManagerProvider.getInstance() }
+
+
+    class NoResultsException : RuntimeException("Autocomplete returned no results")
 
     fun offlineAutocomplete(searchRequest: SearchRequest): List<AutocompleteResult> {
         val autocompleteResultListener: AutocompleteResultListener = mock(verboseLogging = true)
@@ -143,12 +153,19 @@ class SearchHelper {
             resultCaptor.capture()
         )
         verify(autocompleteResultListener, never()).onAutocompleteError(any())
+        if (resultCaptor.firstValue.isEmpty()) {
+            session.close()
+            throw NoResultsException()
+        }
         assert(resultCaptor.firstValue[0].type == ResultType.CUSTOM_PLACE) // fail here already
         session.close()
         return resultCaptor.firstValue
     }
 
-    fun offlineAutocompleteCustomPlacesWithDataset(searchRequest: SearchRequest, dataset: String): List<AutocompleteResult> {
+    fun offlineAutocompleteCustomPlacesWithDataset(
+        searchRequest: SearchRequest,
+        dataset: String
+    ): List<AutocompleteResult> {
         val autocompleteResultListener: AutocompleteResultListener = mock(verboseLogging = true)
         val createSearchListener: CreateSearchCallback<CustomPlacesSearch> =
             mock(verboseLogging = true)
@@ -249,7 +266,7 @@ class SearchHelper {
         val customPlacesSearchCaptor = argumentCaptor<CustomPlacesSearch>()
         val argumentCaptor = argumentCaptor<List<Place>>()
 
-        SearchManagerProvider.getInstance().get().createCustomPlacesSearch(searchCallback)
+        searchManager.createCustomPlacesSearch(searchCallback)
 
         verify(searchCallback, timeout(10_000L)).onSuccess(
             customPlacesSearchCaptor.capture()

@@ -1,6 +1,5 @@
 package cz.feldis.sdkandroidtests.mapInstaller
 
-import org.mockito.kotlin.*
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
 import com.sygic.sdk.map.listeners.MapListResultListener
@@ -9,11 +8,17 @@ import com.sygic.sdk.map.listeners.MapStatusListener
 import com.sygic.sdk.map.listeners.MapsResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
+import kotlinx.coroutines.runBlocking
 import org.mockito.ArgumentMatchers.anyList
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.timeout
+import org.mockito.kotlin.verify
 
 class MapDownloadHelper : BaseTest() {
 
-    private val installer = MapInstallerProvider.getInstance().get()
+    private val installer = runBlocking { MapInstallerProvider.getInstance() }
 
     fun ensureMapNotInstalled(iso: String) {
         val uninstallListener: MapResultListener = mock(verboseLogging = true)
@@ -67,12 +72,18 @@ class MapDownloadHelper : BaseTest() {
         installer.getAvailableCountries(
             installed = true,
             object : MapListResultListener {
-                override fun onMapListResult(mapIsos: List<String>, result: MapInstaller.LoadResult) {
+                override fun onMapListResult(
+                    mapIsos: List<String>,
+                    result: MapInstaller.LoadResult
+                ) {
                     installer.unloadMaps(mapIsos, listener)
                 }
             }
         )
-        verify(listener, timeout(10_000L)).onMapsResult(anyList(), eq(MapInstaller.LoadResult.Success))
+        verify(listener, timeout(10_000L)).onMapsResult(
+            anyList(),
+            eq(MapInstaller.LoadResult.Success)
+        )
 
     }
 }

@@ -2,20 +2,20 @@
 buildscript {
     ext {
         build_tools_version = '35.0.0'
-        kotlinVersion = "1.9.24"
+        kotlinVersion = "2.1.20"
     }
 
     repositories {
-        maven { url "https://public.repo.sygic.com/repository/maven-sygic-releases/" }
-        maven { url "https://repository.sygic.com/repository/maven-sygic-internal/" }
-        maven { url "https://repository.sygic.com/repository/maven-sygic-releases/" }
+        maven { url = "https://public.repo.sygic.com/repository/maven-sygic-releases/" }
+        maven { url = "https://repository.sygic.com/repository/maven-sygic-internal/" }
+        maven { url = "https://repository.sygic.com/repository/maven-sygic-releases/" }
         google()
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.6.1'
+        classpath 'com.android.tools.build:gradle:8.11.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
-        classpath 'com.google.gms:google-services:4.4.2'
+        classpath 'com.google.gms:google-services:4.4.3'
 
         if (gradle.wantsToBuildSdkFromSource()) {
             classpath "com.sygic.sdk:assets-plugin:1.0.0-rc09"
@@ -28,9 +28,9 @@ buildscript {
 
 allprojects {
     repositories {
-        maven { url "https://public.repo.sygic.com/repository/maven-sygic-releases/" }
-        maven { url "https://repository.sygic.com/repository/maven-sygic-internal/" }
-        maven { url "https://repository.sygic.com/repository/maven-sygic-releases/" }
+        maven { url = "https://public.repo.sygic.com/repository/maven-sygic-releases/" }
+        maven { url = "https://repository.sygic.com/repository/maven-sygic-internal/" }
+        maven { url = "https://repository.sygic.com/repository/maven-sygic-releases/" }
         google()
         mavenCentral()
     }

@@ -1,6 +1,7 @@
 package cz.feldis.sdkandroidtests.map
 
 import android.graphics.Color
+import android.os.Bundle
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import com.sygic.sdk.incidents.IncidentData
@@ -16,8 +17,10 @@ import com.sygic.sdk.map.MapAnimation
 import com.sygic.sdk.map.MapCenter
 import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
+import com.sygic.sdk.map.MapView.InjectSkinResultListener
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.map.listeners.RequestObjectCallback
+import com.sygic.sdk.map.`object`.Appearance
 import com.sygic.sdk.map.`object`.MapIncident
 import com.sygic.sdk.map.`object`.MapPolygon
 import com.sygic.sdk.map.`object`.MapPolyline
@@ -34,6 +37,7 @@ import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.RouterProvider
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.listeners.EVRangeListener
+import com.sygic.sdk.route.listeners.GeometryListener
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.SygicActivity
 import cz.feldis.sdkandroidtests.TestMapFragment
@@ -45,8 +49,8 @@ import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert
 import org.junit.Assert.fail
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.junit.MockitoJUnitRunner
@@ -65,7 +69,7 @@ class MapViewTests : BaseTest() {
 
     override fun setUp() {
         super.setUp()
-        incidentsManager = IncidentsManagerProvider.getInstance().get()
+        incidentsManager = runBlocking { IncidentsManagerProvider.getInstance() }
     }
 
     @Test
@@ -242,7 +246,7 @@ class MapViewTests : BaseTest() {
         mapView.cameraModel.zoomLevel = 15F
         mapView.cameraModel.tilt = 0F
 
-        RouterProvider.getInstance().get().computeEVRange(
+        runBlocking { RouterProvider.getInstance() }.computeEVRange(
             GeoCoordinates(48.10095535808773, 17.234824479529344),
             listOf(3.0),
             RoutingOptions().apply {
@@ -471,7 +475,6 @@ class MapViewTests : BaseTest() {
         scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
-    @Ignore("Won't be part of sdk28 yet")
     @Test
     fun requestMapPolylineFromCoordinates(): Unit = runBlocking {
         // Create a map fragment with the initial camera state.
@@ -650,11 +653,11 @@ class MapViewTests : BaseTest() {
 
         // Verify that among the returned objects, at least one is a MapPolyline.
         val viewObjects = captor.firstValue
+        scenario.moveToState(Lifecycle.State.DESTROYED)
         assertTrue(
             "Expected to find a MapPolyline object at the clicked point",
             viewObjects.any { it is MapRoute }
         )
-        scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
     @Test
@@ -709,11 +712,11 @@ class MapViewTests : BaseTest() {
 
         // Verify that among the returned objects, at least one is a MapPolyline.
         val viewObjects = captor.firstValue
+        scenario.moveToState(Lifecycle.State.DESTROYED)
         assertTrue(
             "Expected to find a MapPolyline object at the clicked point",
             viewObjects.any { it is MapRoute }
         )
-        scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
     /**
@@ -743,7 +746,7 @@ class MapViewTests : BaseTest() {
 
         val listener: SetVisibleCategoriesListener = mock(verboseLogging = true)
 
-        PlacesManagerProvider.getInstance().get().setVisibleCategories(
+        runBlocking { PlacesManagerProvider.getInstance() }.setVisibleCategories(
             listOf(
                 PlaceCategoryGroupVisibility(
                     "SYPetrolStation",
@@ -812,7 +815,7 @@ class MapViewTests : BaseTest() {
     fun checkVisibilityOfPOIsBeforeFirstScenario(): Unit = runBlocking {
         val listener: SetVisibleCategoriesListener = mock(verboseLogging = true)
 
-        PlacesManagerProvider.getInstance().get().setVisibleCategories(
+        runBlocking { PlacesManagerProvider.getInstance() }.setVisibleCategories(
             listOf(
                 PlaceCategoryGroupVisibility(
                     "SYPetrolStation",
@@ -869,6 +872,271 @@ class MapViewTests : BaseTest() {
         )
     }
 
+    @Test
+    fun testPoiTopCategory(): Unit = runBlocking {
+        // Create a map fragment with the initial camera state.
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // Launch the activity and add the map fragment.
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity { activity ->
+            activity.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+
+        val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
+        mapView.injectSkinDefinition(
+            readJson("skin_poi_top.json"),
+            injectSkinResultListener
+        )
+
+        verify(
+            injectSkinResultListener,
+            timeout(5_000L)
+        ).onResult(eq(MapView.InjectSkinResult.Success))
+
+        mapView.cameraModel.position = GeoCoordinates(48.09524, 17.21050)
+        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.tilt = 0F
+
+        delay(3000)
+
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        val view = requireNotNull(mapView.view)
+
+        val x: Float = view.width / 2F
+        val y: Float = view.height / 2F
+        val id = mapView.requestObjectsAtPoint(x, y, callback) // click in the middle of the screen
+
+        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(id))
+
+        val capturedObjects = captor.firstValue
+
+        if (capturedObjects.isNotEmpty() && capturedObjects[0] is ProxyPlace) {
+            val proxyPlace = capturedObjects[0] as ProxyPlace
+
+            Assert.assertEquals(proxyPlace.data.appearance.importance, Appearance.Importance.Top)
+            Assert.assertEquals(proxyPlace.data.place.category, "SYPetrolStation")
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Expected object of type ProxyPlace, but found: ${capturedObjects[0]::class.java}")
+        }
+    }
+
+    @Test
+    fun testPoiMinorCategory(): Unit = runBlocking {
+        // Create a map fragment with the initial camera state.
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // Launch the activity and add the map fragment.
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity { activity ->
+            activity.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+
+        val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
+        mapView.injectSkinDefinition(
+            readJson("skin_poi_minor.json"),
+            injectSkinResultListener
+        )
+
+        verify(
+            injectSkinResultListener,
+            timeout(5_000L)
+        ).onResult(eq(MapView.InjectSkinResult.Success))
+
+        mapView.cameraModel.position = GeoCoordinates(48.09524, 17.21050)
+        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.tilt = 0F
+
+        delay(3000)
+
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        val view = requireNotNull(mapView.view)
+
+        val x: Float = view.width / 2F
+        val y: Float = view.height / 2F
+        val id = mapView.requestObjectsAtPoint(x, y, callback) // click in the middle of the screen
+
+        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(id))
+
+        val capturedObjects = captor.firstValue
+
+        if (capturedObjects.isNotEmpty() && capturedObjects[0] is ProxyPlace) {
+            val proxyPlace = capturedObjects[0] as ProxyPlace
+
+            Assert.assertEquals(proxyPlace.data.appearance.importance, Appearance.Importance.Minor)
+            Assert.assertEquals(proxyPlace.data.place.category, "SYPetrolStation")
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Expected object of type ProxyPlace, but found: ${capturedObjects[0]::class.java}")
+        }
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14471
+     */
+    @Test
+    fun requestMapRouteFromRouteCheckPayload(): Unit = runBlocking {
+        // Create a map fragment with the initial camera state.
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // Launch the activity and add the map fragment.
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity { activity ->
+            activity.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+
+        val route = RouteComputeHelper().onlineComputeRoute(
+            start = GeoCoordinates(48.10230847247041, 17.23332912174021),
+            destination = GeoCoordinates(48.101253920311315, 17.23448444159353)
+        )
+
+        // Set the camera position to the midpoint of the polyline.
+        mapView.cameraModel.position = GeoCoordinates(48.101824882389934, 17.23386163759587)
+        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.tilt = 0F
+
+        val payload = Bundle().apply {
+            putString("key", "tujemojpayload")
+        }
+
+        val mapRoute = MapRoute.from(route)
+            .setType(RouteType.Primary)
+            .withPayload(payload)
+            .build()
+        // Add the polyline to the map.
+        mapView.mapDataModel.addMapObject(mapRoute)
+        delay(1000)
+
+        // Prepare the callback for object requests.
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        // Get the map view and determine its center.
+        val view = requireNotNull(mapView.view)
+        val x: Float = view.width / 2F
+        val y: Float = view.height / 2F
+
+        // Request objects at the center point (this should hit the polyline).
+        val requestId = mapView.requestObjectsAtPoint(x, y, callback)
+
+        // Verify that the callback returns the objects within 5 seconds.
+        verify(callback, timeout(5_000L)).onRequestResult(
+            captor.capture(),
+            eq(x),
+            eq(y),
+            eq(requestId)
+        )
+
+        // Verify that among the returned objects, at least one is a MapPolyline.
+        val viewObjects = captor.firstValue
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+        val mapRouteObject = viewObjects
+            .filterIsInstance<MapRoute>()
+            .firstOrNull()
+
+        assertNotNull("MapRoute object not found among returned view objects", mapRouteObject)
+
+        val returnedPayload = mapRouteObject!!.data.payload as? Bundle
+        assertNotNull("Expected payload to be a Bundle", returnedPayload)
+        assertEquals("tujemojpayload", returnedPayload?.getString("key"))
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14471
+     */
+    @Test
+    fun requestMapPolylineFromRouteCheckPayload(): Unit = runBlocking {
+        // Create a map fragment with the initial camera state.
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // Launch the activity and add the map fragment.
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity { activity ->
+            activity.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        val mapView = getMapView(mapFragment)
+
+        val route = RouteComputeHelper().onlineComputeRoute(
+            start = GeoCoordinates(48.10230847247041, 17.23332912174021),
+            destination = GeoCoordinates(48.101253920311315, 17.23448444159353)
+        )
+
+        // Set the camera position to the midpoint of the polyline.
+        mapView.cameraModel.position = GeoCoordinates(48.10164, 17.23405)
+        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.tilt = 0F
+
+        val payload = Bundle().apply {
+            putString("key", "tujemojpayload")
+        }
+
+        val geometryListener: GeometryListener = mock(verboseLogging = true)
+
+        route.getRouteGeometry(false, geometryListener)
+        val geometryListCaptor = argumentCaptor<List<GeoCoordinates>>()
+        verify(geometryListener, timeout(10_000L)).onGeometry(geometryListCaptor.capture())
+
+        val mapPolyline = MapPolyline.of(
+            geometryListCaptor.firstValue
+        ).withPayload(
+            payload
+        ).setLineWidth(20.0F)
+            .build()
+
+        // Add the polyline to the map.
+        mapView.mapDataModel.addMapObject(mapPolyline)
+        delay(1000)
+
+        // Prepare the callback for object requests.
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+
+        // Get the map view and determine its center.
+        val view = requireNotNull(mapView.view)
+        val x: Float = view.width / 2F
+        val y: Float = view.height / 2F
+
+        // Request objects at the center point (this should hit the polyline).
+        val requestId = mapView.requestObjectsAtPoint(x, y, callback)
+
+        // Verify that the callback returns the objects within 5 seconds.
+        verify(callback, timeout(5_000L)).onRequestResult(
+            captor.capture(),
+            eq(x),
+            eq(y),
+            eq(requestId)
+        )
+
+        // Verify that among the returned objects, at least one is a MapPolyline.
+        val viewObjects = captor.firstValue
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+        val mapPolylineObject = viewObjects
+            .filterIsInstance<MapPolyline>()
+            .firstOrNull()
+
+        assertNotNull(
+            "mapPolylineObject object not found among returned view objects",
+            mapPolylineObject
+        )
+
+        val returnedPayload = mapPolylineObject!!.data.payload as? Bundle
+        assertNotNull("Expected payload to be a Bundle", returnedPayload)
+        assertEquals("tujemojpayload", returnedPayload?.getString("key"))
+    }
 
     private fun getInitialCameraState(): CameraState {
         return CameraState.Builder().apply {
