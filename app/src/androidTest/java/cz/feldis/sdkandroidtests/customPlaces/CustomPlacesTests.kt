@@ -18,6 +18,7 @@ import com.sygic.sdk.map.`object`.ViewObject
 import com.sygic.sdk.map.`object`.data.ViewObjectData
 import com.sygic.sdk.places.CustomPlacesManager
 import com.sygic.sdk.places.CustomPlacesManagerProvider
+import com.sygic.sdk.places.listeners.CustomPlacesSearchIndexingListener
 import com.sygic.sdk.places.results.InstallDatasetsData
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.AutocompleteResult
@@ -74,8 +75,7 @@ class CustomPlacesTests : BaseTest() {
     private fun installOfflinePlaces(iso: String) = runBlocking {
         cpManager.installOfflineDatasets(listOf(defaultDataset), iso)
             .filterIsInstance<InstallDatasetsData.Result>()
-            .map { it.result }
-            .first { it.result == CustomPlacesManager.InstallResult.SUCCESS }
+            .first { it.result.result == CustomPlacesManager.InstallResult.SUCCESS }
     }
 
     private fun uninstallOfflinePlaces(iso: String) = runBlocking {

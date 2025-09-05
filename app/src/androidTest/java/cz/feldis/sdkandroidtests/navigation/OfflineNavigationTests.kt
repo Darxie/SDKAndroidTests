@@ -754,7 +754,6 @@ class OfflineNavigationTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation)
     }
 
-    @OptIn(FlowPreview::class)
     @Test
     fun setIncidentWarningSettingsAfterPassingSpeedCam(): Unit = runBlocking {
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
@@ -796,26 +795,20 @@ class OfflineNavigationTests : BaseTest() {
             withTimeout(20_000) {
                 incidentsFlow
                     .map { list ->
-                        // nájdi ten istý incident v najnovšom emite
                         list.find { it.incident.id == targetIncident.incident.id }
                     }
-                    .onEach { Timber.d("Nájdený incident pre ID=${targetIncident.incident.id}: $it") }
-                    .debounce(200)
                     .onEach { info ->
                         if (info != null) {
                             seenAtLeastOnce = true
-                            val d = info.distance
-                            Timber.d("Distance k incidentu: $d (last=$lastDistance)")
-                            // tolerancia na šum, napr. +5 m
+                            val distance = info.distance
                             assertTrue(
-                                "Distance by sa mala znižovať (predtým=$lastDistance, teraz=$d)",
-                                d <= lastDistance
+                                "Distance should diminish (before=$lastDistance, now=$distance)",
+                                distance <= lastDistance
 
                             )
-                            lastDistance = d
+                            lastDistance = distance
                         }
                     }
-                    .debounce(1000)
                     .first { info -> seenAtLeastOnce && info == null }
             }
 
