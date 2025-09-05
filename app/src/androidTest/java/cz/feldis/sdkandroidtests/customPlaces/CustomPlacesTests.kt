@@ -5,12 +5,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import com.sygic.sdk.map.Camera
 import com.sygic.sdk.map.CameraState
+import com.sygic.sdk.map.GetMapResult
 import com.sygic.sdk.map.MapAnimation
 import com.sygic.sdk.map.MapCenter
 import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.MapView.InjectSkinResultListener
-import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.map.listeners.RequestObjectCallback
 import com.sygic.sdk.map.`object`.Appearance
 import com.sygic.sdk.map.`object`.ProxyPlace
@@ -19,6 +19,7 @@ import com.sygic.sdk.map.`object`.data.ViewObjectData
 import com.sygic.sdk.places.CustomPlacesManager
 import com.sygic.sdk.places.CustomPlacesManagerProvider
 import com.sygic.sdk.places.listeners.CustomPlacesSearchIndexingListener
+import com.sygic.sdk.places.results.InstallDatasetsData
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.search.AutocompleteResult
 import com.sygic.sdk.search.AutocompleteResultListener
@@ -36,7 +37,11 @@ import cz.feldis.sdkandroidtests.TestMapFragment
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.search.SearchHelper
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -67,27 +72,15 @@ class CustomPlacesTests : BaseTest() {
         uninstallOfflinePlaces("sk")
     }
 
-    private fun installOfflinePlaces(iso: String) {
-        val customPlacesResultListener: CustomPlacesManager.InstallResultListener =
-            mock(verboseLogging = true)
-        cpManager.installOfflineDatasets(
-            listOf(defaultDataset),
-            iso,
-            customPlacesResultListener
-        )
-        verify(
-            customPlacesResultListener,
-            timeout(20_000L)
-        ).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
+    private fun installOfflinePlaces(iso: String) = runBlocking {
+        cpManager.installOfflineDatasets(listOf(defaultDataset), iso)
+            .filterIsInstance<InstallDatasetsData.Result>()
+            .first { it.result.result == CustomPlacesManager.InstallResult.SUCCESS }
     }
 
-    private fun uninstallOfflinePlaces(iso: String) {
-        val resultListener: CustomPlacesManager.InstallResultListener = mock(verboseLogging = true)
-        cpManager.uninstallOfflineDatasetsFromCountry(iso, resultListener)
-        verify(
-            resultListener,
-            timeout(20_000L)
-        ).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
+    private fun uninstallOfflinePlaces(iso: String) = runBlocking {
+        val result = cpManager.uninstallOfflineDatasetsFromCountry(iso)
+        assertTrue(result.result == CustomPlacesManager.InstallResult.SUCCESS)
     }
 
     private fun getInitialCameraState(): CameraState {
@@ -109,30 +102,25 @@ class CustomPlacesTests : BaseTest() {
         }.build()
     }
 
-    private fun getMapView(mapFragment: TestMapFragment): MapView {
-        val mapInitListener: OnMapInitListener = mock(verboseLogging = true)
-        val mapViewCaptor = argumentCaptor<MapView>()
-
-        mapFragment.getMapAsync(mapInitListener)
-        verify(mapInitListener, timeout(5_000L)).onMapReady(
-            mapViewCaptor.capture()
-        )
-        return mapViewCaptor.firstValue
-    }
+    private suspend fun getMapView(mapFragment: TestMapFragment): MapView =
+        withTimeout(5_000L) {
+            when (val res = mapFragment.getMapAsync()) {
+                is GetMapResult.Success -> res.mapView
+                is GetMapResult.Error -> fail("getMapAsync returned error")
+            } as MapView
+        }
 
     @Test
-    fun testInstallPlaces() {
-        val customPlacesResultListener: CustomPlacesManager.InstallResultListener =
-            mock(verboseLogging = true)
-        cpManager.installOfflineDatasets(
-            listOf(defaultDataset),
-            "sk",
-            customPlacesResultListener
+    fun testInstallPlaces() = runBlocking {
+        val result = cpManager.installOfflineDatasets(listOf(defaultDataset), "sk")
+            .filterIsInstance<InstallDatasetsData.Result>()
+            .map { it.result }
+            .first { it.result == CustomPlacesManager.InstallResult.SUCCESS }
+
+        assertEquals(
+            CustomPlacesManager.InstallResult.SUCCESS,
+            result.result,
         )
-        verify(
-            customPlacesResultListener,
-            timeout(20_000L)
-        ).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), anyOrNull())
     }
 
     @Test
@@ -285,7 +273,7 @@ class CustomPlacesTests : BaseTest() {
         }
 
         // Get the MapView instance from the TestMapFragment.
-        val mapView = getMapView(mapFragment)
+        val mapView = runBlocking { getMapView(mapFragment) }
         mapView.setMapLanguage(Locale.ENGLISH)
 
         // Inject a skin definition using a JSON file and the injectSkinResultListener.
@@ -331,7 +319,7 @@ class CustomPlacesTests : BaseTest() {
                 .add(R.id.content, mapFragment)
                 .commitNow()
         }
-        val mapView = getMapView(mapFragment)
+        val mapView = runBlocking { getMapView(mapFragment) }
         mapView.setMapLanguage(Locale.FRENCH)
 
         // inject skin

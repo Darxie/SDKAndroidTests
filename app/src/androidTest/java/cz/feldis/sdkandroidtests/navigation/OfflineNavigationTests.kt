@@ -40,6 +40,7 @@ import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -753,7 +754,6 @@ class OfflineNavigationTests : BaseTest() {
         navigationManagerKtx.stopNavigation(navigation)
     }
 
-    @OptIn(FlowPreview::class)
     @Test
     fun setIncidentWarningSettingsAfterPassingSpeedCam(): Unit = runBlocking {
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
@@ -784,41 +784,31 @@ class OfflineNavigationTests : BaseTest() {
             val incidentsFlow = NavigationManagerProvider.getInstance().incidents()
             val targetIncident = withTimeout(20_000) {
                 incidentsFlow
-                    .onEach { list -> Timber.d("Emit zoznam incidentov (size=${list.size}): ids=${list.map { it.incident.id }}") }
-                    .map { list ->
-                        list.firstOrNull()
-                    }
-                    .filterNotNull()
-                    .onEach { Timber.d("Prvý incident = id=${it.incident.id}, distance=${it.distance}") }
+                    .filter { it.isNotEmpty() }
+                    .map { it.first() }
                     .first()
             }
 
             var lastDistance = Int.MAX_VALUE
             var seenAtLeastOnce = false
 
-            withTimeout(60_000) {
+            withTimeout(20_000) {
                 incidentsFlow
                     .map { list ->
-                        // nájdi ten istý incident v najnovšom emite
                         list.find { it.incident.id == targetIncident.incident.id }
                     }
-                    .onEach { Timber.d("Nájdený incident pre ID=${targetIncident.incident.id}: $it") }
-                    .debounce(200)
                     .onEach { info ->
                         if (info != null) {
                             seenAtLeastOnce = true
-                            val d = info.distance
-                            Timber.d("Distance k incidentu: $d (last=$lastDistance)")
-                            // tolerancia na šum, napr. +5 m
+                            val distance = info.distance
                             assertTrue(
-                                "Distance by sa mala znižovať (predtým=$lastDistance, teraz=$d)",
-                                d <= lastDistance
+                                "Distance should diminish (before=$lastDistance, now=$distance)",
+                                distance <= lastDistance
 
                             )
-                            lastDistance = d
+                            lastDistance = distance
                         }
                     }
-                    .debounce(1000)
                     .first { info -> seenAtLeastOnce && info == null }
             }
 
