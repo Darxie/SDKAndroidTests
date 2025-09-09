@@ -1222,6 +1222,96 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     @Test
+    fun onlineRoutingGetAllTransitSplitCountries() {
+        val start = GeoCoordinates(45.093660, -70.153760)
+        val destination = GeoCoordinates(32.621350, -83.303830)
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                this.useTraffic = false
+                this.useSpeedProfiles = false
+            }
+        )
+
+        val expectedRegions =
+            setOf("me", "nh", "ma", "ct", "wv", "ny", "pa", "md", "va", "nc", "sc", "ga")
+
+        val transitCountriesInfoListener: TransitCountriesInfoListener = mock(verboseLogging = true)
+        route.getTransitCountriesInfo(transitCountriesInfoListener)
+
+        verify(transitCountriesInfoListener, timeout(5_000L)).onTransitCountriesInfo(
+            argThat { actualList ->
+
+                val regions = actualList.flatMap { info ->
+                    when {
+                        info.country.startsWith("us-") -> listOf(info.country.substringAfter("us-"))
+                        info.country == "us" -> info.regions
+                        else -> emptyList()
+                    }
+                }.toSet()
+
+                println("Actual regions from SDK: $regions")
+                regions.containsAll(expectedRegions)
+            }
+        )
+    }
+
+    /***
+     * https://jira.sygic.com/browse/CI-3339
+     * TC3912
+     */
+    @Test
+    fun disconnectedRouteFromTheRoadOnline() = runBlocking {
+        val waypoints = listOf(
+            GeoCoordinates(48.269350, 16.452510) // Waypoint
+        )
+
+        val vehicleProfile = VehicleProfile().apply {
+            this.dimensionalTraits = DimensionalTraits().apply {
+                totalWeight = 40000.0F
+                totalLength = 5000
+                totalHeight = 5000
+                totalWidth = 2500
+            }
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Truck
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(48.26984, 16.45232),
+            bottomRight = GeoCoordinates(48.26900, 16.45270)
+        )
+
+        val routingOptions = RoutingOptions().apply {
+            this.routingType = RoutingType.Fastest
+            this.vehicleProfile = vehicleProfile
+            this.useEndpointProtection = true
+            this.useSpeedProfiles = true
+            this.napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start = GeoCoordinates(48.268310, 16.454770),
+            waypoints = waypoints,
+            destination = GeoCoordinates(48.271150, 16.451670),
+            routingOptions = routingOptions
+        )
+
+        val maneuversInBoundingBox = route.maneuvers.filter { maneuver ->
+            GeoUtils.isPointInBoundingBox(maneuver.position, boundingBox)
+        }
+
+        assertTrue(
+            "Route contains unexpected maneuvers within the bounding box: $maneuversInBoundingBox",
+            maneuversInBoundingBox.isEmpty()
+        )
+    }
+
+
+    @Test
     fun onlineRoutingGetAllTransitCountries() {
         val start = GeoCoordinates(48.13204503419638, 17.09786238379282)
         val destination = GeoCoordinates(51.491340, -0.102940)
