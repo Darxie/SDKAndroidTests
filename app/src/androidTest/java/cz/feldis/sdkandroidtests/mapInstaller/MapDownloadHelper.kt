@@ -67,6 +67,11 @@ class MapDownloadHelper : BaseTest() {
         verify(listener, timeout(20_000L)).onResult(eq(MapInstaller.LoadResult.Success))
     }
 
+    fun unloadMap(iso: String) = runBlocking {
+        val listener: MapsResultListener = mock(verboseLogging = true)
+        installer.unloadMap(iso)
+    }
+
     fun unloadAllMaps() {
         val listener: MapsResultListener = mock(verboseLogging = true)
         installer.getAvailableCountries(

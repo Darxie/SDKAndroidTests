@@ -15,12 +15,16 @@ import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
+import com.sygic.sdk.navigation.explorer.ExplorePlacesOnRouteData
+import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
+import com.sygic.sdk.places.PlacesManager
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.Route
 import com.sygic.sdk.route.Router
 import com.sygic.sdk.route.RouterProvider
 import com.sygic.sdk.route.RoutingOptions
+import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.Waypoint
 import com.sygic.sdk.route.listeners.RouteComputeListener
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
@@ -37,11 +41,9 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -51,6 +53,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.mockito.AdditionalMatchers
 import org.mockito.InOrder
@@ -843,6 +846,50 @@ class OfflineNavigationTests : BaseTest() {
             setRotationMode(Camera.RotationMode.Free)
             setTilt(0f)
         }.build()
+    }
+
+    @Test
+    @Ignore("fdskfjsdf")
+    fun navigationInterruptedByMapReloadTest(): Unit = runBlocking {
+        mapDownload.installAndLoadMap("sk")
+
+        val start = GeoCoordinates(48.1486, 17.1077)
+        val destination = GeoCoordinates(48.7164, 21.2611)
+
+        val route = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                arriveInDrivingSide = true
+                useTraffic = false
+                useSpeedProfiles = false
+            }
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val simulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.startSimulator(simulatorAdapter)
+
+
+        val flow = RouteExplorerProvider.getInstance().explorePlacesOnRoute(route, listOf())
+        flow.onEach {
+            if (it is ExplorePlacesOnRouteData.PlacesLoaded) {
+                Timber.d("PROGREEEEEEEEEEEEEEEEEEEEEEEEEES - ${it.progress}")
+            }
+        }
+        delay(10000)
+        mapDownload.unloadMap("sk")
+        val error = flow
+            .filterIsInstance<ExplorePlacesOnRouteData.Error>()
+            .onEach { Timber.d("ERRROOOOOOOOOOOOOOOOOOOOOOOOOOR ----- ${it.errorCode.name}") }
+            .first({ it.errorCode == PlacesManager.ErrorCode.REQUEST_CANCELED })
+        delay(1_000)
+
+        assertTrue(error.errorCode == PlacesManager.ErrorCode.REQUEST_CANCELED)
     }
 
     private fun getMapView(mapFragment: TestMapFragment): MapView {
