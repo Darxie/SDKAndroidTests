@@ -552,9 +552,9 @@ class RouteComputeTests : BaseTest() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
-        val start = GeoCoordinates(48.19159435449465, 17.223366296005075)
-        val waypoint = GeoCoordinates(48.19136102846576, 17.226362460836786)
-        val destination = GeoCoordinates(48.19159237577265, 17.22143784412721)
+        val start = GeoCoordinates(48.19066, 17.03575)
+        val waypoint = GeoCoordinates(48.19245, 17.03501)
+        val destination = GeoCoordinates(48.19412, 17.03458)
         val routingOptions = RoutingOptions().apply {
             vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
@@ -597,9 +597,8 @@ class RouteComputeTests : BaseTest() {
         verify(routeWarningsListener, timeout(10_000L)).onRouteWarnings(captorWarnings.capture())
 
         assert(captorWarnings.firstValue.size == 1)
-        // as we get back through the same road, there would be two warnings if we didn't change the weight
         assertEquals(
-            34000.0F,
+            22000.0F,
             (captorWarnings.firstValue[0] as RouteWarning.SectionWarning.WeightRestriction).limitValue
         )
         assertEquals(
@@ -614,9 +613,9 @@ class RouteComputeTests : BaseTest() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
-        val start = GeoCoordinates(48.19159435449465, 17.223366296005075)
-        val waypoint = GeoCoordinates(48.19136102846576, 17.226362460836786)
-        val destination = GeoCoordinates(48.19159237577265, 17.22143784412721)
+        val start = GeoCoordinates(48.19066, 17.03575)
+        val waypoint = GeoCoordinates(48.19245, 17.03501)
+        val destination = GeoCoordinates(48.19412, 17.03458)
         val routingOptions = RoutingOptions().apply {
             vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
