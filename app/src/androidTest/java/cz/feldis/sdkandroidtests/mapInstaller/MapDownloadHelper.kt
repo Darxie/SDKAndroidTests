@@ -8,6 +8,7 @@ import com.sygic.sdk.map.listeners.MapStatusListener
 import com.sygic.sdk.map.listeners.MapsResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.kotlin.any
@@ -68,8 +69,8 @@ class MapDownloadHelper : BaseTest() {
     }
 
     fun unloadMap(iso: String) = runBlocking {
-        val listener: MapsResultListener = mock(verboseLogging = true)
-        installer.unloadMap(iso)
+        val result = installer.unloadMap(iso)
+        assertTrue(result is MapInstaller.LoadResult.Success)
     }
 
     fun unloadAllMaps() {

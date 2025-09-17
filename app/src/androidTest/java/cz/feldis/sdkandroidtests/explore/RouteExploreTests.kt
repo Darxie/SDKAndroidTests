@@ -1,11 +1,14 @@
 package cz.feldis.sdkandroidtests.explore
 
+import com.sygic.sdk.map.MapInstallerProvider
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
+import com.sygic.sdk.navigation.explorer.ExplorePlacesOnRouteData
 import com.sygic.sdk.navigation.explorer.RouteExplorer
 import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
 import com.sygic.sdk.navigation.traffic.TrafficManager
 import com.sygic.sdk.navigation.traffic.TrafficManagerProvider
+import com.sygic.sdk.places.PlacesManager
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.ChargingStation
 import com.sygic.sdk.route.RoutingOptions
@@ -17,6 +20,11 @@ import cz.feldis.sdkandroidtests.ktx.TrafficManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -41,6 +49,7 @@ class RouteExploreTests : BaseTest() {
     private val trafficManagerKtx = TrafficManagerKtx()
     private lateinit var trafficManager: TrafficManager
     private lateinit var routeExplorer: RouteExplorer
+    private val scope = CoroutineScope(Dispatchers.Unconfined)
 
     override fun setUp() {
         super.setUp()
@@ -248,5 +257,37 @@ class RouteExploreTests : BaseTest() {
         // Ensure that the first and last invocation checks were performed
         assertTrue(firstInvocationSize >= 0)  // Ensure that the first invocation was recorded
         assertTrue(lastInvocationSize >= 0)   // Ensure that the last invocation was recorded
+    }
+
+    @Test
+    fun testReloadMapWhileExploring() = runBlocking {
+        val mapDownloadHelper = MapDownloadHelper()
+        mapDownloadHelper.installAndLoadMap("va")
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.16876, 17.07634),
+            GeoCoordinates(48.16281, 17.09559)
+        )
+
+        val interrupted = CompletableDeferred<Unit>()
+
+        scope.launch {
+            while(isActive) {
+                RouteExplorerProvider.getInstance().explorePlacesOnRoute(route, emptyList()).collect {
+                    if (it is ExplorePlacesOnRouteData.Error && it.errorCode == PlacesManager.ErrorCode.INTERRUPTED_BY_MAP_RELOAD) {
+                        interrupted.complete(Unit)
+                    }
+                }
+            }
+        }
+
+        scope.launch {
+            val mapInstaller = MapInstallerProvider.getInstance()
+            while(isActive) {
+                mapInstaller.unloadMap("va")
+                mapInstaller.loadMap("va")
+            }
+        }
+
+        interrupted.await()
     }
 }
