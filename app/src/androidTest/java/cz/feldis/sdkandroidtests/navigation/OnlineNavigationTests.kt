@@ -16,6 +16,7 @@ import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.RoutingOptions
+import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.Waypoint
 import com.sygic.sdk.route.simulator.NmeaLogSimulatorProvider
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
@@ -678,6 +679,49 @@ class OnlineNavigationTests : BaseTest() {
             Mockito.timeout(STATUS_TIMEOUT)
         )
             .onWaypointPassed(any())
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnWaypointPassListener(listener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    /**
+     * Navigation test on waypoint pass and demonstration finished in restricted zone
+     * TC904
+     * https://jira.sygic.com/browse/SDC-14042
+     * In this test we compute route with waypoint and with destination in restricted zone, and set it for navigation.
+     * Via simulator provider we set this route for simulation and start demonstrate navigation.
+     * We verify that onWaypointPassed and onFinishReached were invoked and the demonstration finished successfully.
+     */
+    @Test
+    fun onWaypointPassRestrictedDestinationTestOnline() = runBlocking {
+        val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
+
+        val route = routeCompute.onlineComputeRoute(
+            GeoCoordinates(48.258830, 16.458170),
+            GeoCoordinates(48.257410, 16.451190),
+            listOf(GeoCoordinates(48.256230, 16.455540)),
+            routingOptions = RoutingOptions().apply {
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                arriveInDrivingSide = true
+                useTraffic = true
+                useSpeedProfiles = true
+            }
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnWaypointPassListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        // перевіряємо порядок викликів: спочатку onWaypointPassed, потім onFinishReached
+        val inOrder: InOrder = inOrder(listener)
+        inOrder.verify(listener, timeout(60_000L)).onWaypointPassed(any())
+        inOrder.verify(listener, timeout(60_000L)).onFinishReached()
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         navigation.removeOnWaypointPassListener(listener)
