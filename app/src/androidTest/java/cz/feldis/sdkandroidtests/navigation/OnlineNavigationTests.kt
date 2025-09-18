@@ -718,7 +718,7 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
-        // перевіряємо порядок викликів: спочатку onWaypointPassed, потім onFinishReached
+        // check the order of calls: first onWaypointPassed, then onFinishReached
         val inOrder: InOrder = inOrder(listener)
         inOrder.verify(listener, timeout(60_000L)).onWaypointPassed(any())
         inOrder.verify(listener, timeout(60_000L)).onFinishReached()
