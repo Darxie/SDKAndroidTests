@@ -698,9 +698,9 @@ class OnlineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
 
         val route = routeCompute.onlineComputeRoute(
-            GeoCoordinates(48.258830, 16.458170),
-            GeoCoordinates(48.257410, 16.451190),
-            listOf(GeoCoordinates(48.256230, 16.455540)),
+            GeoCoordinates(48.258950, 16.457700),
+            GeoCoordinates(48.257590, 16.455430),
+            listOf(GeoCoordinates(48.258140, 16.456600)),
             routingOptions = RoutingOptions().apply {
                 useEndpointProtection = true
                 napStrategy = NearestAccessiblePointStrategy.Disabled
@@ -715,7 +715,7 @@ class OnlineNavigationTests : BaseTest() {
 
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
-        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 10F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
         // check the order of calls: first onWaypointPassed, then onFinishReached
