@@ -62,10 +62,10 @@ class OnlineNavigationTests : BaseTest() {
     @Before
     override fun setUp() {
         super.setUp()
-        routeCompute = RouteComputeHelper()
         mapDownload = MapDownloadHelper()
-        navigation = runBlocking { NavigationManagerProvider.getInstance() }
         mapDownload.unloadAllMaps()
+        routeCompute = RouteComputeHelper()
+        navigation = runBlocking { NavigationManagerProvider.getInstance() }
     }
 
     @Test
@@ -715,7 +715,7 @@ class OnlineNavigationTests : BaseTest() {
 
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
-        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 6F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
         // check the order of calls: first onWaypointPassed, then onFinishReached

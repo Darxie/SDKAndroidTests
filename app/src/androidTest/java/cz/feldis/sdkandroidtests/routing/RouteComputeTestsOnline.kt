@@ -56,8 +56,8 @@ class RouteComputeTestsOnline : BaseTest() {
     override fun setUp() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
-        routeComputeHelper = RouteComputeHelper()
         mapDownloadHelper.unloadAllMaps()
+        routeComputeHelper = RouteComputeHelper()
         router = runBlocking { RouterProvider.getInstance() }
     }
 
