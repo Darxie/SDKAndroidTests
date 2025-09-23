@@ -732,11 +732,6 @@ class RouteComputeTestsOnline : BaseTest() {
      */
     @Test
     fun routingThroughIntersectionSlovakiaOnlineTest() = runBlocking {
-        val vehicleProfile = VehicleProfile().apply {
-            this.generalVehicleTraits = GeneralVehicleTraits().apply {
-                vehicleType = VehicleType.Car
-            }
-        }
 
         val boundingBox = GeoBoundingBox(
             topLeft = GeoCoordinates(48.11995, 17.11774),
@@ -747,12 +742,10 @@ class RouteComputeTestsOnline : BaseTest() {
             GeoCoordinates(48.117600, 17.120250),
             GeoCoordinates(48.118920, 17.115830),
             routingOptions = RoutingOptions().apply {
-                this.routingType = RoutingOptions.RoutingType.Fastest
-                this.vehicleProfile = vehicleProfile
+                this.routingType = RoutingType.Fastest
                 this.useEndpointProtection = true
                 this.napStrategy = NearestAccessiblePointStrategy.Disabled
-                this.useTraffic = true
-                this.useSpeedProfiles = true
+                this.arriveInDrivingSide = false
             }
         )
 
