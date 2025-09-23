@@ -687,7 +687,7 @@ class OnlineNavigationTests : BaseTest() {
 
     /**
      * Navigation test on waypoint pass and demonstration finished in restricted zone
-     * TC904
+     * TC904 (but another coordinates)
      * https://jira.sygic.com/browse/SDC-14042
      * In this test we compute route with waypoint and with destination in restricted zone, and set it for navigation.
      * Via simulator provider we set this route for simulation and start demonstrate navigation.
