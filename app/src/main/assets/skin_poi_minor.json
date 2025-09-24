@@ -11,6 +11,9 @@
             "priority": 0,
             "zoomLevel": 14,
             "importance": "Minor"
+          },
+          "SYEVStation": {
+            "enabled": false
           }
         }
       }

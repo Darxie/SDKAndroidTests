@@ -897,7 +897,7 @@ class MapViewTests : BaseTest() {
         ).onResult(eq(MapView.InjectSkinResult.Success))
 
         mapView.cameraModel.position = GeoCoordinates(48.09524, 17.21050)
-        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.zoomLevel = 19F
         mapView.cameraModel.tilt = 0F
 
         delay(3000)
@@ -952,7 +952,7 @@ class MapViewTests : BaseTest() {
         ).onResult(eq(MapView.InjectSkinResult.Success))
 
         mapView.cameraModel.position = GeoCoordinates(48.09524, 17.21050)
-        mapView.cameraModel.zoomLevel = 20F
+        mapView.cameraModel.zoomLevel = 19F
         mapView.cameraModel.tilt = 0F
 
         delay(3000)

@@ -36,6 +36,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
@@ -51,6 +52,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import timber.log.Timber
 import java.util.Locale
 
 class OnlineNavigationTests : BaseTest() {
@@ -58,6 +60,7 @@ class OnlineNavigationTests : BaseTest() {
     private lateinit var mapDownload: MapDownloadHelper
     private val navigationManagerKtx = NavigationManagerKtx()
     private lateinit var navigation: NavigationManager
+    override val betaRouting = true
 
     @Before
     override fun setUp() {
@@ -70,7 +73,6 @@ class OnlineNavigationTests : BaseTest() {
 
     @Test
     fun testGetRouteProgressAsyncOnline() = runBlocking {
-        val listener: OnRouteProgressListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.101936, 17.233684)
         val destination = GeoCoordinates(48.145644, 17.127011)
@@ -78,11 +80,9 @@ class OnlineNavigationTests : BaseTest() {
         val route = routeCompute.onlineComputeRoute(start, destination)
         navigationManagerKtx.setRouteForNavigation(route, navigation)
 
-        navigation.getRouteProgress(
-            listener
-        )
-
-        verify(listener, timeout(5_000)).onRouteProgress(any())
+        val progress = navigation.getRouteProgress()
+        Timber.d("Progress - distance to end: ${progress.distanceToEnd}")
+        assertTrue(progress.distanceToEnd > 0)
     }
 
     /**

@@ -1,5 +1,6 @@
 package cz.feldis.sdkandroidtests.mapInstaller
 
+import android.util.Log
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
 import com.sygic.sdk.map.listeners.MapListResult
@@ -81,13 +82,12 @@ class MapDownloadHelper : BaseTest() {
         check(result.result is MapInstaller.LoadResult.Success) {
             "Failed to get installed maps: ${result.result}"
         }
-
+        Log.d("SYGIC", "Going to unload maps")
         val unloadResult = installer.unloadMaps(result.mapIsos)
         assertTrue(
             "Failed to unload maps: ${result.mapIsos}",
             unloadResult is MapInstaller.LoadResult.Success
         )
-        Timber.d("Maps unloaded successfully: ${result.mapIsos}")
-        delay(2000)
+        Log.d("SYGIC","Maps unloaded successfully: ${result.mapIsos}")
     }
 }

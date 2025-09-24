@@ -4,6 +4,7 @@ import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.PrimaryRouteRequest
 import com.sygic.sdk.route.RouteAvoids
+import com.sygic.sdk.route.RouteElement
 import com.sygic.sdk.route.RouteManeuver
 import com.sygic.sdk.route.RouteRequest
 import com.sygic.sdk.route.RouteWarning
@@ -30,7 +31,13 @@ import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.utils.GeoUtils
 import junit.framework.Assert.assertNotNull
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -51,12 +58,12 @@ class RouteComputeTestsOnline : BaseTest() {
     private lateinit var mapDownloadHelper: MapDownloadHelper
     private lateinit var routeComputeHelper: RouteComputeHelper
     override val betaRouting = true
+    override val loadMaps = false
     private lateinit var router: Router
 
     override fun setUp() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
-        mapDownloadHelper.unloadAllMaps()
         routeComputeHelper = RouteComputeHelper()
         router = runBlocking { RouterProvider.getInstance() }
     }
@@ -95,21 +102,11 @@ class RouteComputeTestsOnline : BaseTest() {
 
     @Test
     fun getRouteElementsIcelandOnline() {
-        val elementsListener: RouteElementsListener = mock(verboseLogging = true)
-
         val start = GeoCoordinates(63.556092, -19.794962)
         val destination = GeoCoordinates(63.420816, -19.001375)
         val route = routeComputeHelper.onlineComputeRoute(start, destination)
-
-        route.getRouteElements(elementsListener)
-        verify(elementsListener, timeout(10_000L)).onRouteElementsRetrieved(
-            argThat {
-                if (this.isEmpty()) {
-                    return@argThat false
-                }
-                true
-            }
-        )
+        val routeElements = runBlocking { route.getRouteElements() }
+        assertTrue(routeElements.isNotEmpty())
     }
 
     @Test
@@ -1190,6 +1187,8 @@ class RouteComputeTestsOnline : BaseTest() {
             }
             useEndpointProtection = true
             napStrategy = NearestAccessiblePointStrategy.Disabled
+            useTraffic = false
+            useSpeedProfiles = false
         }
 
         val boundingBox = GeoBoundingBox(
