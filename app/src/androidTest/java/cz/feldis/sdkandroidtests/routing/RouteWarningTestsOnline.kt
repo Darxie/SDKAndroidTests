@@ -28,7 +28,6 @@ class RouteWarningTestsOnline : BaseTest() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
-        mapDownloadHelper.unloadAllMaps()
     }
 
     @Test

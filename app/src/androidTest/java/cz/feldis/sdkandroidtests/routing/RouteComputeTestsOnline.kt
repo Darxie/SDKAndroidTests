@@ -16,7 +16,6 @@ import com.sygic.sdk.route.TransitCountryInfo
 import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
 import com.sygic.sdk.route.listeners.RouteComputeListener
 import com.sygic.sdk.route.listeners.RouteDurationListener
-import com.sygic.sdk.route.listeners.RouteElementsListener
 import com.sygic.sdk.route.listeners.RouteRequestDeserializedListener
 import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.route.listeners.TransitCountriesInfoListener
@@ -57,7 +56,6 @@ class RouteComputeTestsOnline : BaseTest() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
-        mapDownloadHelper.unloadAllMaps()
         router = runBlocking { RouterProvider.getInstance() }
     }
 
@@ -95,21 +93,11 @@ class RouteComputeTestsOnline : BaseTest() {
 
     @Test
     fun getRouteElementsIcelandOnline() {
-        val elementsListener: RouteElementsListener = mock(verboseLogging = true)
-
         val start = GeoCoordinates(63.556092, -19.794962)
         val destination = GeoCoordinates(63.420816, -19.001375)
         val route = routeComputeHelper.onlineComputeRoute(start, destination)
-
-        route.getRouteElements(elementsListener)
-        verify(elementsListener, timeout(10_000L)).onRouteElementsRetrieved(
-            argThat {
-                if (this.isEmpty()) {
-                    return@argThat false
-                }
-                true
-            }
-        )
+        val routeElements = runBlocking { route.getRouteElements() }
+        assertTrue(routeElements.isNotEmpty())
     }
 
     @Test
@@ -732,11 +720,6 @@ class RouteComputeTestsOnline : BaseTest() {
      */
     @Test
     fun routingThroughIntersectionSlovakiaOnlineTest() = runBlocking {
-        val vehicleProfile = VehicleProfile().apply {
-            this.generalVehicleTraits = GeneralVehicleTraits().apply {
-                vehicleType = VehicleType.Car
-            }
-        }
 
         val boundingBox = GeoBoundingBox(
             topLeft = GeoCoordinates(48.11995, 17.11774),
@@ -747,12 +730,10 @@ class RouteComputeTestsOnline : BaseTest() {
             GeoCoordinates(48.117600, 17.120250),
             GeoCoordinates(48.118920, 17.115830),
             routingOptions = RoutingOptions().apply {
-                this.routingType = RoutingOptions.RoutingType.Fastest
-                this.vehicleProfile = vehicleProfile
+                this.routingType = RoutingType.Fastest
                 this.useEndpointProtection = true
                 this.napStrategy = NearestAccessiblePointStrategy.Disabled
-                this.useTraffic = true
-                this.useSpeedProfiles = true
+                this.arriveInDrivingSide = false
             }
         )
 
@@ -1197,6 +1178,8 @@ class RouteComputeTestsOnline : BaseTest() {
             }
             useEndpointProtection = true
             napStrategy = NearestAccessiblePointStrategy.Disabled
+            useTraffic = false
+            useSpeedProfiles = false
         }
 
         val boundingBox = GeoBoundingBox(

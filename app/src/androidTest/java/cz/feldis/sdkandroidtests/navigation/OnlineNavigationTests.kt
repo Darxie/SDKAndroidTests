@@ -10,7 +10,6 @@ import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.navigation.NavigationManager
-import com.sygic.sdk.navigation.NavigationManager.OnRouteProgressListener
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
@@ -36,6 +35,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
@@ -51,6 +51,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import timber.log.Timber
 import java.util.Locale
 
 class OnlineNavigationTests : BaseTest() {
@@ -58,19 +59,18 @@ class OnlineNavigationTests : BaseTest() {
     private lateinit var mapDownload: MapDownloadHelper
     private val navigationManagerKtx = NavigationManagerKtx()
     private lateinit var navigation: NavigationManager
+    override val betaRouting = true
 
     @Before
     override fun setUp() {
         super.setUp()
-        routeCompute = RouteComputeHelper()
         mapDownload = MapDownloadHelper()
+        routeCompute = RouteComputeHelper()
         navigation = runBlocking { NavigationManagerProvider.getInstance() }
-        mapDownload.unloadAllMaps()
     }
 
     @Test
     fun testGetRouteProgressAsyncOnline() = runBlocking {
-        val listener: OnRouteProgressListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.101936, 17.233684)
         val destination = GeoCoordinates(48.145644, 17.127011)
@@ -78,11 +78,9 @@ class OnlineNavigationTests : BaseTest() {
         val route = routeCompute.onlineComputeRoute(start, destination)
         navigationManagerKtx.setRouteForNavigation(route, navigation)
 
-        navigation.getRouteProgress(
-            listener
-        )
-
-        verify(listener, timeout(5_000)).onRouteProgress(any())
+        val progress = navigation.getRouteProgress()
+        Timber.d("Progress - distance to end: ${progress.distanceToEnd}")
+        assertTrue(progress.distanceToEnd > 0)
     }
 
     /**
@@ -456,8 +454,8 @@ class OnlineNavigationTests : BaseTest() {
 
         val route =
             routeCompute.onlineComputeRoute(
-                GeoCoordinates(48.7429, 17.8603),
-                GeoCoordinates(48.7457, 17.86)
+                GeoCoordinates(48.73900, 17.86193),
+                GeoCoordinates(48.75703, 17.86381)
             )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
