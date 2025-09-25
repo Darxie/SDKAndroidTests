@@ -1,7 +1,14 @@
 package cz.feldis.sdkandroidtests
 
 import com.sygic.sdk.low.gl.GlSurfaceListenerFactory
-import com.sygic.sdk.map.*
+import com.sygic.sdk.map.Camera
+import com.sygic.sdk.map.CameraState
+import com.sygic.sdk.map.MapAnimation
+import com.sygic.sdk.map.MapCenter
+import com.sygic.sdk.map.MapCenterSettings
+import com.sygic.sdk.map.MapFragment
+import com.sygic.sdk.map.MapView
+import com.sygic.sdk.map.data.MapDataModel
 import com.sygic.sdk.map.data.SimpleMapDataModel
 import com.sygic.sdk.position.GeoCoordinates
 
@@ -43,7 +50,7 @@ class TestMapFragment : MapFragment() {
         }
     }
 
-    override fun getMapDataModel(): MapView.MapDataModel {
+    override fun getMapDataModel(): MapDataModel {
         return testDataModel
     }
 }

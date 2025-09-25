@@ -2,7 +2,6 @@ package cz.feldis.sdkandroidtests.utils
 
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
-import com.sygic.sdk.Routing
 import com.sygic.sdk.map.Camera
 import com.sygic.sdk.map.Camera.MovementMode
 import com.sygic.sdk.map.Camera.RotationMode
@@ -18,8 +17,6 @@ import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.RoutingOptions
-import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
-import com.sygic.sdk.route.RoutingOptions.RoutingService
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
@@ -110,10 +107,10 @@ class AuxiliaryTests : BaseTest() {
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
-        mapView.cameraModel.rotationMode = RotationMode.Vehicle
-        mapView.cameraModel.movementMode = MovementMode.FollowGpsPositionWithAutozoom
-        mapView.cameraModel.tilt = 45F
-        mapView.fpsLimit = FpsConfig(FpsConfig.FpsMode.PERFORMANCE, 60f)
+        mapView.cameraModel.setRotationMode(RotationMode.Vehicle)
+        mapView.cameraModel.setMovementMode(MovementMode.FollowGpsPositionWithAutozoom)
+        mapView.cameraModel.setTilt(45F)
+        mapView.setFpsLimit(FpsConfig(FpsConfig.FpsMode.PERFORMANCE, 60f))
 
         delay(600000)
         //close scenario & activity

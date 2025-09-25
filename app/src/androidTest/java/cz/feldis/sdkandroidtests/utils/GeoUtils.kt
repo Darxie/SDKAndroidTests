@@ -47,12 +47,14 @@ object GeoUtils {
         val mapView = getMapView(mapFragment)
 
         // Set the camera position to the midpoint of the polyline.
-        mapView.cameraModel.tilt = 0F
-        mapView.cameraModel.mapRectangle = MapRectangle(
-            GeoBoundingBox(
-                route.boundingBox.topLeft,
-                route.boundingBox.bottomRight
-            ), 100, 10, 100, 10
+        mapView.cameraModel.setTilt(0F)
+        mapView.cameraModel.setMapRectangle(
+            MapRectangle(
+                GeoBoundingBox(
+                    route.boundingBox.topLeft,
+                    route.boundingBox.bottomRight
+                ), 100, 10, 100, 10
+            )
         )
 
         val mapRoute = MapRoute.from(route)

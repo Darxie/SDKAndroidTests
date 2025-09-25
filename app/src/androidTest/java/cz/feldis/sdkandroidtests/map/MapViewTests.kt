@@ -69,7 +69,9 @@ class MapViewTests : BaseTest() {
 
     override fun setUp() {
         super.setUp()
-        incidentsManager = runBlocking { IncidentsManagerProvider.getInstance() }
+        runBlocking {
+            incidentsManager = IncidentsManagerProvider.getInstance()
+        }
     }
 
     @Test
@@ -106,17 +108,17 @@ class MapViewTests : BaseTest() {
 
         val mapView = getMapView(mapFragment)
         delay(500)
-        mapView.cameraModel.tilt = 45.06479F
+        mapView.cameraModel.setTilt(45.06479F)
         delay(500)
-        mapView.cameraModel.tilt = 48.06479F
+        mapView.cameraModel.setTilt(48.06479F)
         delay(500)
-        mapView.cameraModel.tilt = 59.06479F
+        mapView.cameraModel.setTilt(59.06479F)
         delay(500)
-        mapView.cameraModel.tilt = 90.06479F
+        mapView.cameraModel.setTilt(90.06479F)
         delay(500)
-        mapView.cameraModel.tilt = 0.06479F
+        mapView.cameraModel.setTilt(0.06479F)
         delay(500)
-        mapView.cameraModel.tilt = -30.06479F
+        mapView.cameraModel.setTilt(-30.06479F)
         delay(500)
 
         //close scenario & activity
@@ -143,14 +145,14 @@ class MapViewTests : BaseTest() {
         verify(listener, timeout(TIMEOUT)).onSuccess()
         verify(listener, never()).onError(any())
 
-        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10095535808773, 17.234824479529344))
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
         delay(3000) // it takes around 1,5s until the speedcam is shown on map
         val callback: RequestObjectCallback = mock(verboseLogging = true)
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
 
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
@@ -193,14 +195,14 @@ class MapViewTests : BaseTest() {
         verify(listener, timeout(TIMEOUT)).onSuccess()
         verify(listener, never()).onError(any())
 
-        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10095535808773, 17.234824479529344))
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
         delay(3000) // it takes around 1,5s until the speedcam is shown on map
         val callback: RequestObjectCallback = mock(verboseLogging = true)
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
 
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
@@ -242,9 +244,9 @@ class MapViewTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
-        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
-        mapView.cameraModel.zoomLevel = 15F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10095535808773, 17.234824479529344))
+        mapView.cameraModel.setZoomLevel(15F)
+        mapView.cameraModel.setTilt(0F)
 
         runBlocking { RouterProvider.getInstance() }.computeEVRange(
             GeoCoordinates(48.10095535808773, 17.234824479529344),
@@ -295,9 +297,9 @@ class MapViewTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
-        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
-        mapView.cameraModel.zoomLevel = 16F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10095535808773, 17.234824479529344))
+        mapView.cameraModel.setZoomLevel(16F)
+        mapView.cameraModel.setTilt(0F)
 
         val geoCoordinates = listOf(
             GeoCoordinates(48.102000, 17.234824),  // North
@@ -333,9 +335,9 @@ class MapViewTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
-        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
-        mapView.cameraModel.zoomLevel = 16F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10095535808773, 17.234824479529344))
+        mapView.cameraModel.setZoomLevel(16F)
+        mapView.cameraModel.setTilt(0F)
 
         val geoCoordinates = listOf(
             GeoCoordinates(48.102000, 17.234824),  // North
@@ -371,9 +373,9 @@ class MapViewTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
-        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
-        mapView.cameraModel.zoomLevel = 16F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10095535808773, 17.234824479529344))
+        mapView.cameraModel.setZoomLevel(16F)
+        mapView.cameraModel.setTilt(0F)
 
         val starShape = listOf(
             GeoCoordinates(48.102000, 17.234824),  // Top
@@ -409,9 +411,9 @@ class MapViewTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
-        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
-        mapView.cameraModel.zoomLevel = 16F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10095535808773, 17.234824479529344))
+        mapView.cameraModel.setZoomLevel(16F)
+        mapView.cameraModel.setTilt(0F)
 
         val spiralShape = listOf(
             GeoCoordinates(48.102000, 17.234824), // Outer spiral
@@ -449,9 +451,9 @@ class MapViewTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
-        mapView.cameraModel.position = GeoCoordinates(48.10095535808773, 17.234824479529344)
-        mapView.cameraModel.zoomLevel = 16F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10095535808773, 17.234824479529344))
+        mapView.cameraModel.setZoomLevel(16F)
+        mapView.cameraModel.setTilt(0F)
 
         val irregularShape = listOf(
             GeoCoordinates(48.102000, 17.235824), // North-northeast
@@ -498,9 +500,9 @@ class MapViewTests : BaseTest() {
         val middleCoordinates = GeoCoordinates(middleLatitude, middleLongitude)
 
         // Set the camera position to the midpoint of the polyline.
-        mapView.cameraModel.position = middleCoordinates
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(middleCoordinates)
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
 
         // Build the polyline using the defined coordinates.
         val polyline = MapPolyline
@@ -518,7 +520,7 @@ class MapViewTests : BaseTest() {
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
         // Get the map view and determine its center.
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
 
@@ -560,9 +562,9 @@ class MapViewTests : BaseTest() {
         val endCoordinates = GeoCoordinates(48.10155535808773, 17.234824479529344)
 
         // Set the camera position to the midpoint of the polyline.
-        mapView.cameraModel.position = GeoCoordinates(48.19621825644435, 17.05067090043468)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.19621825644435, 17.05067090043468))
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
 
         // Build the polyline using the defined coordinates.
         val polyline = MapPolyline
@@ -577,7 +579,7 @@ class MapViewTests : BaseTest() {
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
         // Get the map view and determine its center.
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
 
@@ -620,23 +622,23 @@ class MapViewTests : BaseTest() {
         )
 
         // Set the camera position to the midpoint of the polyline.
-        mapView.cameraModel.position = GeoCoordinates(48.101824882389934, 17.23386163759587)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.101824882389934, 17.23386163759587))
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
 
         val mapRoute = MapRoute.from(route)
             .setType(RouteType.Primary)
             .build()
         // Add the polyline to the map.
         mapView.mapDataModel.addMapObject(mapRoute)
-        delay(1000)
+        delay(10000)
 
         // Prepare the callback for object requests.
         val callback: RequestObjectCallback = mock(verboseLogging = true)
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
         // Get the map view and determine its center.
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
 
@@ -679,9 +681,9 @@ class MapViewTests : BaseTest() {
         )
 
         // Set the camera position to the midpoint of the polyline.
-        mapView.cameraModel.position = GeoCoordinates(48.101824882389934, 17.23386163759587)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.101824882389934, 17.23386163759587))
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
 
         val mapRoute = MapRoute.from(route)
             .setType(RouteType.Alternative)
@@ -695,7 +697,7 @@ class MapViewTests : BaseTest() {
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
         // Get the map view and determine its center.
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
 
@@ -740,9 +742,9 @@ class MapViewTests : BaseTest() {
 
         val mapView = getMapView(mapFragment)
         // Set the camera position.
-        mapView.cameraModel.position = GeoCoordinates(48.1293, 17.1943)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.1293, 17.1943))
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
 
         val listener: SetVisibleCategoriesListener = mock(verboseLogging = true)
 
@@ -770,9 +772,9 @@ class MapViewTests : BaseTest() {
         val mapView2 = getMapView(mapFragment2)
 
         // Set the camera position.
-        mapView2.cameraModel.position = GeoCoordinates(48.1293, 17.1943)
-        mapView2.cameraModel.zoomLevel = 20F
-        mapView2.cameraModel.tilt = 0F
+        mapView2.cameraModel.setPosition(GeoCoordinates(48.1293, 17.1943))
+        mapView2.cameraModel.setZoomLevel(20F)
+        mapView2.cameraModel.setTilt(0F)
 
         delay(3000)
 
@@ -781,7 +783,7 @@ class MapViewTests : BaseTest() {
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
         // Determine the center coordinates of the MapView.
-        val view = requireNotNull(mapView2.view)
+        val view = requireNotNull(mapView2.getView())
         val x = view.width / 2F
         val y = view.height / 2F
 
@@ -838,9 +840,9 @@ class MapViewTests : BaseTest() {
         val mapView = getMapView(mapFragment)
 
         // Set the camera position.
-        mapView.cameraModel.position = GeoCoordinates(48.1293, 17.1943)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.1293, 17.1943))
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
 
         delay(1000)
 
@@ -849,7 +851,7 @@ class MapViewTests : BaseTest() {
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
         // Determine the center coordinates of the MapView.
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
         val x = view.width / 2F
         val y = view.height / 2F
 
@@ -896,16 +898,16 @@ class MapViewTests : BaseTest() {
             timeout(5_000L)
         ).onResult(eq(MapView.InjectSkinResult.Success))
 
-        mapView.cameraModel.position = GeoCoordinates(48.09524, 17.21050)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.09524, 17.21050))
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
 
         delay(3000)
 
         val callback: RequestObjectCallback = mock(verboseLogging = true)
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
 
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
@@ -951,16 +953,16 @@ class MapViewTests : BaseTest() {
             timeout(5_000L)
         ).onResult(eq(MapView.InjectSkinResult.Success))
 
-        mapView.cameraModel.position = GeoCoordinates(48.09524, 17.21050)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.09524, 17.21050))
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
 
         delay(3000)
 
         val callback: RequestObjectCallback = mock(verboseLogging = true)
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
 
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
@@ -1004,9 +1006,9 @@ class MapViewTests : BaseTest() {
         )
 
         // Set the camera position to the midpoint of the polyline.
-        mapView.cameraModel.position = GeoCoordinates(48.101824882389934, 17.23386163759587)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.101824882389934, 17.23386163759587))
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
 
         val payload = Bundle().apply {
             putString("key", "tujemojpayload")
@@ -1025,7 +1027,7 @@ class MapViewTests : BaseTest() {
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
         // Get the map view and determine its center.
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
 
@@ -1076,9 +1078,9 @@ class MapViewTests : BaseTest() {
         )
 
         // Set the camera position to the midpoint of the polyline.
-        mapView.cameraModel.position = GeoCoordinates(48.10164, 17.23405)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10164, 17.23405))
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
 
         val payload = Bundle().apply {
             putString("key", "tujemojpayload")
@@ -1106,7 +1108,7 @@ class MapViewTests : BaseTest() {
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
         // Get the map view and determine its center.
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
 

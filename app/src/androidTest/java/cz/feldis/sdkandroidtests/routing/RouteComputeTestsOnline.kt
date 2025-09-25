@@ -57,7 +57,6 @@ class RouteComputeTestsOnline : BaseTest() {
         super.setUp()
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
-        mapDownloadHelper.unloadAllMaps()
         router = runBlocking { RouterProvider.getInstance() }
     }
 

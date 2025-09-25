@@ -65,7 +65,6 @@ class OnlineNavigationTests : BaseTest() {
         routeCompute = RouteComputeHelper()
         mapDownload = MapDownloadHelper()
         navigation = runBlocking { NavigationManagerProvider.getInstance() }
-        mapDownload.unloadAllMaps()
     }
 
     @Test

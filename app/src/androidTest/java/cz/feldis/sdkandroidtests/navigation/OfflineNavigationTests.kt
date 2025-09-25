@@ -15,8 +15,8 @@ import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
-import com.sygic.sdk.navigation.explorer.ExplorePlacesOnRouteData
 import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
+import com.sygic.sdk.navigation.explorer.results.ExplorePlacesOnRouteData
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
 import com.sygic.sdk.places.PlacesManager
 import com.sygic.sdk.position.GeoCoordinates
@@ -779,10 +779,10 @@ class OfflineNavigationTests : BaseTest() {
             navigationManagerKtx.startSimulator(logSimulatorAdapter)
             navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 2F)
 
-            mapView.cameraModel.movementMode = Camera.MovementMode.FollowGpsPosition
-            mapView.cameraModel.rotationMode = Camera.RotationMode.Vehicle
-            mapView.cameraModel.zoomLevel = 19F
-            mapView.cameraModel.tilt = 45F
+            mapView.cameraModel.setMovementMode(Camera.MovementMode.FollowGpsPosition)
+            mapView.cameraModel.setRotationMode(Camera.RotationMode.Vehicle)
+            mapView.cameraModel.setZoomLevel(19F)
+            mapView.cameraModel.setTilt(45F)
 
             val incidentsFlow = NavigationManagerProvider.getInstance().incidents()
             val targetIncident = withTimeout(20_000) {

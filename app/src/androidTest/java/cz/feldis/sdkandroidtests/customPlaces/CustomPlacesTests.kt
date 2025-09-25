@@ -193,14 +193,14 @@ class CustomPlacesTests : BaseTest() {
             timeout(5_000L)
         ).onResult(eq(CustomPlacesManager.InstallResult.SUCCESS), any())
 
-        mapView.cameraModel.position = GeoCoordinates(48.2587, 17.75712)
-        mapView.cameraModel.zoomLevel = 22F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.2587, 17.75712))
+        mapView.cameraModel.setZoomLevel(22F)
+        mapView.cameraModel.setTilt(0F)
         delay(3000) // it takes around 1,5s until the custom place is shown on map
         val callback: RequestObjectCallback = mock(verboseLogging = true)
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
 
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
@@ -566,16 +566,16 @@ class CustomPlacesTests : BaseTest() {
             timeout(5_000L)
         ).onResult(eq(MapView.InjectSkinResult.Success))
 
-        mapView.cameraModel.position = GeoCoordinates(48.2587, 17.75712)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.2587, 17.75712))
+        mapView.cameraModel.setZoomLevel(22F)
+        mapView.cameraModel.setTilt(0F)
 
         delay(3000)
 
         val callback: RequestObjectCallback = mock(verboseLogging = true)
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
 
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
@@ -638,16 +638,16 @@ class CustomPlacesTests : BaseTest() {
             timeout(5_000L)
         ).onResult(eq(MapView.InjectSkinResult.Success))
 
-        mapView.cameraModel.position = GeoCoordinates(48.10201396997687, 17.24821095500223)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10201396997687, 17.24821095500223))
+        mapView.cameraModel.setZoomLevel(20f)
+        mapView.cameraModel.setTilt(0f)
 
         delay(3000)
 
         val callback: RequestObjectCallback = mock(verboseLogging = true)
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
 
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
@@ -713,16 +713,16 @@ class CustomPlacesTests : BaseTest() {
             timeout(5_000L)
         ).onResult(eq(MapView.InjectSkinResult.Success))
 
-        mapView.cameraModel.position = GeoCoordinates(48.10201396997687, 17.24821095500223)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10201396997687, 17.24821095500223))
+        mapView.cameraModel.setZoomLevel(20f)
+        mapView.cameraModel.setTilt(0f)
 
         delay(3000)
 
         val callback: RequestObjectCallback = mock(verboseLogging = true)
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
 
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F
@@ -788,16 +788,16 @@ class CustomPlacesTests : BaseTest() {
             timeout(5_000L)
         ).onResult(eq(MapView.InjectSkinResult.Success))
 
-        mapView.cameraModel.position = GeoCoordinates(48.10201396997687, 17.24821095500223)
-        mapView.cameraModel.zoomLevel = 20F
-        mapView.cameraModel.tilt = 0F
+        mapView.cameraModel.setPosition(GeoCoordinates(48.10201396997687, 17.24821095500223))
+        mapView.cameraModel.setZoomLevel(20f)
+        mapView.cameraModel.setTilt(0f)
 
         delay(3000)
 
         val callback: RequestObjectCallback = mock(verboseLogging = true)
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
 
-        val view = requireNotNull(mapView.view)
+        val view = requireNotNull(mapView.getView())
 
         val x: Float = view.width / 2F
         val y: Float = view.height / 2F

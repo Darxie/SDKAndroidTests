@@ -3,9 +3,9 @@ package cz.feldis.sdkandroidtests.explore
 import com.sygic.sdk.map.MapInstallerProvider
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
-import com.sygic.sdk.navigation.explorer.ExplorePlacesOnRouteData
 import com.sygic.sdk.navigation.explorer.RouteExplorer
 import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
+import com.sygic.sdk.navigation.explorer.results.ExplorePlacesOnRouteData
 import com.sygic.sdk.navigation.traffic.TrafficManager
 import com.sygic.sdk.navigation.traffic.TrafficManagerProvider
 import com.sygic.sdk.places.PlacesManager
