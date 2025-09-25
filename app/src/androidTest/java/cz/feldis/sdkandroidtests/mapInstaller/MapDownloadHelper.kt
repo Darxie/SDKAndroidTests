@@ -1,7 +1,9 @@
 package cz.feldis.sdkandroidtests.mapInstaller
 
+import android.util.Log
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
+import com.sygic.sdk.map.listeners.MapListResult
 import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.MapStatusListener
@@ -9,6 +11,7 @@ import com.sygic.sdk.map.listeners.MapsResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
 import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.kotlin.any
@@ -16,6 +19,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import timber.log.Timber
 
 class MapDownloadHelper : BaseTest() {
 
@@ -73,23 +77,17 @@ class MapDownloadHelper : BaseTest() {
         assertTrue(result is MapInstaller.LoadResult.Success)
     }
 
-    fun unloadAllMaps() {
-        val listener: MapsResultListener = mock(verboseLogging = true)
-        installer.getAvailableCountries(
-            installed = true,
-            object : MapListResultListener {
-                override fun onMapListResult(
-                    mapIsos: List<String>,
-                    result: MapInstaller.LoadResult
-                ) {
-                    installer.unloadMaps(mapIsos, listener)
-                }
-            }
+    fun unloadAllMaps() = runBlocking {
+        val result = installer.getAvailableCountries(installed = true)
+        check(result.result is MapInstaller.LoadResult.Success) {
+            "Failed to get installed maps: ${result.result}"
+        }
+        Log.d("SYGIC", "Going to unload maps")
+        val unloadResult = installer.unloadMaps(result.mapIsos)
+        assertTrue(
+            "Failed to unload maps: ${result.mapIsos}",
+            unloadResult is MapInstaller.LoadResult.Success
         )
-        verify(listener, timeout(10_000L)).onMapsResult(
-            anyList(),
-            eq(MapInstaller.LoadResult.Success)
-        )
-
+        Log.d("SYGIC","Maps unloaded successfully: ${result.mapIsos}")
     }
 }

@@ -10,7 +10,6 @@ import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.navigation.NavigationManager
-import com.sygic.sdk.navigation.NavigationManager.OnRouteProgressListener
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
@@ -36,6 +35,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
@@ -51,6 +51,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import timber.log.Timber
 import java.util.Locale
 
 class OnlineNavigationTests : BaseTest() {
@@ -58,18 +59,18 @@ class OnlineNavigationTests : BaseTest() {
     private lateinit var mapDownload: MapDownloadHelper
     private val navigationManagerKtx = NavigationManagerKtx()
     private lateinit var navigation: NavigationManager
+    override val betaRouting = true
 
     @Before
     override fun setUp() {
         super.setUp()
-        routeCompute = RouteComputeHelper()
         mapDownload = MapDownloadHelper()
+        routeCompute = RouteComputeHelper()
         navigation = runBlocking { NavigationManagerProvider.getInstance() }
     }
 
     @Test
     fun testGetRouteProgressAsyncOnline() = runBlocking {
-        val listener: OnRouteProgressListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.101936, 17.233684)
         val destination = GeoCoordinates(48.145644, 17.127011)
@@ -77,11 +78,9 @@ class OnlineNavigationTests : BaseTest() {
         val route = routeCompute.onlineComputeRoute(start, destination)
         navigationManagerKtx.setRouteForNavigation(route, navigation)
 
-        navigation.getRouteProgress(
-            listener
-        )
-
-        verify(listener, timeout(5_000)).onRouteProgress(any())
+        val progress = navigation.getRouteProgress()
+        Timber.d("Progress - distance to end: ${progress.distanceToEnd}")
+        assertTrue(progress.distanceToEnd > 0)
     }
 
     /**
@@ -455,8 +454,8 @@ class OnlineNavigationTests : BaseTest() {
 
         val route =
             routeCompute.onlineComputeRoute(
-                GeoCoordinates(48.7429, 17.8603),
-                GeoCoordinates(48.7457, 17.86)
+                GeoCoordinates(48.73900, 17.86193),
+                GeoCoordinates(48.75703, 17.86381)
             )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
@@ -686,7 +685,7 @@ class OnlineNavigationTests : BaseTest() {
 
     /**
      * Navigation test on waypoint pass and demonstration finished in restricted zone
-     * TC904
+     * TC904 (but another coordinates)
      * https://jira.sygic.com/browse/SDC-14042
      * In this test we compute route with waypoint and with destination in restricted zone, and set it for navigation.
      * Via simulator provider we set this route for simulation and start demonstrate navigation.
@@ -697,9 +696,9 @@ class OnlineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
 
         val route = routeCompute.onlineComputeRoute(
-            GeoCoordinates(48.258830, 16.458170),
-            GeoCoordinates(48.257410, 16.451190),
-            listOf(GeoCoordinates(48.256230, 16.455540)),
+            GeoCoordinates(48.258950, 16.457700),
+            GeoCoordinates(48.257590, 16.455430),
+            listOf(GeoCoordinates(48.258140, 16.456600)),
             routingOptions = RoutingOptions().apply {
                 useEndpointProtection = true
                 napStrategy = NearestAccessiblePointStrategy.Disabled
@@ -714,7 +713,7 @@ class OnlineNavigationTests : BaseTest() {
 
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
-        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 10F)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
         // check the order of calls: first onWaypointPassed, then onFinishReached

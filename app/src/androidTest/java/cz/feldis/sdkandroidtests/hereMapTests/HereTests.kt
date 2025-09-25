@@ -13,6 +13,8 @@ import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingService
 import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
+import com.sygic.sdk.search.ReverseGeocoder
+import com.sygic.sdk.search.ReverseGeocoderProvider
 import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
@@ -531,6 +533,25 @@ class HereTests : BaseHereTest() {
         assertTrue(
             estimatedTimeOfArrivalBus > 120
         )
+    }
+
+    @Test
+    fun reverseGeoVriezewegNetherlandsHere() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("nl")
+        val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
+            mock(verboseLogging = true)
+
+        val reverseGeocoder = runBlocking { ReverseGeocoderProvider.getInstance() }
+        reverseGeocoder
+            .reverseGeocode(GeoCoordinates( 51.889, 5.66985), emptySet(), reverseGeoListener)
+        verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
+            this.forEach {
+                if ((it.names.houseNumber == "63") && (it.names.street == "Vriezeweg"))
+                    return@argThat true
+            }
+            return@argThat false
+        })
     }
 
     /**
