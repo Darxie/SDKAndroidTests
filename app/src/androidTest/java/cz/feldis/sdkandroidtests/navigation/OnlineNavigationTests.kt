@@ -10,7 +10,6 @@ import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.navigation.NavigationManager
-import com.sygic.sdk.navigation.NavigationManager.OnRouteProgressListener
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
@@ -66,7 +65,6 @@ class OnlineNavigationTests : BaseTest() {
     override fun setUp() {
         super.setUp()
         mapDownload = MapDownloadHelper()
-        mapDownload.unloadAllMaps()
         routeCompute = RouteComputeHelper()
         navigation = runBlocking { NavigationManagerProvider.getInstance() }
     }
@@ -456,8 +454,8 @@ class OnlineNavigationTests : BaseTest() {
 
         val route =
             routeCompute.onlineComputeRoute(
-                GeoCoordinates(48.7429, 17.8603),
-                GeoCoordinates(48.7457, 17.86)
+                GeoCoordinates(48.73900, 17.86193),
+                GeoCoordinates(48.75703, 17.86381)
             )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)

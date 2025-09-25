@@ -536,7 +536,7 @@ class HereTests : BaseHereTest() {
     }
 
     @Test
-    fun reverseGeoVriezewegNetherlands() {
+    fun reverseGeoVriezewegNetherlandsHere() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("nl")
         val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
@@ -544,7 +544,7 @@ class HereTests : BaseHereTest() {
 
         val reverseGeocoder = runBlocking { ReverseGeocoderProvider.getInstance() }
         reverseGeocoder
-            .reverseGeocode(GeoCoordinates(51.8889, 5.66983), emptySet(), reverseGeoListener)
+            .reverseGeocode(GeoCoordinates( 51.889, 5.66985), emptySet(), reverseGeoListener)
         verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
             this.forEach {
                 if ((it.names.houseNumber == "63") && (it.names.street == "Vriezeweg"))
