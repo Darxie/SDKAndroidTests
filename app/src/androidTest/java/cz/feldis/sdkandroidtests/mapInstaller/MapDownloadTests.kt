@@ -9,6 +9,7 @@ import com.sygic.sdk.map.listeners.MapListResultListener
 import com.sygic.sdk.map.listeners.MapResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -43,20 +44,16 @@ class MapDownloadTests : BaseTest() {
     }
 
     @Test
-    fun installUninstallAndVerifyMapTest() {
+    fun installUninstallAndVerifyMapTest() = runBlocking {
         assumeTrue(!isRunningOnEmulator())
         //vatican
         mapDownloadHelper.ensureMapNotInstalled("va")
         mapDownloadHelper.installAndLoadMap("va")
         mapDownloadHelper.uninstallMap("va")
-        val listener: MapListResultListener = mock(verboseLogging = true)
-        val captor = argumentCaptor<List<String>>()
-        mapInstaller.getAvailableCountries(true, listener)
-        verify(listener, timeout(10_000L)).onMapListResult(
-            captor.capture(),
-            eq(MapInstaller.LoadResult.Success)
-        )
-        assertFalse(captor.firstValue.contains("va"))
+        delay(100)
+        val installedCountries = runBlocking { mapInstaller.getAvailableCountries(true) }
+        assertTrue(installedCountries.result is MapInstaller.LoadResult.Success)
+        assertFalse(installedCountries.mapIsos.contains("va"))
     }
 
     @Test
@@ -201,6 +198,24 @@ class MapDownloadTests : BaseTest() {
         // cache is cleared during setUp() and locale set to en-en
         val listener: ResultListener = mock(verboseLogging = true)
 
+        mapInstaller.setLocale("sk-sk", listener)
+        verify(listener, timeout(20_000L).times(1))
+            .onResult(eq(MapInstaller.LoadResult.Success))
+
+        val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
+        val detailsCaptor = argumentCaptor<CountryDetails>()
+
+        mapInstaller.getCountryDetails("sk", false, cdListener)
+        verify(cdListener, timeout(20_000L)).onCountryDetails(detailsCaptor.capture())
+        assertTrue(detailsCaptor.firstValue.name == "Slovensko")
+        assertTrue(detailsCaptor.firstValue.continentName == "Európa")
+    }
+
+    @Test
+    fun setLocaleTestOfflineMap() {
+        // cache is cleared during setUp() and locale set to en-en
+        val listener: ResultListener = mock(verboseLogging = true)
+        mapDownloadHelper.installAndLoadMap("sk")
         mapInstaller.setLocale("sk-sk", listener)
         verify(listener, timeout(20_000L).times(1))
             .onResult(eq(MapInstaller.LoadResult.Success))

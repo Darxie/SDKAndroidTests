@@ -1,5 +1,6 @@
 package cz.feldis.sdkandroidtests.routing
 
+import android.util.Log
 import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.PrimaryRouteRequest
@@ -1219,25 +1220,21 @@ class RouteComputeTestsOnline : BaseTest() {
         )
 
         val expectedRegions =
-            setOf("me", "nh", "ma", "ct", "wv", "ny", "pa", "md", "va", "nc", "sc", "ga")
+            setOf("me", "nh", "ma", "ct", "ny", "nj", "de", "md", "va", "nc", "sc", "ga")
+        val transitCountries = runBlocking { route.getTransitCountriesInfo() }
 
-        val transitCountriesInfoListener: TransitCountriesInfoListener = mock(verboseLogging = true)
-        route.getTransitCountriesInfo(transitCountriesInfoListener)
-
-        verify(transitCountriesInfoListener, timeout(5_000L)).onTransitCountriesInfo(
-            argThat { actualList ->
-
-                val regions = actualList.flatMap { info ->
-                    when {
-                        info.country.startsWith("us-") -> listOf(info.country.substringAfter("us-"))
-                        info.country == "us" -> info.regions
-                        else -> emptyList()
-                    }
-                }.toSet()
-
-                println("Actual regions from SDK: $regions")
-                regions.containsAll(expectedRegions)
+        val regions = transitCountries.flatMap { info ->
+            when {
+                info.country.startsWith("us-") -> listOf(info.country.substringAfter("us-"))
+                else -> emptyList()
             }
+        }.toSet()
+
+        Log.d("SYGIC", "Actual regions from SDK: $regions")
+
+        assertTrue(
+            "Missing regions: ${expectedRegions - regions}",
+            regions.containsAll(expectedRegions)
         )
     }
 
