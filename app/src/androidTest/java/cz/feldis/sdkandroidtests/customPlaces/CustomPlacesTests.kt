@@ -18,6 +18,7 @@ import com.sygic.sdk.map.`object`.ViewObject
 import com.sygic.sdk.map.`object`.data.ViewObjectData
 import com.sygic.sdk.places.CustomPlacesManager
 import com.sygic.sdk.places.CustomPlacesManagerProvider
+import com.sygic.sdk.places.PlaceDetail
 import com.sygic.sdk.places.listeners.CustomPlacesSearchIndexingListener
 import com.sygic.sdk.places.results.InstallDatasetsData
 import com.sygic.sdk.position.GeoCoordinates
@@ -346,6 +347,34 @@ class CustomPlacesTests : BaseTest() {
 
         // verify
         assertEquals("ja som POI", searchResult.name)
+    }
+
+    @Test
+    fun testInstallAndSearchAndCheckDetailsOfCustomPlace() {
+        installOfflinePlaces("sk")
+
+        val placeRequest = PlaceRequest(
+            location = GeoCoordinates(48.2718, 17.7697),
+            categoryTags = listOf("mojaSuperKategoria"),
+            radius = 50,
+        )
+
+        val searchResult = searchHelper.searchCustomPlaces(placeRequest)[0]
+
+        assertEquals("vyzlec sa", searchResult.name)
+        val expectedDetails = listOf(
+            PlaceDetail("Filko", "fast"),
+            PlaceDetail("Filko", "strong"),
+            PlaceDetail("SYEvStationUUID", "00030300-02c0-00a0-0000-000020e90001"),
+            PlaceDetail("SYName", "vyzlec sa"),
+            PlaceDetail("SYSearchIndex", "englicky vyzlec sa"),
+            PlaceDetail("SYSubtitle", "ibi maiga"),
+            PlaceDetail("klucik", "od_domu"),
+            PlaceDetail("klucik", "od_prace"),
+            PlaceDetail("klucik", "od_zachodu"),
+            PlaceDetail("klucik", "od_hradu")
+        )
+        assertEquals(expectedDetails, searchResult.details)
     }
 
     @Test
