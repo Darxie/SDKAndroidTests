@@ -93,6 +93,24 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     @Test
+    fun computeNextDurationsTestOnlineToKTX() = runBlocking {
+        val start = GeoCoordinates(48.145718, 17.118669)
+        val destination = GeoCoordinates(48.190322, 16.401080)
+        val route = routeComputeHelper.onlineComputeRoute(start, destination)
+
+        val times =
+            listOf(
+                System.currentTimeMillis() / 1000 + 1800,
+                System.currentTimeMillis() / 1000 + 3700
+            )
+
+        val (newRoute, durations) = router.computeNextDurations(route, times)
+
+        assertEquals(route, newRoute)
+        assertEquals(2, durations.size)
+    }
+
+    @Test
     fun getRouteElementsIcelandOnline() {
         val start = GeoCoordinates(63.556092, -19.794962)
         val destination = GeoCoordinates(63.420816, -19.001375)
@@ -1121,6 +1139,38 @@ class RouteComputeTestsOnline : BaseTest() {
         })
 
     }
+
+    /**
+     * TC169
+     * In this test we checking that there are no toll roads on the route
+     */
+    @Test
+    fun tollRoadAvoidWarningOnlineTestToKTX() = runBlocking {
+        val start = GeoCoordinates(48.0935, 17.1165)
+        val destination = GeoCoordinates(48.1209, 16.5627)
+        val routingOptions = RoutingOptions().apply {
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
+            this.routingType = RoutingType.Fastest
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeComputeHelper.onlineComputeRoute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val warnings = route.getRouteWarnings()
+
+        val hasUnavoidableTollRoadWarning =
+            warnings.any { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad }
+
+        assertFalse(
+            "Route with toll road avoidance enabled should not contain an UnavoidableTollRoad warning.",
+            hasUnavoidableTollRoadWarning
+        )
+    }
+
 
     /**
      * https://jira.sygic.com/browse/SDC-14224
