@@ -2,6 +2,7 @@ package cz.feldis.sdkandroidtests.hereMapTests
 
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
+import com.sygic.sdk.navigation.routeeventnotifications.LaneInfo
 import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
 import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
@@ -38,6 +39,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
+import org.mockito.Mockito
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
@@ -544,7 +546,7 @@ class HereTests : BaseHereTest() {
 
         val reverseGeocoder = runBlocking { ReverseGeocoderProvider.getInstance() }
         reverseGeocoder
-            .reverseGeocode(GeoCoordinates( 51.889, 5.66985), emptySet(), reverseGeoListener)
+            .reverseGeocode(GeoCoordinates(51.889, 5.66985), emptySet(), reverseGeoListener)
         verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
             this.forEach {
                 if ((it.names.houseNumber == "63") && (it.names.street == "Vriezeweg"))
@@ -600,6 +602,57 @@ class HereTests : BaseHereTest() {
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         navigation.removeOnVehicleAidListener(listener)
         navigation.removeOnVehicleZoneListener(listenerzone)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    /**
+     * https://jira.sygic.com/browse/CI-3518
+     * Only the half left arrow of the left lane should be highlighted
+     */
+    @Test
+    fun onLaneListenerTestOfflineHERE() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val listener: NavigationManager.OnLaneListener = mock(verboseLogging = true)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            GeoCoordinates(48.76916, 18.62626),
+            GeoCoordinates(48.76798, 18.62524)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnLaneListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+
+        Mockito.verify(
+            listener, Mockito.timeout(30_000L)
+        ).onLaneInfoChanged(argThat { laneInfo ->
+            val lanes = laneInfo.simpleLanesInfo?.lanes
+            if (lanes != null) {
+                for (lane in lanes) {
+                    val arrows = lane.arrows
+                    for (arrow in arrows) {
+                        if (arrow.direction == LaneInfo.Lane.Direction.HalfLeft && arrow.isHighlighted) {
+                            return@argThat true
+                        }
+                        if (arrow.direction == LaneInfo.Lane.Direction.Straight && arrow.isHighlighted) {
+                            return@argThat false
+                        }
+                        if (arrow.direction == LaneInfo.Lane.Direction.HalfRight && arrow.isHighlighted) {
+                            return@argThat false
+                        }
+                    }
+                }
+            }
+            return@argThat false
+        })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnLaneListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
 }
