@@ -61,39 +61,7 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     @Test
-    fun computeNextDurationsTestOnline() {
-        val listener: RouteDurationListener = mock(verboseLogging = true)
-
-        val start = GeoCoordinates(48.145718, 17.118669)
-        val destination = GeoCoordinates(48.190322, 16.401080)
-        val route = routeComputeHelper.onlineComputeRoute(start, destination)
-
-        val times =
-            listOf(
-                System.currentTimeMillis() / 1000 + 1800,
-                System.currentTimeMillis() / 1000 + 3700
-            )
-
-        router.computeNextDurations(route, times, listener)
-
-        verify(listener, timeout(35_000L))
-            .onRouteDurations(argThat {
-                if (this != route) {
-                    Timber.e("Route is not equal to the original route.")
-                    return@argThat false
-                }
-                true
-            }, argThat {
-                if (this.size != 2) {
-                    Timber.e("List of durations is not equal to 2, List size is ${this.size}")
-                    return@argThat false
-                }
-                true
-            })
-    }
-
-    @Test
-    fun computeNextDurationsTestOnlineToKTX() = runBlocking {
+    fun computeNextDurationsTestOnline() = runBlocking {
         val start = GeoCoordinates(48.145718, 17.118669)
         val destination = GeoCoordinates(48.190322, 16.401080)
         val route = routeComputeHelper.onlineComputeRoute(start, destination)
@@ -106,8 +74,8 @@ class RouteComputeTestsOnline : BaseTest() {
 
         val (newRoute, durations) = router.computeNextDurations(route, times)
 
-        assertEquals(route, newRoute)
-        assertEquals(2, durations.size)
+        assertEquals("Expected route is not equal to the actual route", route, newRoute)
+        assertEquals("Expected 2 returned times, but got ${durations.size}",2, durations.size)
     }
 
     @Test
@@ -1085,7 +1053,7 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     @Test
-    fun shortestRouteInSlovakiaTestOnline() = runBlocking {
+    fun shortestRouteInSlovakiaTestOnline() {
         val routeCompute = RouteComputeHelper()
 
         val route = routeCompute.onlineComputeRoute(
@@ -1112,46 +1080,17 @@ class RouteComputeTestsOnline : BaseTest() {
 
     /**
      * TC169
-     * In this test we checking that there are no toll roads on the route
+     * In this test we check that there are no toll roads on the route
+     * if we avoid toll roads.
      */
     @Test
-    fun tollRoadAvoidWarningOnlineTest() {
-
-        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
-
+    fun tollRoadAvoidWarningOnlineTest() = runBlocking {
         val start = GeoCoordinates(48.0935, 17.1165)
         val destination = GeoCoordinates(48.1209, 16.5627)
         val routingOptions = RoutingOptions().apply {
-            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
+            this.routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
             this.routingType = RoutingType.Fastest
-            napStrategy = NearestAccessiblePointStrategy.Disabled
-        }
-
-        val route = routeComputeHelper.onlineComputeRoute(
-            start,
-            destination,
-            routingOptions = routingOptions
-        )
-
-        route.getRouteWarnings(routeWarningsListener)
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } == null
-        })
-
-    }
-
-    /**
-     * TC169
-     * In this test we checking that there are no toll roads on the route
-     */
-    @Test
-    fun tollRoadAvoidWarningOnlineTestToKTX() = runBlocking {
-        val start = GeoCoordinates(48.0935, 17.1165)
-        val destination = GeoCoordinates(48.1209, 16.5627)
-        val routingOptions = RoutingOptions().apply {
-            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
-            this.routingType = RoutingType.Fastest
-            napStrategy = NearestAccessiblePointStrategy.Disabled
+            this.napStrategy = NearestAccessiblePointStrategy.Disabled
         }
 
         val route = routeComputeHelper.onlineComputeRoute(
@@ -1162,12 +1101,9 @@ class RouteComputeTestsOnline : BaseTest() {
 
         val warnings = route.getRouteWarnings()
 
-        val hasUnavoidableTollRoadWarning =
-            warnings.any { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad }
-
         assertFalse(
             "Route with toll road avoidance enabled should not contain an UnavoidableTollRoad warning.",
-            hasUnavoidableTollRoadWarning
+            warnings.any { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad }
         )
     }
 
