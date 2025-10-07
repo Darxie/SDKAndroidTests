@@ -16,9 +16,7 @@ import com.sygic.sdk.route.RoutingOptions.RoutingType
 import com.sygic.sdk.route.TransitCountryInfo
 import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
 import com.sygic.sdk.route.listeners.RouteComputeListener
-import com.sygic.sdk.route.listeners.RouteDurationListener
 import com.sygic.sdk.route.listeners.RouteRequestDeserializedListener
-import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.route.listeners.TransitCountriesInfoListener
 import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
@@ -45,7 +43,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.withSettings
-import timber.log.Timber
 
 class RouteComputeTestsOnline : BaseTest() {
     private lateinit var mapDownloadHelper: MapDownloadHelper
