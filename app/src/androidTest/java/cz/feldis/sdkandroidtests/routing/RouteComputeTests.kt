@@ -1344,6 +1344,55 @@ class RouteComputeTests : BaseTest() {
         )
     }
 
+    /***
+     * https://jira.sygic.com/browse/SDC-14366
+     * TC914
+     * The message "required to wait at..." is displayed in warnings
+     */
+    /*
+    @Test
+    fun requiredToWaitWarningTest(): Unit = runBlocking {
+        mapDownloadHelper.installAndLoadMap("fr-10")
+        val start = GeoCoordinates(48.817610, 2.438940)
+        val destination = GeoCoordinates(48.831860, 2.384900)
+        val routeCompute = RouteComputeHelper()
+
+        val route = routeCompute.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                this.departureTime = Date(1747765280000) // 2025-05-20 18:21:20
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                    generalVehicleTraits.vehicleType = VehicleType.Truck
+                    generalVehicleTraits.maximalSpeed = 150
+                    dimensionalTraits?.totalWeight = 15_000F
+                    dimensionalTraits?.totalLength = 15000
+                    dimensionalTraits?.totalHeight = 3000
+                    dimensionalTraits?.totalWidth = 2550
+                }
+                useEndpointProtection = true
+                useTraffic = false
+                useSpeedProfiles = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        // Get warnings
+        val warnings = route.getRouteWarnings()
+
+        // Check that route is computed and list of warnings includes "required to wait" warning
+        assertTrue("Warnings list should not be empty", warnings.isNotEmpty())
+
+        val hasRequiredToWaitWarning = warnings.any {
+            it is RouteWarning.SectionWarning.RequiredToWait
+        }
+        assertTrue(
+            "Expected 'RequiredToWait' warning, but it was not found.",
+            hasRequiredToWaitWarning
+        )
+
+        Timber.i("Found RequiredToWait warning: ${warnings.filterIsInstance<RouteWarning.SectionWarning.RequiredToWait>()}")
+    }*/
 
     /***
      * https://eurowag-cloud.atlassian.net/browse/NE-190
