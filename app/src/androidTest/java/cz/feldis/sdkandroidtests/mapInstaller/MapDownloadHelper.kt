@@ -22,7 +22,7 @@ class MapDownloadHelper : BaseTest() {
         assertTrue(getMapStatusResult.status == MapInstaller.MapStatus.NotInstalled)
     }
 
-    fun installAndLoadMap(iso: String) {
+    fun installAndLoadMap(iso: String)  = runBlocking {
         val installMapResult = runBlocking {
             installer.installMap(iso)
         }
@@ -32,6 +32,7 @@ class MapDownloadHelper : BaseTest() {
             installer.loadMap(iso)
         }
         assertTrue(loadMapResult is MapInstaller.LoadResult.Success)
+        delay(500)
     }
 
     fun uninstallMap(iso: String) {

@@ -76,10 +76,9 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun computeNextDurationsTestOffline() {
+    fun computeNextDurationsTestOffline() = runBlocking {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
-        val listener: RouteDurationListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.145718, 17.118669)
         val destination = GeoCoordinates(48.190322, 16.401080)
@@ -91,22 +90,10 @@ class RouteComputeTests : BaseTest() {
                 System.currentTimeMillis() / 1000 + 3700
             )
 
-        router.computeNextDurations(route, times, listener)
+        val (newRoute, durations) = router.computeNextDurations(route, times)
 
-        verify(listener, timeout(35_000L))
-            .onRouteDurations(argThat {
-                if (this != route) {
-                    Timber.e("Route is not equal to the original route.")
-                    return@argThat false
-                }
-                true
-            }, argThat {
-                if (this.size != 2) {
-                    Timber.e("List of durations is not equal to 2, List size is ${this.size}")
-                    return@argThat false
-                }
-                true
-            })
+        assertEquals("Expected route is not equal to the actual route", route, newRoute)
+        assertEquals("Expected 2 returned times, but got ${durations.size}",2, durations.size)
     }
 
     @Test

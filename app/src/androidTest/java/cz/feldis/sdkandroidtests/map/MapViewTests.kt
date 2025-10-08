@@ -616,7 +616,7 @@ class MapViewTests : BaseTest() {
 
         val mapView = getMapView(mapFragment)
 
-        val route = RouteComputeHelper().onlineComputeRoute(
+        val route = RouteComputeHelper().onlineRouteCompute(
             start = GeoCoordinates(48.10230847247041, 17.23332912174021),
             destination = GeoCoordinates(48.101253920311315, 17.23448444159353)
         )
@@ -675,7 +675,7 @@ class MapViewTests : BaseTest() {
 
         val mapView = getMapView(mapFragment)
 
-        val route = RouteComputeHelper().onlineComputeRoute(
+        val route = RouteComputeHelper().onlineRouteCompute(
             start = GeoCoordinates(48.10230847247041, 17.23332912174021),
             destination = GeoCoordinates(48.101253920311315, 17.23448444159353)
         )
@@ -1000,7 +1000,7 @@ class MapViewTests : BaseTest() {
 
         val mapView = getMapView(mapFragment)
 
-        val route = RouteComputeHelper().onlineComputeRoute(
+        val route = RouteComputeHelper().onlineRouteCompute(
             start = GeoCoordinates(48.10230847247041, 17.23332912174021),
             destination = GeoCoordinates(48.101253920311315, 17.23448444159353)
         )
@@ -1072,7 +1072,7 @@ class MapViewTests : BaseTest() {
 
         val mapView = getMapView(mapFragment)
 
-        val route = RouteComputeHelper().onlineComputeRoute(
+        val route = RouteComputeHelper().onlineRouteCompute(
             start = GeoCoordinates(48.10230847247041, 17.23332912174021),
             destination = GeoCoordinates(48.101253920311315, 17.23448444159353)
         )

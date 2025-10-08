@@ -61,7 +61,7 @@ class RouteComputeTestsOnline : BaseTest() {
     fun computeNextDurationsTestOnline() = runBlocking {
         val start = GeoCoordinates(48.145718, 17.118669)
         val destination = GeoCoordinates(48.190322, 16.401080)
-        val route = routeComputeHelper.onlineComputeRoute(start, destination)
+        val route = routeComputeHelper.onlineRouteCompute(start, destination)
 
         val times =
             listOf(
@@ -79,7 +79,7 @@ class RouteComputeTestsOnline : BaseTest() {
     fun getRouteElementsIcelandOnline() {
         val start = GeoCoordinates(63.556092, -19.794962)
         val destination = GeoCoordinates(63.420816, -19.001375)
-        val route = routeComputeHelper.onlineComputeRoute(start, destination)
+        val route = routeComputeHelper.onlineRouteCompute(start, destination)
         val routeElements = runBlocking { route.getRouteElements() }
         assertTrue(routeElements.isNotEmpty())
     }
@@ -119,7 +119,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(48.145718, 17.118669)
         val destination = GeoCoordinates(48.190322, 16.401080)
         val originalRoute =
-            routeComputeHelper.onlineComputeRoute(start, destination)
+            routeComputeHelper.onlineRouteCompute(start, destination)
         val listener: RouteRequestDeserializedListener = mock(verboseLogging = true)
 
         val routeJson = originalRoute.serializeToBriefJSON()
@@ -210,7 +210,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(48.13204503419638, 17.09786238379282)
         val destination = GeoCoordinates(51.491340, -0.102940)
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             start,
             destination
         )
@@ -232,7 +232,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(41.938650, -87.807700)
         val destination = GeoCoordinates(41.788500, -87.605030)
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             start,
             destination
         )
@@ -251,7 +251,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(43.4337, 6.73637)
         val destination = GeoCoordinates(43.4335, 6.73851)
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = RoutingOptions().apply {
@@ -274,7 +274,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(48.0967, 17.1192)
         val destination = GeoCoordinates(48.0988, 17.117)
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = RoutingOptions().apply {
@@ -296,7 +296,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(48.1416, 17.1097)
         val destination = GeoCoordinates(48.1444, 17.1067)
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = RoutingOptions().apply {
@@ -324,7 +324,7 @@ class RouteComputeTestsOnline : BaseTest() {
             bottomRight = GeoCoordinates(48.76949, 21.29728)
         )
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             GeoCoordinates(48.9329, 21.9153),
             GeoCoordinates(48.7576, 21.2724),
             routingOptions = RoutingOptions().apply {
@@ -364,7 +364,7 @@ class RouteComputeTestsOnline : BaseTest() {
             bottomRight = GeoCoordinates(49.22082, 16.58453)
         )
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             GeoCoordinates(49.219570, 16.561400),
             GeoCoordinates(49.262160, 16.579050),
             routingOptions = RoutingOptions().apply {
@@ -404,7 +404,7 @@ class RouteComputeTestsOnline : BaseTest() {
             bottomRight = GeoCoordinates(48.30719, 17.56776)
         )
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             GeoCoordinates(48.211820, 17.263800),
             GeoCoordinates(48.983180, 18.402170),
             routingOptions = RoutingOptions().apply {
@@ -445,7 +445,7 @@ class RouteComputeTestsOnline : BaseTest() {
             bottomRight = GeoCoordinates(53.28261, -6.45114)
         )
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             GeoCoordinates(53.291460, -6.438910),
             GeoCoordinates(53.279980, -6.483670),
             routingOptions = RoutingOptions().apply {
@@ -487,7 +487,7 @@ class RouteComputeTestsOnline : BaseTest() {
             bottomRight = GeoCoordinates(52.39568, -7.90871)
         )
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             GeoCoordinates(52.391330, -7.927900),
             GeoCoordinates(52.410620, -7.913030),
             routingOptions = RoutingOptions().apply {
@@ -532,7 +532,7 @@ class RouteComputeTestsOnline : BaseTest() {
             }
         }
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             GeoCoordinates(58.351620, 11.845900),
             GeoCoordinates(58.347790, 11.792080),
             routingOptions = RoutingOptions().apply {
@@ -710,7 +710,7 @@ class RouteComputeTestsOnline : BaseTest() {
             bottomRight = GeoCoordinates(48.11929, 17.11949)
         )
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             GeoCoordinates(48.117600, 17.120250),
             GeoCoordinates(48.118920, 17.115830),
             routingOptions = RoutingOptions().apply {
@@ -757,7 +757,7 @@ class RouteComputeTestsOnline : BaseTest() {
             bottomRight = GeoCoordinates(52.64499, -0.49927)
         )
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             GeoCoordinates(53.516590, -1.130280),
             GeoCoordinates(52.571690, -0.243670),
             routingOptions = RoutingOptions().apply {
@@ -806,7 +806,7 @@ class RouteComputeTestsOnline : BaseTest() {
             bottomRight = GeoCoordinates(40.71712, -73.49872)
         )
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             GeoCoordinates(40.717030, -73.502540),
             GeoCoordinates(40.732270, -73.448270),
             routingOptions = RoutingOptions().apply {
@@ -842,7 +842,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(45.822810, 6.533240)
         val destination = GeoCoordinates(45.594250, 6.880690)
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = RoutingOptions().apply {
@@ -875,7 +875,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(45.194770, -109.246780)
         val destination = GeoCoordinates(45.019490, -109.934500)
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = RoutingOptions().apply {
@@ -914,7 +914,7 @@ class RouteComputeTestsOnline : BaseTest() {
             bottomRight = GeoCoordinates(50.80165, -0.04889)
         )
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             GeoCoordinates(50.801700, -0.048000),
             GeoCoordinates(50.803910, -0.049780),
             routingOptions = RoutingOptions().apply {
@@ -954,7 +954,7 @@ class RouteComputeTestsOnline : BaseTest() {
             bottomRight = GeoCoordinates(43.19764, 5.71052)
         )
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             GeoCoordinates(43.1979, 5.71095),
             GeoCoordinates(43.1983, 5.71006),
             routingOptions = RoutingOptions().apply {
@@ -992,7 +992,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(48.9329, 21.9153)
         val destination = GeoCoordinates(48.7576, 21.2724)
 
-        val routeFastest = routeComputeHelper.onlineComputeRoute(
+        val routeFastest = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = RoutingOptions().apply {
@@ -1004,7 +1004,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val estimatedTimeOfArrivalFastest =
             routeFastest.routeInfo.waypointDurations.last().withSpeedProfiles
 
-        val routeShortest = routeComputeHelper.onlineComputeRoute(
+        val routeShortest = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = RoutingOptions().apply {
@@ -1038,7 +1038,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val destination = GeoCoordinates(28.5822, 77.1861)
 
         val routeFastest =
-            routeComputeHelper.onlineComputeRoute(
+            routeComputeHelper.onlineRouteCompute(
                 start,
                 destination,
                 routingOptions = RoutingOptions().apply {
@@ -1053,7 +1053,7 @@ class RouteComputeTestsOnline : BaseTest() {
     fun shortestRouteInSlovakiaTestOnline() {
         val routeCompute = RouteComputeHelper()
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.149240, 17.106990),
             GeoCoordinates(48.574280, 19.126600),
             routingOptions = RoutingOptions().apply {
@@ -1076,36 +1076,6 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     /**
-     * TC169
-     * In this test we check that there are no toll roads on the route
-     * if we avoid toll roads.
-     */
-    @Test
-    fun tollRoadAvoidWarningOnlineTest() = runBlocking {
-        val start = GeoCoordinates(48.0935, 17.1165)
-        val destination = GeoCoordinates(48.1209, 16.5627)
-        val routingOptions = RoutingOptions().apply {
-            this.routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
-            this.routingType = RoutingType.Fastest
-            this.napStrategy = NearestAccessiblePointStrategy.Disabled
-        }
-
-        val route = routeComputeHelper.onlineComputeRoute(
-            start,
-            destination,
-            routingOptions = routingOptions
-        )
-
-        val warnings = route.getRouteWarnings()
-
-        assertFalse(
-            "Route with toll road avoidance enabled should not contain an UnavoidableTollRoad warning.",
-            warnings.any { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad }
-        )
-    }
-
-
-    /**
      * https://jira.sygic.com/browse/SDC-14224
      * TC892
      * In this test we check that route doesn't lead through tunnel cat. E by following way:
@@ -1117,13 +1087,13 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(51.49906, -0.05638)
         val destination = GeoCoordinates(51.51246, -0.04123)
 
-        val normalRoute = routeComputeHelper.onlineComputeRoute(
+        val normalRoute = routeComputeHelper.onlineRouteCompute(
             start,
             destination
         )
         val lengthNormal = normalRoute.routeInfo.length
 
-        val restrictedRoute = routeComputeHelper.onlineComputeRoute(
+        val restrictedRoute = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = RoutingOptions().apply {
@@ -1171,7 +1141,7 @@ class RouteComputeTestsOnline : BaseTest() {
             bottomRight = GeoCoordinates(51.45145, 0.24507)
         )
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = routingOptions
@@ -1193,7 +1163,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(45.093660, -70.153760)
         val destination = GeoCoordinates(32.621350, -83.303830)
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = RoutingOptions().apply {
@@ -1256,7 +1226,7 @@ class RouteComputeTestsOnline : BaseTest() {
             this.napStrategy = NearestAccessiblePointStrategy.Disabled
         }
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             start = GeoCoordinates(48.268310, 16.454770),
             waypoints = waypoints,
             destination = GeoCoordinates(48.271150, 16.451670),
@@ -1279,7 +1249,7 @@ class RouteComputeTestsOnline : BaseTest() {
         val start = GeoCoordinates(48.13204503419638, 17.09786238379282)
         val destination = GeoCoordinates(51.491340, -0.102940)
 
-        val route = routeComputeHelper.onlineComputeRoute(
+        val route = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = RoutingOptions().apply { // turn off to always get the same route

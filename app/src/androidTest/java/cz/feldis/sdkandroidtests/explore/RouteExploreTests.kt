@@ -65,7 +65,7 @@ class RouteExploreTests : BaseTest() {
 
         val listener: RouteExplorer.OnExploreTrafficOnRouteListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.155195, 17.136827),
             GeoCoordinates(48.289024, 17.264717)
         )
@@ -87,7 +87,7 @@ class RouteExploreTests : BaseTest() {
 
         val listener: RouteExplorer.OnExploreTrafficOnRouteListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.155195, 17.136827),
             GeoCoordinates(48.289024, 17.264717)
         )
@@ -113,7 +113,7 @@ class RouteExploreTests : BaseTest() {
     fun onExplorePlacesOnRoute() {
         val listener: RouteExplorer.OnExplorePlacesOnRouteListener = mock(verboseLogging = true)
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.167749, 17.184778),
                 GeoCoordinates(48.586029, 17.824360)
             )
@@ -135,7 +135,7 @@ class RouteExploreTests : BaseTest() {
     fun exploreIncidentsOnRoute() {
         val listener: RouteExplorer.OnExploreIncidentsOnRouteListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.7429, 17.8603),
             GeoCoordinates(48.7457, 17.86)
         )
@@ -263,7 +263,7 @@ class RouteExploreTests : BaseTest() {
     fun testReloadMapWhileExploring() = runBlocking {
         val mapDownloadHelper = MapDownloadHelper()
         mapDownloadHelper.installAndLoadMap("va")
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.16876, 17.07634),
             GeoCoordinates(48.16281, 17.09559)
         )

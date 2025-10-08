@@ -77,7 +77,7 @@ class IncidentsTests : BaseTest() {
 
         val listener: RouteExplorer.OnExploreIncidentsOnRouteListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.10223044006818, 17.23340438881692),
             GeoCoordinates(48.098580331935274, 17.237506607527582)
         )
@@ -122,7 +122,7 @@ class IncidentsTests : BaseTest() {
 
         val listener: RouteExplorer.OnExploreIncidentsOnRouteListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.10223044006818, 17.23340438881692),
             GeoCoordinates(48.098580331935274, 17.237506607527582)
         )
@@ -167,7 +167,7 @@ class IncidentsTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.113888808253996, 17.218758652700572),
                 GeoCoordinates(48.12788892758158, 17.195351511200577)
             )
@@ -201,7 +201,7 @@ class IncidentsTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.1023, 17.2333),
                 GeoCoordinates(48.098, 17.2381),
             )
@@ -240,7 +240,7 @@ class IncidentsTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.099784526591, 17.236136889475524),
                 GeoCoordinates(48.098, 17.2381)
             )
@@ -282,7 +282,7 @@ class IncidentsTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.1023, 17.2333),
                 GeoCoordinates(48.098, 17.2381),
             )
@@ -482,7 +482,7 @@ class IncidentsTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.09716941959428, 17.236491302530972),
                 GeoCoordinates(48.09349360600483, 17.242717265915495),
             )
@@ -524,7 +524,7 @@ class IncidentsTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.09559365418439, 17.2393755272787),
                 GeoCoordinates(48.09349360600483, 17.242717265915495),
             )

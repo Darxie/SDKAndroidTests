@@ -75,7 +75,7 @@ class OnlineNavigationTests : BaseTest() {
         val start = GeoCoordinates(48.101936, 17.233684)
         val destination = GeoCoordinates(48.145644, 17.127011)
         val routeCompute = RouteComputeHelper()
-        val route = routeCompute.onlineComputeRoute(start, destination)
+        val route = routeCompute.onlineRouteCompute(start, destination)
         navigationManagerKtx.setRouteForNavigation(route, navigation)
 
         val progress = navigation.getRouteProgress()
@@ -94,7 +94,7 @@ class OnlineNavigationTests : BaseTest() {
     fun onSignpostChangedTestOnline() = runBlocking {
         val listener: NavigationManager.OnSignpostListener = mock(verboseLogging = true)
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.143133, 17.175447),
                 GeoCoordinates(48.171427, 17.191148)
             )
@@ -134,7 +134,7 @@ class OnlineNavigationTests : BaseTest() {
             Mockito.withSettings().verboseLogging()
         )
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.0977, 17.2382),
                 GeoCoordinates(48.0986, 17.2345)
             )
@@ -172,7 +172,7 @@ class OnlineNavigationTests : BaseTest() {
 
         val listener: NavigationManager.OnSpeedLimitListener = mock(verboseLogging = true)
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.128027, 17.094285),
                 GeoCoordinates(48.131233, 17.112298)
             )
@@ -211,7 +211,7 @@ class OnlineNavigationTests : BaseTest() {
 
         val listener: NavigationManager.OnRailwayCrossingListener = mock(verboseLogging = true)
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.133798, 17.168522),
                 GeoCoordinates(48.136994, 17.155435)
             )
@@ -250,7 +250,7 @@ class OnlineNavigationTests : BaseTest() {
 
         val listener: NavigationManager.OnHighwayExitListener = mock(verboseLogging = true)
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.1581, 17.1822),
                 GeoCoordinates(48.1647, 17.1837)
             )
@@ -291,7 +291,7 @@ class OnlineNavigationTests : BaseTest() {
 
         val listener: NavigationManager.OnRouteChangedListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.1447, 17.1317),
             GeoCoordinates(48.1461, 17.1285)
         )
@@ -371,7 +371,7 @@ class OnlineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnLaneListener = mock(verboseLogging = true)
 
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.147682401781026, 17.14365655304184),
                 GeoCoordinates(48.15310362223699, 17.147190865317768)
             )
@@ -412,7 +412,7 @@ class OnlineNavigationTests : BaseTest() {
     fun onSharpCurveListenerTestOnline() = runBlocking {
         val listener: NavigationManager.OnSharpCurveListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.1384, 17.3184),
             GeoCoordinates(48.132, 17.3009)
         )
@@ -453,7 +453,7 @@ class OnlineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
 
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.73900, 17.86193),
                 GeoCoordinates(48.75703, 17.86381)
             )
@@ -487,7 +487,7 @@ class OnlineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnPlaceListener = mock(verboseLogging = true)
 
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.142020, 17.139852),
                 GeoCoordinates(48.146196, 17.137438)
             )
@@ -523,7 +523,7 @@ class OnlineNavigationTests : BaseTest() {
         val listener: NavigationManager.OnRouteRecomputeListener =
             mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.1447, 17.1317),
             GeoCoordinates(48.1461, 17.1285)
         )
@@ -609,7 +609,7 @@ class OnlineNavigationTests : BaseTest() {
         }
         val mapView = getMapView(mapFragment)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.1447, 17.1317),
             GeoCoordinates(48.1461, 17.1285)
         )
@@ -659,7 +659,7 @@ class OnlineNavigationTests : BaseTest() {
     fun onWaypointPassTestOnline() = runBlocking {
         val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.296103, 17.304851),
             GeoCoordinates(48.296446, 17.306706),
             listOf(GeoCoordinates(48.297194, 17.313073))
@@ -695,7 +695,7 @@ class OnlineNavigationTests : BaseTest() {
     fun onWaypointPassRestrictedDestinationTestOnline() = runBlocking {
         val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.258950, 16.457700),
             GeoCoordinates(48.257590, 16.455430),
             listOf(GeoCoordinates(48.258140, 16.456600)),
@@ -739,7 +739,7 @@ class OnlineNavigationTests : BaseTest() {
     fun onWaypointPassInRestrictionTestOnline() = runBlocking {
         val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.152580, 17.113530),
             GeoCoordinates(48.147460, 17.110280),
             listOf(GeoCoordinates(48.148540, 17.112430))
@@ -777,7 +777,7 @@ class OnlineNavigationTests : BaseTest() {
     fun onPlaceSplitDistanceTestOnline() = runBlocking {
         val listener: NavigationManager.OnPlaceListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.457323, 17.739210),
             GeoCoordinates(48.448209, 17.738767)
         )
@@ -816,7 +816,7 @@ class OnlineNavigationTests : BaseTest() {
     fun testGetCurrentRouteWaypointsAsyncOnline() = runBlocking {
         val listener: NavigationManager.OnWaypointsListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.457323, 17.739210),
             GeoCoordinates(48.123, 17.723),
             listOf(GeoCoordinates(48.448209, 17.738767))
@@ -849,7 +849,7 @@ class OnlineNavigationTests : BaseTest() {
                 }
             }
         }
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             start = GeoCoordinates(48.146255528464, 17.1273927454307),
             waypoints = waypoints,
             destination = GeoCoordinates(48.157031, 17.121155),
@@ -885,7 +885,7 @@ class OnlineNavigationTests : BaseTest() {
     @Test
     fun testStopNavigationWhileDemonstratingOnline() = runBlocking {
         val route =
-            routeCompute.onlineComputeRoute(
+            routeCompute.onlineRouteCompute(
                 GeoCoordinates(48.147260, 17.150520),
                 GeoCoordinates(48.413651171955465, 16.927561108197466)
             )
@@ -904,7 +904,7 @@ class OnlineNavigationTests : BaseTest() {
         val navigation = NavigationManagerProvider.getInstance()
         val listener: NavigationManager.StreetChangedListener = mock(verboseLogging = true)
 
-        val route = routeCompute.onlineComputeRoute(
+        val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.1209419355147, 17.207606308128618),
             GeoCoordinates(48.12276083935055, 17.207632634218143),
         )
@@ -933,7 +933,7 @@ class OnlineNavigationTests : BaseTest() {
         val destination = GeoCoordinates(49.4425, 10.9459)
         val routeCompute = RouteComputeHelper()
 
-        val route = routeCompute.onlineComputeRoute(start, destination)
+        val route = routeCompute.onlineRouteCompute(start, destination)
 
         assertEquals(6, route.maneuvers.size) // 6 maneuvers since october 2024 maps
         for (maneuver in route.maneuvers) {

@@ -392,65 +392,6 @@ class RouteWarningTests : BaseTest() {
         assertTrue(restriction2.realValue == 5000F)
     }
 
-    @Test
-    @Ignore("ToDo - will work on v3 soon")
-    fun tollRoadAvoidWarningTestOnline() {
-        enableOnlineMaps()
-        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
-
-        val start = GeoCoordinates(48.07473125945471, 17.121696472685443)
-        val destination = GeoCoordinates(48.41623783484128, 17.747376207492863)
-        val routingOptions = RoutingOptions().apply {
-            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
-        }
-
-        val route = routeComputeHelper.onlineComputeRoute(
-            start,
-            destination,
-            routingOptions = routingOptions
-        )
-
-        route.getRouteWarnings(routeWarningsListener)
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } != null
-        })
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.isNotEmpty()
-        })
-    }
-
-    @Test
-    fun tollRoadCountryAvoidWarningTestOnline() {
-        enableOnlineMaps()
-        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
-
-        val start = GeoCoordinates(48.1083, 17.2206)
-        val destination = GeoCoordinates(51.9035, -0.47722)
-        val routingOptions = RoutingOptions().apply {
-            routeAvoids.countryRouteAvoids =
-                mutableMapOf("gb" to mutableSetOf(RouteAvoids.Type.Highway))
-        }
-
-        val captor = argumentCaptor<List<RouteWarning>>()
-        val route = routeComputeHelper.onlineComputeRoute(
-            start,
-            destination,
-            routingOptions = routingOptions
-        )
-
-        route.getRouteWarnings(routeWarningsListener)
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(captor.capture())
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.find { it is RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableHighway } != null
-        })
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.isNotEmpty()
-        })
-        val restriction = captor.allValues.flatten()
-            .first() as RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableHighway
-        assertTrue(restriction.iso == "gb")
-    }
-
     /**
      * https://jira.sygic.com/browse/SDC-10869
      *

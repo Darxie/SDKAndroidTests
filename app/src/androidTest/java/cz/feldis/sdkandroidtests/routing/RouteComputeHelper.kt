@@ -1,14 +1,13 @@
 package cz.feldis.sdkandroidtests.routing
 
+import android.util.Log
 import com.sygic.sdk.position.GeoCoordinates
-import com.sygic.sdk.route.PrimaryRouteRequest
 import com.sygic.sdk.route.Route
 import com.sygic.sdk.route.RouteRequest
 import com.sygic.sdk.route.Router
 import com.sygic.sdk.route.RouterProvider
 import com.sygic.sdk.route.RoutingOptions
-import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
-import com.sygic.sdk.route.listeners.RouteComputeListener
+import com.sygic.sdk.route.results.ComputeRouteWithAlternativesData
 import com.sygic.sdk.utils.EnforceableAttribute
 import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
@@ -26,26 +25,22 @@ import com.sygic.sdk.vehicletraits.powertrain.FuelType
 import com.sygic.sdk.vehicletraits.powertrain.PowerRange
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
-import org.mockito.ArgumentCaptor
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argThat
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.timeout
-import org.mockito.kotlin.verify
 
 class RouteComputeHelper : BaseTest() {
     private val router = runBlocking { RouterProvider.getInstance() }
 
-    fun onlineComputeRoute(
+    fun onlineRouteCompute(
         start: GeoCoordinates,
         destination: GeoCoordinates,
         waypoints: List<GeoCoordinates> = emptyList(),
         routingOptions: RoutingOptions = RoutingOptions()
-    ): Route {
-
+    ): Route = runBlocking {
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
@@ -54,23 +49,26 @@ class RouteComputeHelper : BaseTest() {
             this.routingOptions.routingService = RoutingOptions.RoutingService.Online
         }
 
-        val listener: RouteComputeListener = mock(verboseLogging = true)
-        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
-        val primaryRouteRequest = PrimaryRouteRequest(request, listener)
-
-        val captor: ArgumentCaptor<Route> = ArgumentCaptor.forClass(Route::class.java)
-
-        router.computeRouteWithAlternatives(
-            primaryRouteRequest,
-            null,
-            routeComputeFinishedListener
-        )
-        verify(listener, timeout(30_000L)).onComputeFinished(
-            captor.capture(),
-            argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
-        )
-
-        return captor.value
+        val flow = router.computeRouteWithAlternatives(request)
+        return@runBlocking flow
+            .filterIsInstance<ComputeRouteWithAlternativesData.RouteComputePrimaryFinished>()
+            .onEach {
+                if (it.status != Router.RouteComputeStatus.Success &&
+                    it.status != Router.RouteComputeStatus.SuccessWithWarnings
+                ) {
+                    Log.w("SYGIC", "Route not computed, error: ${it.status}")
+                }
+            }
+            .filter {
+                it.status == Router.RouteComputeStatus.Success || it.status == Router.RouteComputeStatus.SuccessWithWarnings
+            }
+            .mapNotNull {
+                it.route
+            }
+            .onEach {
+                Log.d("SYGIC", "Route successfully computed with length: ${it.routeInfo.length}")
+            }
+            .first()
     }
 
     fun offlineRouteCompute(
@@ -78,7 +76,7 @@ class RouteComputeHelper : BaseTest() {
         destination: GeoCoordinates,
         waypoints: List<GeoCoordinates> = emptyList(),
         routingOptions: RoutingOptions = RoutingOptions()
-    ): Route {
+    ): Route = runBlocking {
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
@@ -86,24 +84,26 @@ class RouteComputeHelper : BaseTest() {
             this.routingOptions = routingOptions
             this.routingOptions.routingService = RoutingOptions.RoutingService.Offline
         }
-        val listener: RouteComputeListener = mock(verboseLogging = true)
-        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
-        val primaryRouteRequest = PrimaryRouteRequest(request, listener)
-
-        val captor: ArgumentCaptor<Route> = ArgumentCaptor.forClass(Route::class.java)
-
-        router.computeRouteWithAlternatives(
-            primaryRouteRequest,
-            null,
-            routeComputeFinishedListener
-        )
-        verify(listener, timeout(100_000L)).onComputeFinished(
-            captor.capture(),
-            argThat { this == Router.RouteComputeStatus.Success || this == Router.RouteComputeStatus.SuccessWithWarnings }
-        )
-        verify(listener, never()).onComputeFinished(eq(null), any())
-
-        return captor.value
+        val flow = router.computeRouteWithAlternatives(request)
+        return@runBlocking flow
+            .filterIsInstance<ComputeRouteWithAlternativesData.RouteComputePrimaryFinished>()
+            .onEach {
+                if (it.status != Router.RouteComputeStatus.Success &&
+                    it.status != Router.RouteComputeStatus.SuccessWithWarnings
+                ) {
+                    Log.w("SYGIC", "Route not computed, error: ${it.status}")
+                }
+            }
+            .filter {
+                it.status == Router.RouteComputeStatus.Success || it.status == Router.RouteComputeStatus.SuccessWithWarnings
+            }
+            .mapNotNull {
+                it.route
+            }
+            .onEach {
+                Log.d("SYGIC", "Route successfully computed with length: ${it.routeInfo.length}")
+            }
+            .first()
     }
 
     fun createCombustionVehicleProfile(): VehicleProfile {
