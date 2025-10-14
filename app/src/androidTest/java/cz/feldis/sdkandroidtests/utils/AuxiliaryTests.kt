@@ -52,7 +52,6 @@ class AuxiliaryTests : BaseTest() {
     private lateinit var mapDownload: MapDownloadHelper
     private val navigationManagerKtx = NavigationManagerKtx()
     private lateinit var navigation: NavigationManager
-    private val brusselsStreetCoordinates = GeoCoordinates(50.86309526480844, 4.29355710076467)
 
 
     @Before
