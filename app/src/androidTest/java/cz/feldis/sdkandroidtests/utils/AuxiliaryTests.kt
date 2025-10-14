@@ -2,7 +2,6 @@ package cz.feldis.sdkandroidtests.utils
 
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
-import com.sygic.sdk.map.Camera
 import com.sygic.sdk.map.Camera.MovementMode
 import com.sygic.sdk.map.Camera.RotationMode
 import com.sygic.sdk.map.CameraState
@@ -16,6 +15,9 @@ import com.sygic.sdk.map.`object`.MapRoute
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.position.PositionManagerProvider
+import com.sygic.sdk.position.results.GetRoadsResult
+import com.sygic.sdk.position.results.MatchResult
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import com.sygic.sdk.vehicletraits.VehicleProfile
@@ -31,6 +33,7 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
@@ -40,6 +43,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import java.util.Locale
 
 @RunWith(MockitoJUnitRunner::class)
 class AuxiliaryTests : BaseTest() {
@@ -48,6 +52,8 @@ class AuxiliaryTests : BaseTest() {
     private lateinit var mapDownload: MapDownloadHelper
     private val navigationManagerKtx = NavigationManagerKtx()
     private lateinit var navigation: NavigationManager
+    private val brusselsStreetCoordinates = GeoCoordinates(50.86309526480844, 4.29355710076467)
+
 
     @Before
     override fun setUp() {
@@ -117,6 +123,77 @@ class AuxiliaryTests : BaseTest() {
         scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
+    @Test
+    fun mapLanguageChangesStreetNameTest(): Unit = runBlocking {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        // create test scenario with activity & map fragment
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        try {
+            val mapView = getMapView(mapFragment)
+            disableOnlineMaps()
+            mapDownload.installAndLoadMap("be")
+            mapView.cameraModel.setPosition(GeoCoordinates(50.86309526480844, 4.29355710076467))
+            mapView.cameraModel.setZoomLevel(20F)
+
+            val streetCoordinates = GeoCoordinates(50.86309526480844, 4.29355710076467)
+            val streetCoordinates2 = GeoCoordinates(50.86331495102468, 4.293697684351139)
+            val positionManager = PositionManagerProvider.getInstance()
+
+            suspend fun getStreetNameForLocale(locale: String): String? {
+                println("🌍 Setting locale = $locale")
+                mapView.setMapLanguage(Locale.forLanguageTag(locale))
+                delay(1000)
+
+                val matchResult = positionManager.match(listOf(streetCoordinates, streetCoordinates2))
+                when (matchResult) {
+                    is MatchResult.Success -> println("✅ Match success, found ${matchResult.submatchings.flatten().size} roads")
+                    else -> println("❌ Match failed: $matchResult")
+                }
+
+                val roadIds = (matchResult as? MatchResult.Success)
+                    ?.submatchings
+                    ?.flatten()
+                    .orEmpty()
+
+                if (roadIds.isEmpty()) {
+                    println("⚠️ roadIds are empty")
+                    return null
+                }
+
+                val roadsResult = positionManager.getRoads(roadIds)
+                when (roadsResult) {
+                    is GetRoadsResult.Success -> {
+                        println("✅ getRoads success, found ${roadsResult.roads.size} roads")
+                        roadsResult.roads.forEachIndexed { i, r ->
+                            println("  [$i] id=${r.id} street=${r.street}")
+                        }
+                        return roadsResult.roads.firstOrNull()?.street
+                    }
+
+                    else -> println("❌ getRoads failed: $roadsResult")
+                }
+                return null
+            }
+
+            val frenchName = getStreetNameForLocale("fr-BE")
+            val dutchName = getStreetNameForLocale("nl-BE")
+
+            println("🇫🇷 frenchName = $frenchName")
+            println("🇳🇱 dutchName = $dutchName")
+
+            assertTrue(dutchName == "Kerkstraat")
+            assertTrue(frenchName == "Rue de l'Eglise")
+        } finally {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        }
+    }
+
     private fun getInitialCameraState(): CameraState {
         return CameraState.Builder().apply {
             setPosition(GeoCoordinates(48.15132, 17.07665))
@@ -130,8 +207,8 @@ class AuxiliaryTests : BaseTest() {
             setMapPadding(0.0f, 0.0f, 0.0f, 0.0f)
             setRotation(0f)
             setZoomLevel(14F)
-            setMovementMode(Camera.MovementMode.Free)
-            setRotationMode(Camera.RotationMode.Free)
+            setMovementMode(MovementMode.Free)
+            setRotationMode(RotationMode.Free)
             setTilt(0f)
         }.build()
     }

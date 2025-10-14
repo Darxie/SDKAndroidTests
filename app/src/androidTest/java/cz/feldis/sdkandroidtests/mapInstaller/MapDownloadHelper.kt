@@ -52,6 +52,13 @@ class MapDownloadHelper : BaseTest() {
         assertTrue(loadResult is MapInstaller.LoadResult.Success)
     }
 
+    fun setMapLocale(locale: String) {
+        val loadResult = runBlocking {
+            installer.setLocale(locale)
+        }
+        assertTrue(loadResult is MapInstaller.LoadResult.Success)
+    }
+
     fun clearCache() {
         val loadResult = runBlocking {
             installer.clearCache()
