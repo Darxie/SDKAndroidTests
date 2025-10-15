@@ -6,6 +6,7 @@ import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.explorer.RouteExplorer
 import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
 import com.sygic.sdk.navigation.explorer.results.ExplorePlacesOnRouteData
+import com.sygic.sdk.navigation.explorer.results.ExplorerTrafficOnRouteResult
 import com.sygic.sdk.navigation.traffic.TrafficManager
 import com.sygic.sdk.navigation.traffic.TrafficManagerProvider
 import com.sygic.sdk.places.PlacesManager
@@ -16,7 +17,6 @@ import com.sygic.sdk.route.simulator.PositionSimulator
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
-import cz.feldis.sdkandroidtests.ktx.TrafficManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
@@ -26,7 +26,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
@@ -46,7 +48,6 @@ class RouteExploreTests : BaseTest() {
 
     private lateinit var routeCompute: RouteComputeHelper
     private val navigationManagerKtx = NavigationManagerKtx()
-    private val trafficManagerKtx = TrafficManagerKtx()
     private lateinit var trafficManager: TrafficManager
     private lateinit var routeExplorer: RouteExplorer
     private val scope = CoroutineScope(Dispatchers.Unconfined)
@@ -60,46 +61,41 @@ class RouteExploreTests : BaseTest() {
 
     @Test
     fun exploreTrafficOnRoute() = runBlocking {
-
-        trafficManagerKtx.enableTrafficService(trafficManager)
-
-        val listener: RouteExplorer.OnExploreTrafficOnRouteListener = mock(verboseLogging = true)
+        trafficManager.enableTrafficService()
 
         val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.155195, 17.136827),
             GeoCoordinates(48.289024, 17.264717)
         )
 
-        routeExplorer.exploreTrafficOnRoute(route, listener)
+        when (val explorerResult = routeExplorer.exploreTrafficOnRoute(route)) {
+            is ExplorerTrafficOnRouteResult.Success -> {
+            }
 
-        verify(listener, Mockito.timeout(10_000L))
-            .onExploreTrafficLoaded(any())
+            is ExplorerTrafficOnRouteResult.Error -> fail("exploreTrafficOnRoute failed with: ${explorerResult.errorCode}")
+        }
 
-        verify(listener, never())
-            .onExploreTrafficError(any())
-
-        trafficManagerKtx.disableTrafficService(trafficManager)
+        trafficManager.disableTrafficService()
     }
 
     @Test
     fun exploreTrafficOnRouteWithDisabledTraffic() = runBlocking {
-        trafficManagerKtx.disableTrafficService(trafficManager)
-
-        val listener: RouteExplorer.OnExploreTrafficOnRouteListener = mock(verboseLogging = true)
+        trafficManager.disableTrafficService()
 
         val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.155195, 17.136827),
             GeoCoordinates(48.289024, 17.264717)
         )
 
-        routeExplorer.exploreTrafficOnRoute(route, listener)
+        when (val explorerResult = routeExplorer.exploreTrafficOnRoute(route)) {
+            is ExplorerTrafficOnRouteResult.Success -> {
+                fail("exploreTrafficOnRoute should have failed with traffic service disabled")
+            }
 
-        verify(listener, never())
-            .onExploreTrafficLoaded(any())
-
-        verify(listener, Mockito.timeout(5_000L))
-            .onExploreTrafficError(TrafficManager.ErrorCode.SERVICE_DISABLED)
-
+            is ExplorerTrafficOnRouteResult.Error -> {
+                assertEquals(TrafficManager.ErrorCode.SERVICE_DISABLED, explorerResult.errorCode)
+            }
+        }
     }
 
     /**
@@ -271,18 +267,19 @@ class RouteExploreTests : BaseTest() {
         val interrupted = CompletableDeferred<Unit>()
 
         scope.launch {
-            while(isActive) {
-                RouteExplorerProvider.getInstance().explorePlacesOnRoute(route, emptyList()).collect {
-                    if (it is ExplorePlacesOnRouteData.Error && it.errorCode == PlacesManager.ErrorCode.INTERRUPTED_BY_MAP_RELOAD) {
-                        interrupted.complete(Unit)
+            while (isActive) {
+                RouteExplorerProvider.getInstance().explorePlacesOnRoute(route, emptyList())
+                    .collect {
+                        if (it is ExplorePlacesOnRouteData.Error && it.errorCode == PlacesManager.ErrorCode.INTERRUPTED_BY_MAP_RELOAD) {
+                            interrupted.complete(Unit)
+                        }
                     }
-                }
             }
         }
 
         scope.launch {
             val mapInstaller = MapInstallerProvider.getInstance()
-            while(isActive) {
+            while (isActive) {
                 mapInstaller.unloadMap("va")
                 mapInstaller.loadMap("va")
             }
