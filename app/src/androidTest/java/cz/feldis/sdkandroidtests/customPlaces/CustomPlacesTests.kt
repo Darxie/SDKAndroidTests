@@ -555,7 +555,7 @@ class CustomPlacesTests : BaseTest() {
             searchInput = "ibi maiga",
             location = GeoCoordinates(48.2718, 17.7697),
         )
-        val searchResult = searchHelper.onlineAutocomplete(searchRequest)
+        val searchResult = runBlocking { searchHelper.onlineAutocomplete(searchRequest) }
         // assert if there is no custom place in the results
         assert(searchResult.find { it.type == ResultType.CUSTOM_PLACE } != null)
     }

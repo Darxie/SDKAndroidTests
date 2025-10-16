@@ -138,7 +138,7 @@ class SearchTests : BaseTest() {
             GeoCoordinates(48.145718, 17.118669),
             6
         )
-        val results = searchHelper.onlineAutocomplete(request)
+        val results = runBlocking { searchHelper.onlineAutocomplete(request) }
         results.forEach {
             assert("Bratislava" in it.title)
         }

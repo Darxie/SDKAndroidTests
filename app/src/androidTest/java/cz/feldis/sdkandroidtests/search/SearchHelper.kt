@@ -17,6 +17,8 @@ import com.sygic.sdk.search.ResultStatus
 import com.sygic.sdk.search.ResultType
 import com.sygic.sdk.search.SearchManagerProvider
 import com.sygic.sdk.search.SearchRequest
+import com.sygic.sdk.search.results.AutocompleteSearchResult
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
@@ -27,6 +29,8 @@ import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import java.nio.ByteBuffer
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class SearchHelper {
 
@@ -56,40 +60,35 @@ class SearchHelper {
         return resultCaptor.firstValue
     }
 
-    fun onlineAutocomplete(autocompleteRequest: SearchRequest): List<AutocompleteResult> {
-        val autocompleteResultListener: AutocompleteResultListener = mock(verboseLogging = true)
+    suspend fun onlineAutocomplete(autocompleteRequest: SearchRequest): List<AutocompleteResult> {
         val createSearchListener: CreateSearchCallback<OnlineMapSearch> = mock()
         val searchCaptor = argumentCaptor<OnlineMapSearch>()
-        val resultCaptor = argumentCaptor<List<AutocompleteResult>>()
-        val errorCaptor = argumentCaptor<ResultStatus>()
         searchManager.createOnlineMapSearch(createSearchListener)
         verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
-        val search = searchCaptor.lastValue
 
+        val search = searchCaptor.lastValue
         val session = search.createSession()
 
-        var attempts = 0
         val maxRetries = 3
-        val retryDelay = 5000L // 2 seconds delay between retries
+        val retryDelay = 5_000L
 
-        while (attempts < maxRetries) {
-            session.autocomplete(autocompleteRequest, autocompleteResultListener)
+        repeat(maxRetries) { attempt ->
+            println("🔍 Autocomplete attempt ${attempt + 1}")
+            when (val result = session.autocomplete(autocompleteRequest)) {
+                is AutocompleteSearchResult.Success -> {
+                    println("✅ Success: ${result.results.size} results")
+                    return result.results
+                }
 
-            try {
-                verify(autocompleteResultListener, timeout(10_000L)).onAutocomplete(
-                    resultCaptor.capture()
-                )
-                verify(autocompleteResultListener, never()).onAutocompleteError(any())
-                return resultCaptor.firstValue
-            } catch (e: Exception) {
-                verify(autocompleteResultListener).onAutocompleteError(errorCaptor.capture())
-                val capturedError = errorCaptor.lastValue
+                is AutocompleteSearchResult.Error -> {
+                    println("⚠️ Error: ${result.status}")
 
-                if (capturedError == ResultStatus.UNSPECIFIED_ERROR && attempts < maxRetries - 1) {
-                    attempts++
-                    Thread.sleep(retryDelay) // Wait before retrying
-                } else {
-                    throw e // Rethrow the exception
+                    // Retry only for UNSPECIFIED_ERROR
+                    if (result.status == ResultStatus.UNSPECIFIED_ERROR && attempt < maxRetries - 1) {
+                        delay(retryDelay)
+                    } else {
+                        throw RuntimeException("Autocomplete failed: ${result.status}")
+                    }
                 }
             }
         }
