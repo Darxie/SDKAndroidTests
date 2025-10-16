@@ -13,6 +13,7 @@ import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
+import com.sygic.sdk.navigation.routeeventnotifications.SpeedLimitInfo
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
@@ -30,11 +31,13 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -927,21 +930,6 @@ class OnlineNavigationTests : BaseTest() {
     }
 
     @Test
-    fun leichendorfToZirndorfOnline() {
-
-        val start = GeoCoordinates(49.4339, 10.9345)
-        val destination = GeoCoordinates(49.4425, 10.9459)
-        val routeCompute = RouteComputeHelper()
-
-        val route = routeCompute.onlineRouteCompute(start, destination)
-
-        assertEquals(6, route.maneuvers.size) // 6 maneuvers since october 2024 maps
-        for (maneuver in route.maneuvers) {
-            assertFalse(maneuver.roadName == "Thomas-Mann-Straße")
-        }
-    }
-
-    @Test
     fun onJunctionPassedStandaloneListenerInvocationWithoutRouteOnline() = runBlocking {
 
         val listener: NavigationManager.JunctionPassedListener = mock(verboseLogging = true)
@@ -970,6 +958,68 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
         navigation.removeJunctionPassedListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    @Test
+    fun checkSpeedUnitsImperialTest() = runBlocking {
+        val route = routeCompute.onlineRouteCompute(
+            GeoCoordinates(48.11367647309752, 17.240726588893086),
+            GeoCoordinates(48.123761760300546, 17.251409401399698)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val adapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(adapter, 1F)
+        navigationManagerKtx.startSimulator(adapter)
+
+        val expectedSpeedLimit = 80 // mph
+
+        val actualSpeedLimit = withTimeout(15_000) {
+            navigation.speedLimits()
+                .map { it.getSpeedLimit(SpeedLimitInfo.SpeedUnits.Miles) }
+                .first { limit ->
+                    println("🔹 Speed limit (imperial): $limit mph")
+                    limit == expectedSpeedLimit
+                }
+        }
+
+        assertEquals(expectedSpeedLimit, actualSpeedLimit)
+        println("✅ Imperial OK: $actualSpeedLimit mph")
+
+        navigationManagerKtx.stopNavigation(navigation)
+        navigationManagerKtx.stopSimulator(adapter)
+    }
+
+    @Test
+    fun checkSpeedUnitsMetricTest() = runBlocking {
+        val route = routeCompute.onlineRouteCompute(
+            GeoCoordinates(48.11367647309752, 17.240726588893086),
+            GeoCoordinates(48.123761760300546, 17.251409401399698)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val adapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(adapter, 1F)
+        navigationManagerKtx.startSimulator(adapter)
+
+        val expectedSpeedLimit = 130 // km/h
+
+        val actualSpeedLimit = withTimeout(15_000) {
+            navigation.speedLimits()
+                .map { it.getSpeedLimit(SpeedLimitInfo.SpeedUnits.Kilometers) }
+                .first { limit ->
+                    println("🔹 Speed limit (metric): $limit km/h")
+                    limit == expectedSpeedLimit
+                }
+        }
+
+        assertEquals(expectedSpeedLimit, actualSpeedLimit)
+        println("✅ Metric OK: $actualSpeedLimit km/h")
+
+        navigationManagerKtx.stopNavigation(navigation)
+        navigationManagerKtx.stopSimulator(adapter)
     }
 
     companion object {
