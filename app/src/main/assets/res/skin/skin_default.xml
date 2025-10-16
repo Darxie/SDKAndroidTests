@@ -1215,12 +1215,12 @@
                 <object name="effect.globe_detailed" type="Library::CEffect">
                     <flags value="0"/>
                     <shader value="map/effects/common/shader.common_CTI_OCF_GNM"/>
-                    <uniforms value="u_vColor-i:map/globe/colors/color.surface;u_vColorToTextureInterpolation-i:map/globe/functions/function.colorToTextureInterpolation;u_vOutputColorCoef_r-i:map/settings/curves/function.color_fall_off_r;u_vOutputColorCoef_g-i:map/settings/curves/function.color_fall_off_g;u_vOutputColorCoef_b-i:map/settings/curves/function.color_fall_off_b;u_tAmbient-r:map/textures/earth;u_tGeoNormalmap-t:CEarthNormalmapTextureLoader;u_vGeoNormalmapInfo-s:CEarthNormalMap::ms_vInfo;u_vGeoNormalmapLight-s:CEarthNormalMap::ms_vLight"/>
+                    <uniforms value="u_vColor-i:map/globe/colors/color.surface;u_vColorToTextureInterpolation-i:map/globe/functions/function.colorToTextureInterpolation;u_vOutputColorCoef_r-i:map/settings/curves/function.color_fall_off_r;u_vOutputColorCoef_g-i:map/settings/curves/function.color_fall_off_g;u_vOutputColorCoef_b-i:map/settings/curves/function.color_fall_off_b;u_tAmbient-r:map/textures/earth;u_tGeoNormalmap-t:CEarthNormalmapTextureLoader;u_vGeoNormalmapInfo-s:CEarthNormalMap::ms_vInfo;u_vGeoNormalmapLight-s:CEarthNormalMap::ms_vLight;u_bHasNormalmap-m:CTexCell::has_normalmap"/>
                 </object>
                 <object name="effect.globe_detailed_flat" type="Library::CEffect">
                     <flags value="0"/>
                     <shader value="map/effects/common/shader.common_CTI_OCF"/>
-                    <uniforms value="u_vColor-i:map/globe/colors/color.surface;u_vColorToTextureInterpolation-i:map/globe/functions/function.colorToTextureInterpolation;u_vOutputColorCoef_r-i:map/settings/curves/function.color_fall_off_r;u_vOutputColorCoef_g-i:map/settings/curves/function.color_fall_off_g;u_vOutputColorCoef_b-i:map/settings/curves/function.color_fall_off_b;u_tAmbient-r:map/textures/earth"/>
+                    <uniforms value="u_vColor-i:map/globe/colors/color.surface;u_vColorToTextureInterpolation-i:map/globe/functions/function.colorToTextureInterpolation;u_vOutputColorCoef_r-i:map/settings/curves/function.color_fall_off_r;u_vOutputColorCoef_g-i:map/settings/curves/function.color_fall_off_g;u_vOutputColorCoef_b-i:map/settings/curves/function.color_fall_off_b;u_tAmbient-r:map/textures/earth;u_tGeoNormalmap-t:CEarthNormalmapTextureLoader;u_vGeoNormalmapInfo-s:CEarthNormalMap::ms_vInfo;u_vGeoNormalmapLight-s:CEarthNormalMap::ms_vLight;u_bHasNormalmap-m:CTexCell::has_normalmap"/>
                 </object>
                 <object name="effect.globe_detailed_grid" type="Library::CEffect">
                     <flags value="Library::CEffect::EfAoBlend"/>
@@ -3609,17 +3609,17 @@
                 <object name="effect.terrain" type="Library::CEffect">
                     <flags value=""/>
                     <shader value="map/effects/common/shader.common_CC_OCF_GNM"/>
-                    <uniforms value="u_vColor-i:map/globe/colors/color.surface;u_vOutputColorCoef_r-i:map/settings/curves/function.color_fall_off_r;u_vOutputColorCoef_g-i:map/settings/curves/function.color_fall_off_g;u_vOutputColorCoef_b-i:map/settings/curves/function.color_fall_off_b;u_tGeoNormalmap-t:CEarthNormalmapTextureLoader;u_vGeoNormalmapInfo-s:CEarthNormalMap::ms_vInfo;u_vGeoNormalmapLight-s:CEarthNormalMap::ms_vLight"/>
+                    <uniforms value="u_vColor-i:map/globe/colors/color.surface;u_vOutputColorCoef_r-i:map/settings/curves/function.color_fall_off_r;u_vOutputColorCoef_g-i:map/settings/curves/function.color_fall_off_g;u_vOutputColorCoef_b-i:map/settings/curves/function.color_fall_off_b;u_tGeoNormalmap-t:CEarthNormalmapTextureLoader;u_vGeoNormalmapInfo-s:CEarthNormalMap::ms_vInfo;u_vGeoNormalmapLight-s:CEarthNormalMap::ms_vLight;u_bHasNormalmap-m:CTerrainCell::has_normalmap"/>
                 </object>
                 <object name="effect.terrain_flat" type="Library::CEffect">
                     <flags value=""/>
                     <shader value="map/effects/common/shader.common_CC_OCF"/>
-                    <uniforms value="u_vColor-i:map/globe/colors/color.surface;u_vOutputColorCoef_r-i:map/settings/curves/function.color_fall_off_r;u_vOutputColorCoef_g-i:map/settings/curves/function.color_fall_off_g;u_vOutputColorCoef_b-i:map/settings/curves/function.color_fall_off_b"/>
+                    <uniforms value="u_vColor-i:map/globe/colors/color.surface;u_vOutputColorCoef_r-i:map/settings/curves/function.color_fall_off_r;u_vOutputColorCoef_g-i:map/settings/curves/function.color_fall_off_g;u_vOutputColorCoef_b-i:map/settings/curves/function.color_fall_off_b;u_bHasNormalmap-m:CTerrainCell::has_normalmap"/>
                 </object>
                 <object name="effect.terrain_grid" type="Library::CEffect">
                     <flags value="Library::CEffect::EfAoBlend"/>
                     <shader value="map/effects/shader.grid"/>
-                    <uniforms value="u_vBlendByDistanceFunction-i:map/terrain/functions/function.blend_by_distance;u_fBorderSize-i:map/terrain/dimensions/grid.border.size;u_vColor-i:map/terrain/colors/color.grid;u_vBorderColor-i:map/terrain/colors/color.grid.border;u_vTiles-m:CTerrainCell::tiles"/>
+                    <uniforms value="u_vBlendByDistanceFunction-i:map/terrain/functions/function.blend_by_distance;u_fBorderSize-i:map/terrain/dimensions/grid.border.size;u_vColor-i:map/terrain/colors/color.grid;u_vBorderColor-i:map/terrain/colors/color.grid.border;u_vTiles-m:CTerrainCell::tiles;u_bHasNormalmap-m:CTerrainCell::has_normalmap"/>
                 </object>
                 <object name="function.shading" type="CLinearFunction">
                     <parent type="CFunctionObject">
