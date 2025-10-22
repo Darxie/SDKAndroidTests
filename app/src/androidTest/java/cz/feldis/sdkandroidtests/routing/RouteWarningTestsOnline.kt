@@ -22,13 +22,11 @@ import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 
 class RouteWarningTestsOnline : BaseTest() {
-    private lateinit var mapDownloadHelper: MapDownloadHelper
     private lateinit var routeComputeHelper: RouteComputeHelper
     override val betaRouting = true
 
     override fun setUp() {
         super.setUp()
-        mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
     }
 
@@ -37,8 +35,6 @@ class RouteWarningTestsOnline : BaseTest() {
      */
     @Test
     fun testSpecialTollRoadWarningOnline() = runBlocking {
-        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
-
         val start = GeoCoordinates(48.1655149641659, 17.151219976297632)
         val destination = GeoCoordinates(48.376850, 17.599600)
         val routingOptions = RoutingOptions().apply {
@@ -48,6 +44,7 @@ class RouteWarningTestsOnline : BaseTest() {
             vehicleProfile = VehicleProfile().apply {
                 generalVehicleTraits.vehicleType = VehicleType.Truck
             }
+            useSpeedProfiles = false
         }
 
         val route = routeComputeHelper.onlineRouteCompute(
@@ -56,16 +53,12 @@ class RouteWarningTestsOnline : BaseTest() {
             routingOptions = routingOptions
         )
 
-        route.getRouteWarnings(routeWarningsListener)
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } != null
-        })
+        val routeWarnings = route.getRouteWarnings()
+        assertTrue(routeWarnings.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } != null)
     }
 
     @Test
     fun testSpecialTollRoadWarningCarNegativeOnline() = runBlocking {
-        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
-
         val start = GeoCoordinates(48.1655149641659, 17.151219976297632)
         val destination = GeoCoordinates(48.376850, 17.599600)
         val routingOptions = RoutingOptions().apply {
@@ -80,16 +73,12 @@ class RouteWarningTestsOnline : BaseTest() {
             routingOptions = routingOptions
         )
 
-        route.getRouteWarnings(routeWarningsListener)
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } == null
-        })
+        val routeWarnings = route.getRouteWarnings()
+        assertTrue(routeWarnings.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } == null)
     }
 
     @Test
     fun testShouldNotGetProhibitedZonesForCar() = runBlocking {
-        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
-
         val start = GeoCoordinates(48.14563204144804, 17.127418475984047)
         val destination = GeoCoordinates(48.100719596404204, 17.234918702389646)
         val routingOptions = RoutingOptions().apply {
@@ -103,16 +92,12 @@ class RouteWarningTestsOnline : BaseTest() {
             routingOptions = routingOptions
         )
 
-        route.getRouteWarnings(routeWarningsListener)
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.isEmpty()
-        })
+        val routeWarnings = route.getRouteWarnings()
+        assertTrue(routeWarnings.isEmpty())
     }
 
     @Test
     fun tollRoadAvoidWarningTestOnline() = runBlocking {
-        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
-
         val start = GeoCoordinates(48.07473125945471, 17.121696472685443)
         val destination = GeoCoordinates(48.41623783484128, 17.747376207492863)
         val routingOptions = RoutingOptions().apply {
@@ -125,19 +110,13 @@ class RouteWarningTestsOnline : BaseTest() {
             routingOptions = routingOptions
         )
 
-        route.getRouteWarnings(routeWarningsListener)
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } != null
-        })
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.isNotEmpty()
-        })
+        val routeWarnings = route.getRouteWarnings()
+        assertTrue(routeWarnings.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } != null)
+        assertTrue(routeWarnings.isNotEmpty())
     }
 
     @Test
     fun tollRoadCountryAvoidWarningTestOnline() = runBlocking {
-        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
-
         val start = GeoCoordinates(48.1083, 17.2206)
         val destination = GeoCoordinates(51.9035, -0.47722)
         val routingOptions = RoutingOptions().apply {
@@ -145,22 +124,17 @@ class RouteWarningTestsOnline : BaseTest() {
                 mutableMapOf("gb" to mutableSetOf(RouteAvoids.Type.Highway))
         }
 
-        val captor = argumentCaptor<List<RouteWarning>>()
         val route = routeComputeHelper.onlineRouteCompute(
             start,
             destination,
             routingOptions = routingOptions
         )
 
-        route.getRouteWarnings(routeWarningsListener)
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(captor.capture())
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.find { it is RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableHighway } != null
-        })
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.isNotEmpty()
-        })
-        val restriction = captor.allValues.flatten()
+        val routeWarnings = route.getRouteWarnings()
+        assertTrue(routeWarnings.isNotEmpty())
+        assertTrue(routeWarnings.find { it is RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableHighway } != null)
+
+        val restriction = routeWarnings
             .first() as RouteWarning.SectionWarning.CountryAvoidViolation.UnavoidableHighway
         assertTrue(restriction.iso == "gb")
     }
