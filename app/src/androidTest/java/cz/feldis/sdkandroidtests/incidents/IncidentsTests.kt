@@ -68,7 +68,7 @@ class IncidentsTests : BaseTest() {
     }
 
     @Test
-    fun exploreCustomIncidentsOnRouteOnlineCompute() {
+    fun exploreCustomIncidentsOnRouteOnlineCompute() = runBlocking {
         val importedSpeedCam = getMockSpeedCam()
         val importedIncidentData = IncidentData(importedSpeedCam, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)
@@ -114,7 +114,7 @@ class IncidentsTests : BaseTest() {
     }
 
     @Test
-    fun exploreIncidentsOnRouteExpectEmptyExpiredIncident() {
+    fun exploreIncidentsOnRouteExpectEmptyExpiredIncident() = runBlocking {
         val importedSpeedCam = getMockSpeedCamOld()
         val importedIncidentData = IncidentData(importedSpeedCam, audioNotificationParams)
         incidentsManager.addIncidents(listOf(importedIncidentData), listener)

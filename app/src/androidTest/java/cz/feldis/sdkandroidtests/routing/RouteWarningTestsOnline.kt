@@ -110,7 +110,7 @@ class RouteWarningTestsOnline : BaseTest() {
     }
 
     @Test
-    fun tollRoadAvoidWarningTestOnline() {
+    fun tollRoadAvoidWarningTestOnline() = runBlocking {
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.07473125945471, 17.121696472685443)
@@ -135,7 +135,7 @@ class RouteWarningTestsOnline : BaseTest() {
     }
 
     @Test
-    fun tollRoadCountryAvoidWarningTestOnline() {
+    fun tollRoadCountryAvoidWarningTestOnline() = runBlocking {
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
         val start = GeoCoordinates(48.1083, 17.2206)

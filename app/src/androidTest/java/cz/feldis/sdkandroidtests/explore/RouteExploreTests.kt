@@ -5,6 +5,7 @@ import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.explorer.RouteExplorer
 import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
+import com.sygic.sdk.navigation.explorer.results.ExploreChargingStationsOnRouteData
 import com.sygic.sdk.navigation.explorer.results.ExplorePlacesOnRouteData
 import com.sygic.sdk.navigation.explorer.results.ExplorerTrafficOnRouteResult
 import com.sygic.sdk.navigation.traffic.TrafficManager
@@ -23,10 +24,13 @@ import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
@@ -35,13 +39,11 @@ import org.mockito.ArgumentMatchers.anyList
 import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import timber.log.Timber
 
 class RouteExploreTests : BaseTest() {
@@ -106,7 +108,7 @@ class RouteExploreTests : BaseTest() {
      * We verify that onExplorePlacesLoaded was invoked with progress equals 100.
      */
     @Test
-    fun onExplorePlacesOnRoute() {
+    fun onExplorePlacesOnRoute() = runBlocking {
         val listener: RouteExplorer.OnExplorePlacesOnRouteListener = mock(verboseLogging = true)
         val route =
             routeCompute.onlineRouteCompute(
@@ -128,13 +130,16 @@ class RouteExploreTests : BaseTest() {
     }
 
     @Test
-    fun exploreIncidentsOnRoute() {
+    fun exploreIncidentsOnRoute() = runBlocking {
         val listener: RouteExplorer.OnExploreIncidentsOnRouteListener = mock(verboseLogging = true)
 
         val route = routeCompute.onlineRouteCompute(
             GeoCoordinates(48.7429, 17.8603),
             GeoCoordinates(48.7457, 17.86)
         )
+
+        routeExplorer.exploreIncidentsOnRoute(route, emptyList())
+
         routeExplorer.exploreIncidentsOnRoute(route, emptyList(), listener)
 
         verify(
@@ -194,19 +199,17 @@ class RouteExploreTests : BaseTest() {
     @Test
     fun exploreChargingStationsOnRoute() = runBlocking {
         disableOnlineMaps()
-        val listener: RouteExplorer.OnExploreChargingStationsOnRouteListener =
-            mock(verboseLogging = true)
 
         val mapDownloadHelper = MapDownloadHelper()
         mapDownloadHelper.installAndLoadMap("sk")
+        val vehicleProfile = RouteComputeHelper().createDefaultElectricVehicleProfile(50f, 50f)
 
         val route =
             routeCompute.offlineRouteCompute(
                 GeoCoordinates(48.12749909071542, 17.126906729580128),
                 GeoCoordinates(48.962803073321275, 18.162986338115697),
                 routingOptions = RoutingOptions().apply {
-                    vehicleProfile =
-                        RouteComputeHelper().createDefaultElectricVehicleProfile(50f, 50f)
+                    vehicleProfile
                 }
             )
 
@@ -216,39 +219,33 @@ class RouteExploreTests : BaseTest() {
         var firstInvocationSize = -1
         var lastInvocationSize = -1
 
-        doAnswer { invocation ->
-            val chargingStations = invocation.getArgument<List<ChargingStation>>(0)
-            val progress = invocation.getArgument<Int>(1)
-
-            // Capture the size during the first callback
-            if (firstInvocationSize == -1 && chargingStations.isNotEmpty()) {
-                firstInvocationSize = chargingStations.size
+        routeExplorer.exploreChargingStationsOnRoute(route, vehicleProfile)
+            .onEach {
+                assertFalse(it is ExploreChargingStationsOnRouteData.Error)
             }
+            .filterIsInstance<ExploreChargingStationsOnRouteData.ChargingStationsLoaded>()
+            .collect {
+                val chargingStations = it.chargingStations
+                val progress = it.progress
 
-            // Check that the list size grows with each callback
-            assertTrue(chargingStations.size >= previousSize)
-            aggregatedChargingStations.addAll(chargingStations)
-            previousSize = chargingStations.size
+                // Capture the size during the first callback
+                if (firstInvocationSize == -1 && chargingStations.isNotEmpty()) {
+                    firstInvocationSize = chargingStations.size
+                }
 
-            // Capture the size during the last invocation when progress is 100
-            if (progress == 100) {
-                lastInvocationSize = chargingStations.size
+                // Check that the list size grows with each callback
+                assertTrue(chargingStations.size >= previousSize)
+                aggregatedChargingStations.addAll(chargingStations)
+                previousSize = chargingStations.size
 
-                // Ensure that the last invocation contains more charging stations than the first
-                assertTrue(lastInvocationSize > firstInvocationSize)
+                // Capture the size during the last invocation when progress is 100
+                if (progress == 100) {
+                    lastInvocationSize = chargingStations.size
 
-                // Optionally, you can also check the final aggregated list here
+                    // Ensure that the last invocation contains more charging stations than the first
+                    assertTrue(lastInvocationSize > firstInvocationSize)
+                }
             }
-        }.whenever(listener).onExploreChargingStationsLoaded(any(), any())
-
-        routeExplorer.exploreChargingStationsOnRoute(
-            route,
-            RouteComputeHelper().createDefaultElectricVehicleProfile(50f, 50f),
-            listener
-        )
-
-        verify(listener, never()).onExploreChargingStationsError(any())
-        verify(listener, timeout(50_000L)).onExploreChargingStationsLoaded(any(), eq(100))
 
         // Ensure that the first and last invocation checks were performed
         assertTrue(firstInvocationSize >= 0)  // Ensure that the first invocation was recorded

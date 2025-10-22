@@ -568,7 +568,7 @@ class OfflineNavigationTests : BaseTest() {
         val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
         navigationManagerKtx.setSpeedMultiplier(logSimulatorAdapter, 4F)
-        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        NavigationManagerProvider.getInstance().setRouteForNavigation(route)
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
         verify(waypointPassListener, timeout(20_000L)).onWaypointPassed(any())

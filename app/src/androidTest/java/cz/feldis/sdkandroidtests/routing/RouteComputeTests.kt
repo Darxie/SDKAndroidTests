@@ -97,7 +97,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun getRouteElementsIcelandOffline() {
+    fun getRouteElementsIcelandOffline() = runBlocking {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("is")
 
@@ -123,7 +123,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun computeReykjavikToVikOffline() {
+    fun computeReykjavikToVikOffline() = runBlocking {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("is")
         val start = GeoCoordinates(64.114341, -21.871153)
@@ -141,7 +141,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun computeReykjavikToVikOfflineGetAltitude() {
+    fun computeReykjavikToVikOfflineGetAltitude() = runBlocking {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("is")
         val listener: GeometryListener = mock(verboseLogging = true)
@@ -318,7 +318,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun camperAndTruckETADifferentComparison() {
+    fun camperAndTruckETADifferentComparison() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
         val start = GeoCoordinates(48.13116130573944, 17.11782382599132)
         val destination = GeoCoordinates(49.05314733520812, 18.325403607220828)
@@ -365,7 +365,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun countriesInfoOrderAtSkHu() {
+    fun countriesInfoOrderAtSkHu() = runBlocking {
         mapDownloadHelper.installAndLoadMap("at")
         mapDownloadHelper.installAndLoadMap("sk")
         mapDownloadHelper.installAndLoadMap("hu")
@@ -393,7 +393,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun countriesInfoOrderHuAtSk() {
+    fun countriesInfoOrderHuAtSk() = runBlocking {
         mapDownloadHelper.installAndLoadMap("at")
         mapDownloadHelper.installAndLoadMap("sk")
         mapDownloadHelper.installAndLoadMap("hu")
@@ -423,7 +423,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun transitCountriesPreserveOrderTest_ThroughLiechtensteinToHungary() {
+    fun transitCountriesPreserveOrderTest_ThroughLiechtensteinToHungary() = runBlocking {
         mapDownloadHelper.installAndLoadMap("ch") // Switzerland
         mapDownloadHelper.installAndLoadMap("li") // Liechtenstein
         mapDownloadHelper.installAndLoadMap("at") // Austria
@@ -466,7 +466,7 @@ class RouteComputeTests : BaseTest() {
      * to the start and destination countries.
      */
     @Test
-    fun avoidableCountryTest() {
+    fun avoidableCountryTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("at")
         mapDownloadHelper.installAndLoadMap("sk")
         mapDownloadHelper.installAndLoadMap("hu")
@@ -496,7 +496,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun avoidableCountryTest_startAndEndCountryMustNotBeAvoided() {
+    fun avoidableCountryTest_startAndEndCountryMustNotBeAvoided() = runBlocking {
         mapDownloadHelper.installAndLoadMap("ch") // Switzerland
         mapDownloadHelper.installAndLoadMap("at") // Austria
         mapDownloadHelper.installAndLoadMap("sk") // Slovakia
@@ -648,7 +648,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun rovinkaToSygicEcoRouteComparison() {
+    fun rovinkaToSygicEcoRouteComparison() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
         val consumptionCurve = mutableMapOf(
             40.0 to 0.09,
@@ -713,7 +713,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun getStateOfChargeAtWaypoint() {
+    fun getStateOfChargeAtWaypoint() = runBlocking {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
@@ -749,7 +749,7 @@ class RouteComputeTests : BaseTest() {
      * In this test case, we only check that the route is computed as there was a problem with graph levels in the past.
      */
     @Test
-    fun testIllinoisOcontoToMaryland() {
+    fun testIllinoisOcontoToMaryland() = runBlocking {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("us-il")
 
@@ -770,7 +770,7 @@ class RouteComputeTests : BaseTest() {
      * we need to check that the route only has three maneuvers.
      */
     @Test
-    fun testNotUturnDirection() {
+    fun testNotUturnDirection() = runBlocking {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("de-07")
 
@@ -860,7 +860,7 @@ class RouteComputeTests : BaseTest() {
      * the route will not pass through residential areas where the speed limit is too low.
      */
     @Test
-    fun leichendorfToZirndorf() {
+    fun leichendorfToZirndorf() = runBlocking {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("de-02")
 
@@ -1019,7 +1019,7 @@ class RouteComputeTests : BaseTest() {
      * in the same way as a car and also is not too high.
      */
     @Test
-    fun testPedestrianRouteDurationLongerThanCar() {
+    fun testPedestrianRouteDurationLongerThanCar() = runBlocking {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
@@ -1119,7 +1119,7 @@ class RouteComputeTests : BaseTest() {
      * restricted route and normal route shouldn't have the same length and difference should be > 1 km
      */
     @Test
-    fun tunnelCategoryERouteLengthDifferenceTest() {
+    fun tunnelCategoryERouteLengthDifferenceTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("gb-03")
 
         val start = GeoCoordinates(51.49906, -0.05638)
@@ -1159,7 +1159,7 @@ class RouteComputeTests : BaseTest() {
      * In this test we check that route doesn't lead through tunnel cat. C
      */
     @Test
-    fun tunnelCategoryCTest() {
+    fun tunnelCategoryCTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("gb-03")
 
         val start = GeoCoordinates(51.45571, 0.23953)
@@ -1199,7 +1199,7 @@ class RouteComputeTests : BaseTest() {
      * https://jira.sygic.com/browse/SDC-13864
      */
     @Test
-    fun shortBusRoutingTest() {
+    fun shortBusRoutingTest() = runBlocking {
         disableOnlineMaps()
         MapDownloadHelper().installAndLoadMap("sk")
 
@@ -1231,7 +1231,7 @@ class RouteComputeTests : BaseTest() {
      * In this test we check that route length is < 80 km (because leads through shortest mountain road)
      */
     @Test
-    fun fuzzyDomainFranceTest() {
+    fun fuzzyDomainFranceTest() = runBlocking {
         disableOnlineMaps()
         MapDownloadHelper().installAndLoadMap("fr-06")
 
@@ -1266,7 +1266,7 @@ class RouteComputeTests : BaseTest() {
      * (because leads through shortest mountain road)
      */
     @Test
-    fun fuzzyDomainSloveniaTest() {
+    fun fuzzyDomainSloveniaTest() = runBlocking {
         disableOnlineMaps()
         MapDownloadHelper().installAndLoadMap("si")
 
@@ -1295,7 +1295,7 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun arriveInDirectionTest() {
+    fun arriveInDirectionTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val start = GeoCoordinates(48.14689, 17.22613)
@@ -1339,7 +1339,7 @@ class RouteComputeTests : BaseTest() {
      */
     @Test
     @Ignore("is not fixed, yet")
-    fun ferryComputedInTimeDifference() {
+    fun ferryComputedInTimeDifference() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
         mapDownloadHelper.installAndLoadMap("at")
         val start = GeoCoordinates(48.38222326230946, 16.838396718192747)

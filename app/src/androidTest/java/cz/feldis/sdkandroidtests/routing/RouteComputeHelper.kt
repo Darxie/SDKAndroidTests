@@ -25,22 +25,22 @@ import com.sygic.sdk.vehicletraits.powertrain.FuelType
 import com.sygic.sdk.vehicletraits.powertrain.PowerRange
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 
 class RouteComputeHelper : BaseTest() {
     private val router = runBlocking { RouterProvider.getInstance() }
 
-    fun onlineRouteCompute(
+    suspend fun onlineRouteCompute(
         start: GeoCoordinates,
         destination: GeoCoordinates,
         waypoints: List<GeoCoordinates> = emptyList(),
         routingOptions: RoutingOptions = RoutingOptions()
-    ): Route = runBlocking {
+    ): Route {
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
@@ -50,33 +50,29 @@ class RouteComputeHelper : BaseTest() {
         }
 
         val flow = router.computeRouteWithAlternatives(request)
-        return@runBlocking flow
+        return flow
             .filterIsInstance<ComputeRouteWithAlternativesData.RouteComputePrimaryFinished>()
             .onEach {
                 if (it.status != Router.RouteComputeStatus.Success &&
                     it.status != Router.RouteComputeStatus.SuccessWithWarnings
                 ) {
-                    Log.w("SYGIC", "Route not computed, error: ${it.status}")
+                    throw Exception("Route not computed, error: ${it.status}")
                 }
             }
-            .filter {
-                it.status == Router.RouteComputeStatus.Success || it.status == Router.RouteComputeStatus.SuccessWithWarnings
-            }
-            .mapNotNull {
-                it.route
-            }
+            .map { it.route }
+            .filterNotNull()
             .onEach {
                 Log.d("SYGIC", "Route successfully computed with length: ${it.routeInfo.length}")
             }
             .first()
     }
 
-    fun offlineRouteCompute(
+    suspend fun offlineRouteCompute(
         start: GeoCoordinates,
         destination: GeoCoordinates,
         waypoints: List<GeoCoordinates> = emptyList(),
         routingOptions: RoutingOptions = RoutingOptions()
-    ): Route = runBlocking {
+    ): Route {
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
@@ -85,21 +81,17 @@ class RouteComputeHelper : BaseTest() {
             this.routingOptions.routingService = RoutingOptions.RoutingService.Offline
         }
         val flow = router.computeRouteWithAlternatives(request)
-        return@runBlocking flow
+        return flow
             .filterIsInstance<ComputeRouteWithAlternativesData.RouteComputePrimaryFinished>()
             .onEach {
                 if (it.status != Router.RouteComputeStatus.Success &&
                     it.status != Router.RouteComputeStatus.SuccessWithWarnings
                 ) {
-                    Log.w("SYGIC", "Route not computed, error: ${it.status}")
+                    throw Exception("Route not computed, error: ${it.status}")
                 }
             }
-            .filter {
-                it.status == Router.RouteComputeStatus.Success || it.status == Router.RouteComputeStatus.SuccessWithWarnings
-            }
-            .mapNotNull {
-                it.route
-            }
+            .map { it.route }
+            .filterNotNull()
             .onEach {
                 Log.d("SYGIC", "Route successfully computed with length: ${it.routeInfo.length}")
             }

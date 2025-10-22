@@ -50,7 +50,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun tollRoadAvoidWarningTest() {
+    fun tollRoadAvoidWarningTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -77,7 +77,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun tollRoadAvoidWarningTwoCountriesTest() {
+    fun tollRoadAvoidWarningTwoCountriesTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
         mapDownloadHelper.installAndLoadMap("at")
 
@@ -117,7 +117,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun tollRoadAvoidWarningTestNegative() {
+    fun tollRoadAvoidWarningTestNegative() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -137,7 +137,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun heightExceededTest() {
+    fun heightExceededTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -180,7 +180,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun heightExceededTestPolylineCheck() {
+    fun heightExceededTestPolylineCheck() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -221,7 +221,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun heightExceededTestNegative() {
+    fun heightExceededTestNegative() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -252,7 +252,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun hazmatAndTunnelViolationTest() {
+    fun hazmatAndTunnelViolationTest(): Unit = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -300,7 +300,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun startAndEndInViolationCheckValues() {
+    fun startAndEndInViolationCheckValues() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -346,7 +346,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun startAndEndInViolationCheckValues2() {
+    fun startAndEndInViolationCheckValues2() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -399,7 +399,7 @@ class RouteWarningTests : BaseTest() {
      * We then check that there is an UnavoidableCountry warning that contains the iso.
      */
     @Test
-    fun unavoidableCountryWarningContainsIso() {
+    fun unavoidableCountryWarningContainsIso() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
         val start = GeoCoordinates(48.11964833044328, 17.211256171240564)
@@ -427,7 +427,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun endInEmissionZoneTest() {
+    fun endInEmissionZoneTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
         mapDownloadHelper.installAndLoadMap("at")
 
@@ -474,7 +474,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun possiblyUnsuitableUnpavedRoadWarningTest() {
+    fun possiblyUnsuitableUnpavedRoadWarningTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("is")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -509,7 +509,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun ipmBlockWarningTest() {
+    fun ipmBlockWarningTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -535,7 +535,7 @@ class RouteWarningTests : BaseTest() {
     }
 
     @Test
-    fun ipmBlockWarningTestNegative() {
+    fun ipmBlockWarningTestNegative() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -665,7 +665,7 @@ class RouteWarningTests : BaseTest() {
      * https://jira.sygic.com/browse/SDC-14368
      */
     @Test
-    fun coordinatesOfInsufficientBatteryWarning() {
+    fun coordinatesOfInsufficientBatteryWarning() = runBlocking {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
@@ -719,7 +719,7 @@ class RouteWarningTests : BaseTest() {
 
 
     @Test
-    fun preferenceViolationWarningEVTest() {
+    fun preferenceViolationWarningEVTest() = runBlocking {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)

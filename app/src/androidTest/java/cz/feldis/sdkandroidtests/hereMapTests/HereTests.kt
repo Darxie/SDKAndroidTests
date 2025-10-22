@@ -63,7 +63,7 @@ class HereTests : BaseHereTest() {
     }
 
     @Test
-    fun compositeHazmatWeightExceededTest() {
+    fun compositeHazmatWeightExceededTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("fr-10")
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
@@ -217,7 +217,7 @@ class HereTests : BaseHereTest() {
     }
 
     @Test
-    fun correctUTurnInstructionBajkalska() {
+    fun correctUTurnInstructionBajkalska() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
         val route =
             routeComputeHelper.offlineRouteCompute(
@@ -508,7 +508,7 @@ class HereTests : BaseHereTest() {
      * TC867
      */
     @Test
-    fun busRoutingAustraliaTest() {
+    fun busRoutingAustraliaTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("au-05")
         val start = GeoCoordinates(-27.665280, 153.376730)
         val destination = GeoCoordinates(-27.669720, 153.378950)

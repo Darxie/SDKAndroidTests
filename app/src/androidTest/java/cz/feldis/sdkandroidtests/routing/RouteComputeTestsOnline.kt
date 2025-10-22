@@ -76,7 +76,7 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     @Test
-    fun getRouteElementsIcelandOnline() {
+    fun getRouteElementsIcelandOnline() = runBlocking {
         val start = GeoCoordinates(63.556092, -19.794962)
         val destination = GeoCoordinates(63.420816, -19.001375)
         val route = routeComputeHelper.onlineRouteCompute(start, destination)
@@ -115,7 +115,7 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     @Test
-    fun routePlanFromJSONOnline() {
+    fun routePlanFromJSONOnline() = runBlocking {
         val start = GeoCoordinates(48.145718, 17.118669)
         val destination = GeoCoordinates(48.190322, 16.401080)
         val originalRoute =
@@ -206,7 +206,7 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     @Test
-    fun onlineRoutingGetLastManeuverCountry() {
+    fun onlineRoutingGetLastManeuverCountry() = runBlocking {
         val start = GeoCoordinates(48.13204503419638, 17.09786238379282)
         val destination = GeoCoordinates(51.491340, -0.102940)
 
@@ -256,7 +256,7 @@ class RouteComputeTestsOnline : BaseTest() {
             destination,
             routingOptions = RoutingOptions().apply {
                 vehicleProfile = null
-                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.routingType = RoutingType.Fastest
             }
         )
         assertNotNull(route)
@@ -279,7 +279,7 @@ class RouteComputeTestsOnline : BaseTest() {
             destination,
             routingOptions = RoutingOptions().apply {
                 vehicleProfile = null
-                this.routingType = RoutingOptions.RoutingType.Fastest
+                this.routingType = RoutingType.Fastest
             }
         )
         assertNotNull(route)
@@ -837,7 +837,7 @@ class RouteComputeTestsOnline : BaseTest() {
      * (because leads through shortest mountain road)
      */
     @Test
-    fun fuzzyDomainFranceTestOnline() {
+    fun fuzzyDomainFranceTestOnline() = runBlocking {
 
         val start = GeoCoordinates(45.822810, 6.533240)
         val destination = GeoCoordinates(45.594250, 6.880690)
@@ -870,7 +870,7 @@ class RouteComputeTestsOnline : BaseTest() {
      * (because leads through shortest mountain road)
      */
     @Test
-    fun fuzzyDomainUSATestOnline() {
+    fun fuzzyDomainUSATestOnline() = runBlocking {
 
         val start = GeoCoordinates(45.194770, -109.246780)
         val destination = GeoCoordinates(45.019490, -109.934500)
@@ -1050,7 +1050,7 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     @Test
-    fun shortestRouteInSlovakiaTestOnline() {
+    fun shortestRouteInSlovakiaTestOnline() = runBlocking {
         val routeCompute = RouteComputeHelper()
 
         val route = routeCompute.onlineRouteCompute(
@@ -1082,7 +1082,7 @@ class RouteComputeTestsOnline : BaseTest() {
      * restricted route and normal route shouldn't have the same length and difference should be > 1 km
      */
     @Test
-    fun tunnelCategoryERouteLengthDifferenceOnlineTest() {
+    fun tunnelCategoryERouteLengthDifferenceOnlineTest() = runBlocking {
 
         val start = GeoCoordinates(51.49906, -0.05638)
         val destination = GeoCoordinates(51.51246, -0.04123)
@@ -1121,7 +1121,7 @@ class RouteComputeTestsOnline : BaseTest() {
      * In this test we check that route doesn't lead through tunnel cat. C
      */
     @Test
-    fun tunnelCategoryCOnlineTest() {
+    fun tunnelCategoryCOnlineTest() = runBlocking {
 
         val start = GeoCoordinates(51.45571, 0.23953)
         val destination = GeoCoordinates(51.48845, 0.26980)
@@ -1159,7 +1159,7 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     @Test
-    fun onlineRoutingGetAllTransitSplitCountries() {
+    fun onlineRoutingGetAllTransitSplitCountries() = runBlocking {
         val start = GeoCoordinates(45.093660, -70.153760)
         val destination = GeoCoordinates(32.621350, -83.303830)
 
@@ -1245,7 +1245,7 @@ class RouteComputeTestsOnline : BaseTest() {
 
 
     @Test
-    fun onlineRoutingGetAllTransitCountries() {
+    fun onlineRoutingGetAllTransitCountries() = runBlocking {
         val start = GeoCoordinates(48.13204503419638, 17.09786238379282)
         val destination = GeoCoordinates(51.491340, -0.102940)
 
@@ -1277,7 +1277,7 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     @Test
-    fun leichendorfToZirndorfOnline() {
+    fun leichendorfToZirndorfOnline() = runBlocking {
 
         val start = GeoCoordinates(49.4339, 10.9345)
         val destination = GeoCoordinates(49.4425, 10.9459)
