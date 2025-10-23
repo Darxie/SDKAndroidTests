@@ -637,6 +637,47 @@ class RouteComputeTestsOnline : BaseTest() {
         }
     }
 
+
+    /**
+     * https://jira.sygic.com/browse/SDC-14494
+     * TC902
+     * There are no warnings after route compute
+     */
+    @Test
+    fun computeWithoutWarningsTestOnlineToKTX() = runBlocking {
+        val start = GeoCoordinates(48.146400, 17.106870)
+        val destination = GeoCoordinates(48.373510, 17.594620)
+
+        val vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+            generalVehicleTraits.vehicleType = VehicleType.Car
+            dimensionalTraits = DimensionalTraits().apply {
+                totalWeight = 30_000F
+                totalLength = 18000
+                totalWidth = 2500
+                totalHeight = 4000
+            }
+        }
+
+        val options = RoutingOptions().apply {
+            this.vehicleProfile = vehicleProfile
+            routingService = RoutingOptions.RoutingService.Online
+            napStrategy = NearestAccessiblePointStrategy.ChangeWaypointTargetRoads
+            useSpeedProfiles = true
+            useTraffic = true
+        }
+
+        val routeRequest = RouteRequest()
+        routeRequest.setStart(start)
+        routeRequest.setDestination(destination)
+        routeRequest.routingOptions = options
+
+        val route = routeComputeHelper.offlineRouteCompute (routeRequest)
+
+        val status = result.second
+
+        assertEquals("Route computation status should be Success", Router.RouteComputeStatus.Success, status)
+    }
+
     /**
      * https://jira.sygic.com/browse/CI-2891
      * TC906
