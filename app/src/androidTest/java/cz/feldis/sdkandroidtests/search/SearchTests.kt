@@ -16,6 +16,7 @@ import com.sygic.sdk.search.ReverseGeocoderProvider
 import com.sygic.sdk.search.SearchManager
 import com.sygic.sdk.search.SearchManagerProvider
 import com.sygic.sdk.search.SearchRequest
+import com.sygic.sdk.search.results.LocalTimeAtLocationResult
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import kotlinx.coroutines.runBlocking
@@ -23,6 +24,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.any
@@ -302,18 +304,19 @@ class SearchTests : BaseTest() {
 
     @Test
     fun getTimeZoneOnlineMap() {
-        val listener: ReverseGeocoder.TimeAtLocationResultListener = mock()
         val utcUnixTimestamp = System.currentTimeMillis() / 1000L
         val location = GeoCoordinates(-37.82626706998113, 140.77709279621698) // South Australia
 
-        reverseGeocoder.getLocalTimeAtLocation(location, utcUnixTimestamp, listener)
+        val result = runBlocking { reverseGeocoder.getLocalTimeAtLocation(location, utcUnixTimestamp) }
+        when (result) {
+            is LocalTimeAtLocationResult.Success -> {
+                assertTrue(result.unixTimestamp - utcUnixTimestamp in 34200..37800)
+            }
 
-        val timestampCaptor = argumentCaptor<Long>()
-
-        verify(listener, timeout(5_000L)).onSuccess(timestampCaptor.capture())
-        verify(listener, never()).onError(any())
-
-        assertTrue(timestampCaptor.lastValue - utcUnixTimestamp in 34200..37800) // in seconds
+            is LocalTimeAtLocationResult.Error -> {
+                fail("getLocalTimeAtLocation error: ${result.errorCode.name}")
+            }
+        }
     }
 
     @Test
@@ -541,7 +544,7 @@ class SearchTests : BaseTest() {
             mock(verboseLogging = true)
 
         reverseGeocoder
-            .reverseGeocode(GeoCoordinates(49.8987,-97.1627), emptySet(), reverseGeoListener)
+            .reverseGeocode(GeoCoordinates(49.8987, -97.1627), emptySet(), reverseGeoListener)
         verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResult(argThat {
             this.forEach {
                 if ((it.names.houseNumber == "684") && (it.names.street == "Victor St"))

@@ -17,7 +17,11 @@ import com.sygic.sdk.search.ResultStatus
 import com.sygic.sdk.search.ResultType
 import com.sygic.sdk.search.SearchManagerProvider
 import com.sygic.sdk.search.SearchRequest
+import com.sygic.sdk.search.Session
 import com.sygic.sdk.search.results.AutocompleteSearchResult
+import com.sygic.sdk.search.results.CreateSearchResult
+import junit.framework.TestCase.assertTrue
+import junit.framework.TestCase.fail
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.mockito.kotlin.any
@@ -61,13 +65,11 @@ class SearchHelper {
     }
 
     suspend fun onlineAutocomplete(autocompleteRequest: SearchRequest): List<AutocompleteResult> {
-        val createSearchListener: CreateSearchCallback<OnlineMapSearch> = mock()
-        val searchCaptor = argumentCaptor<OnlineMapSearch>()
-        searchManager.createOnlineMapSearch(createSearchListener)
-        verify(createSearchListener, timeout(3_000L)).onSuccess(searchCaptor.capture())
-
-        val search = searchCaptor.lastValue
-        val session = search.createSession()
+        val onlineMapSearchResult = searchManager.createOnlineMapSearch()
+        if (onlineMapSearchResult is CreateSearchResult.Error) {
+            fail("❌ Failed to create online map search: ${onlineMapSearchResult.error.name}")
+        }
+        val session = (onlineMapSearchResult as CreateSearchResult.Success).search.createSession()
 
         val maxRetries = 3
         val retryDelay = 5_000L
@@ -82,8 +84,6 @@ class SearchHelper {
 
                 is AutocompleteSearchResult.Error -> {
                     println("⚠️ Error: ${result.status}")
-
-                    // Retry only for UNSPECIFIED_ERROR
                     if (result.status == ResultStatus.UNSPECIFIED_ERROR && attempt < maxRetries - 1) {
                         delay(retryDelay)
                     } else {
