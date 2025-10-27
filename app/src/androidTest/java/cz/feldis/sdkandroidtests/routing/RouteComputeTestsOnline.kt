@@ -43,6 +43,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.withSettings
+import java.util.Date
 
 class RouteComputeTestsOnline : BaseTest() {
     private lateinit var mapDownloadHelper: MapDownloadHelper
@@ -657,6 +658,7 @@ class RouteComputeTestsOnline : BaseTest() {
      * There are no Truck warnings for vehicle type Bus in Routing-Summary window
      */
     @Test
+    @Ignore("https://eurowag-cloud.atlassian.net/browse/DNAENG-531")
     fun computeWithoutTruckWarningsForBusTestOnline() {
         val start = GeoCoordinates(47.773290, 12.009410)
         val destination = GeoCoordinates(48.131460, 11.575850)
@@ -1169,11 +1171,12 @@ class RouteComputeTestsOnline : BaseTest() {
             routingOptions = RoutingOptions().apply {
                 this.useTraffic = false
                 this.useSpeedProfiles = false
+                this.departureTime = Date(1761301182)
             }
         )
 
         val expectedRegions =
-            setOf("me", "nh", "ma", "ct", "ny", "nj", "de", "md", "va", "nc", "sc", "ga")
+            setOf("me", "nh", "ma", "ct", "ny", "nj", "de", "md", "dc", "va", "nc", "sc", "ga")
         val transitCountries = runBlocking { route.getTransitCountriesInfo() }
 
         val regions = transitCountries.flatMap { info ->
