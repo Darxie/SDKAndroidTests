@@ -19,19 +19,20 @@ import com.sygic.sdk.position.PositionManagerProvider
 import com.sygic.sdk.position.results.GetRoadsResult
 import com.sygic.sdk.position.results.MatchResult
 import com.sygic.sdk.route.RoutingOptions
-import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
-import com.sygic.sdk.vehicletraits.listeners.SetVehicleProfileListener
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.SygicActivity
 import cz.feldis.sdkandroidtests.TestMapFragment
-import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -50,7 +51,6 @@ class AuxiliaryTests : BaseTest() {
 
     private lateinit var routeCompute: RouteComputeHelper
     private lateinit var mapDownload: MapDownloadHelper
-    private val navigationManagerKtx = NavigationManagerKtx()
     private lateinit var navigation: NavigationManager
 
 
@@ -64,10 +64,10 @@ class AuxiliaryTests : BaseTest() {
     }
 
     @Test
-    @Ignore("run this only when needed")
+    @Ignore("run when needed")
     fun testJustNavigationWithMap(): Unit = runBlocking {
-        mapDownload.installAndLoadMap("sk")
-
+        enableOnlineMaps()
+        mapDownload.installAndLoadMap("fr")
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
         // create test scenario with activity & map fragment
         val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
@@ -77,49 +77,78 @@ class AuxiliaryTests : BaseTest() {
                 .commitNow()
         }
 
-        val vehicleProfile = VehicleProfile().apply {
-            this.dimensionalTraits = DimensionalTraits().apply {
-                this.totalLength = 16500
+        try {
+            val vehicleProfile = VehicleProfile().apply {
+                this.dimensionalTraits = DimensionalTraits().apply {
+                    this.totalLength = 16500
+                    this.totalWeight = 25000F
+                }
+                this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                    this.vehicleType = VehicleType.Truck
+                }
             }
-            this.generalVehicleTraits = GeneralVehicleTraits().apply {
-                this.vehicleType = VehicleType.Truck
+
+            val mapView = getMapView(mapFragment)
+
+            val route = routeCompute.onlineRouteCompute(
+                GeoCoordinates(48.14562613458992, 17.126682063470636),
+                GeoCoordinates(48.390008550344, 17.58597217027952),
+                routingOptions = RoutingOptions().apply {
+                    this.vehicleProfile = vehicleProfile
+                }
+            )
+
+            mapView.setVehicleProfile(vehicleProfile)
+            mapView.mapDataModel.addMapObject(
+                MapRoute.from(route).setType(MapRoute.RouteType.Primary).build()
+            )
+            mapView.mapDataModel.setSkin(listOf("car"))
+
+            navigation.setRouteForNavigation(route)
+
+            launch {
+                navigation.routeChanges()
+                    .map { it.route }
+                    .filterNotNull()
+                    .collect {
+                        println("Route changed: ${it.routeId}")
+                        val mapView = getMapView(mapFragment)
+                        val objects = mapView.mapDataModel.getMapObjects()
+                        objects.forEach { mapView.mapDataModel.removeMapObject(it) }
+                        mapView.mapDataModel.addMapObject(
+                            MapRoute.from(it).setType(MapRoute.RouteType.Primary).build()
+                        )
+                        mapView.cameraModel.setRotationMode(RotationMode.Vehicle)
+                        mapView.cameraModel.setMovementMode(MovementMode.FollowGpsPositionWithAutozoom)
+                        mapView.cameraModel.setTilt(45F)
+                    }
             }
+
+            launch { navigation.places().onEach { println("places: ${it.size}") }.collect { } }
+            launch {
+                navigation.directions().onEach { println("direction: ${it.primary.type.name} onto ${it.primary.nextRoadName}") }
+                    .collect { }
+            }
+            launch { navigation.routeRecomputes().onEach { println("recompute") }.collect { } }
+            launch {
+                navigation.trafficSigns().onEach { println("traffic signs: ${it.size}") }
+                    .collect { }
+            }
+            launch {
+                navigation.speedLimits().onEach { println("speedlimits: ${it.speedLimit}") }
+                    .collect { }
+            }
+
+            mapView.cameraModel.setRotationMode(RotationMode.Vehicle)
+            mapView.cameraModel.setMovementMode(MovementMode.FollowGpsPositionWithAutozoom)
+            mapView.cameraModel.setTilt(45F)
+            mapView.setFpsLimit(FpsConfig(FpsConfig.FpsMode.PERFORMANCE, 120f))
+
+            delay(600000)
+        } finally {
+            //close scenario & activity
+            scenario.moveToState(Lifecycle.State.DESTROYED)
         }
-
-        val mapView = getMapView(mapFragment)
-
-        val route = routeCompute.offlineRouteCompute(
-            GeoCoordinates(48.14562613458992, 17.126682063470636),
-            GeoCoordinates(48.390008550344, 17.58597217027952),
-            routingOptions = RoutingOptions().apply {
-                this.vehicleProfile = vehicleProfile
-            }
-        )
-
-        mapView.setVehicleProfile(vehicleProfile, object : SetVehicleProfileListener {
-            override fun onSuccess() {
-            }
-
-            override fun onError() {
-            }
-        })
-        mapView.mapDataModel.addMapObject(
-            MapRoute.from(route).setType(MapRoute.RouteType.Primary).build()
-        )
-
-        navigationManagerKtx.setRouteForNavigation(route, navigation)
-        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
-        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
-        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
-
-        mapView.cameraModel.setRotationMode(RotationMode.Vehicle)
-        mapView.cameraModel.setMovementMode(MovementMode.FollowGpsPositionWithAutozoom)
-        mapView.cameraModel.setTilt(45F)
-        mapView.setFpsLimit(FpsConfig(FpsConfig.FpsMode.PERFORMANCE, 60f))
-
-        delay(600000)
-        //close scenario & activity
-        scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
     @Test
@@ -149,7 +178,8 @@ class AuxiliaryTests : BaseTest() {
                 mapView.setMapLanguage(Locale.forLanguageTag(locale))
                 delay(1000)
 
-                val matchResult = positionManager.match(listOf(streetCoordinates, streetCoordinates2))
+                val matchResult =
+                    positionManager.match(listOf(streetCoordinates, streetCoordinates2))
                 when (matchResult) {
                     is MatchResult.Success -> println("✅ Match success, found ${matchResult.submatchings.flatten().size} roads")
                     else -> println("❌ Match failed: $matchResult")
