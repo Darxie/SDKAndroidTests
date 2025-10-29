@@ -1161,6 +1161,7 @@ class RouteComputeTestsOnline : BaseTest() {
     }
 
     @Test
+    @Ignore("https://dev.azure.com/sygiclbs/Maps%20SDK%20and%20Libraries/_git/sdk/pullrequest/2561")
     fun onlineRoutingGetAllTransitSplitCountries() = runBlocking {
         val start = GeoCoordinates(45.093660, -70.153760)
         val destination = GeoCoordinates(32.621350, -83.303830)

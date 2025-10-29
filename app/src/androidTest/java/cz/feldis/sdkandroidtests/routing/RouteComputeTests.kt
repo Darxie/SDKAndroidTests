@@ -1373,6 +1373,34 @@ class RouteComputeTests : BaseTest() {
         )
     }
 
+    @Test
+    @Ignore("https://dev.azure.com/sygiclbs/Maps%20SDK%20and%20Libraries/_git/sdk/pullrequest/2561")
+    fun offlineDepartureTimeTest() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+        val start = GeoCoordinates(48.145411852878745, 17.126700710236015)
+        val destination = GeoCoordinates(48.20623993001774, 16.975278490626195)
+        val routeCompute = RouteComputeHelper()
+        val routingOptions = RoutingOptions().apply {
+            this.departureTime = Date(1761752071000) // 2025-10-29 16:34
+        }
+
+        val routeAtPeak = routeCompute.offlineRouteCompute(
+            start, destination, routingOptions = routingOptions
+        )
+        val routeAtNight = routeCompute.offlineRouteCompute(
+            start, destination, routingOptions = RoutingOptions().apply {
+                this.departureTime = Date(1761701671000) // 2025-10-29 02:34
+            }
+        )
+        val nightDuration = routeAtNight.routeInfo.waypointDurations.sumOf { it.withSpeedProfiles }
+        val peakDuration = routeAtPeak.routeInfo.waypointDurations.sumOf { it.withSpeedProfiles }
+
+        assertTrue(
+            "Expected night route to be faster than peak route",
+            nightDuration < peakDuration
+        )
+    }
+
     private suspend fun getRouteRequest(path: String): RouteRequest =
         suspendCoroutine { continuation ->
             router.createRouteRequestFromJSONString(
