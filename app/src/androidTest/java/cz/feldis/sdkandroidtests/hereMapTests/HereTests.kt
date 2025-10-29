@@ -33,13 +33,15 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.GeoUtils
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
-import org.mockito.Mockito
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
@@ -610,9 +612,8 @@ class HereTests : BaseHereTest() {
      * Only the half left arrow of the left lane should be highlighted
      */
     @Test
-    fun onLaneListenerTestOfflineHERE() = runBlocking {
+    fun onLaneFlowTestOfflineHERE() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
-        val listener: NavigationManager.OnLaneListener = mock(verboseLogging = true)
 
         val route = routeComputeHelper.offlineRouteCompute(
             GeoCoordinates(48.76916, 18.62626),
@@ -620,39 +621,40 @@ class HereTests : BaseHereTest() {
         )
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
-        navigation.addOnLaneListener(listener)
 
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
-        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1f)
         navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
+        withTimeout(30_000L) {
+            navigation.lanes()
+                .onEach { println("➡️ laneInfo = $it") }
+                .first { laneInfo ->
+                    val lanes = laneInfo.simpleLanesInfo?.lanes ?: return@first false
 
-        Mockito.verify(
-            listener, Mockito.timeout(30_000L)
-        ).onLaneInfoChanged(argThat { laneInfo ->
-            val lanes = laneInfo.simpleLanesInfo?.lanes
-            if (lanes != null) {
-                for (lane in lanes) {
-                    val arrows = lane.arrows
-                    for (arrow in arrows) {
-                        if (arrow.direction == LaneInfo.Lane.Direction.HalfLeft && arrow.isHighlighted) {
-                            return@argThat true
-                        }
-                        if (arrow.direction == LaneInfo.Lane.Direction.Straight && arrow.isHighlighted) {
-                            return@argThat false
-                        }
-                        if (arrow.direction == LaneInfo.Lane.Direction.HalfRight && arrow.isHighlighted) {
-                            return@argThat false
+                    var halfLeftHighlighted = false
+                    var straightHighlighted = false
+                    var halfRightHighlighted = false
+
+                    for (lane in lanes) {
+                        for (arrow in lane.arrows) {
+                            when (arrow.direction) {
+                                LaneInfo.Lane.Direction.HalfLeft -> if (arrow.isHighlighted) halfLeftHighlighted = true
+                                LaneInfo.Lane.Direction.Straight -> if (arrow.isHighlighted) straightHighlighted = true
+                                LaneInfo.Lane.Direction.HalfRight -> if (arrow.isHighlighted) halfRightHighlighted = true
+                                else -> {}
+                            }
                         }
                     }
+
+                    halfLeftHighlighted && !straightHighlighted && !halfRightHighlighted
                 }
-            }
-            return@argThat false
-        })
+
+            println("✅ Correct lane highlight detected")
+        }
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
-        navigation.removeOnLaneListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
     }
 }
