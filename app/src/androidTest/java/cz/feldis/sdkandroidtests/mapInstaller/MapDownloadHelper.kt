@@ -26,7 +26,8 @@ class MapDownloadHelper : BaseTest() {
         val installMapResult = runBlocking {
             installer.installMap(iso)
         }
-        assertTrue(installMapResult is MapInstaller.LoadResult.Success)
+        assertTrue("Failed to install map: $installMapResult",
+            installMapResult is MapInstaller.LoadResult.Success)
 
         val loadMapResult = runBlocking {
             installer.loadMap(iso)
