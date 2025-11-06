@@ -4,13 +4,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import com.sygic.sdk.map.Camera.MovementMode
 import com.sygic.sdk.map.Camera.RotationMode
-import com.sygic.sdk.map.CameraState
-import com.sygic.sdk.map.MapAnimation
-import com.sygic.sdk.map.MapCenter
-import com.sygic.sdk.map.MapCenterSettings
-import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.fps.FpsConfig
-import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.map.`object`.MapRoute
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
@@ -40,10 +34,6 @@ import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.timeout
-import org.mockito.kotlin.verify
 import java.util.Locale
 
 @RunWith(MockitoJUnitRunner::class)
@@ -195,8 +185,7 @@ class AuxiliaryTests : BaseTest() {
                     return null
                 }
 
-                val roadsResult = positionManager.getRoads(roadIds)
-                when (roadsResult) {
+                when (val roadsResult = positionManager.getRoads(roadIds)) {
                     is GetRoadsResult.Success -> {
                         println("✅ getRoads success, found ${roadsResult.roads.size} roads")
                         roadsResult.roads.forEachIndexed { i, r ->
@@ -221,35 +210,5 @@ class AuxiliaryTests : BaseTest() {
         } finally {
             scenario.moveToState(Lifecycle.State.DESTROYED)
         }
-    }
-
-    private fun getInitialCameraState(): CameraState {
-        return CameraState.Builder().apply {
-            setPosition(GeoCoordinates(48.15132, 17.07665))
-            setMapCenterSettings(
-                MapCenterSettings(
-                    MapCenter(0.5f, 0.5f),
-                    MapCenter(0.5f, 0.5f),
-                    MapAnimation.NONE, MapAnimation.NONE
-                )
-            )
-            setMapPadding(0.0f, 0.0f, 0.0f, 0.0f)
-            setRotation(0f)
-            setZoomLevel(14F)
-            setMovementMode(MovementMode.Free)
-            setRotationMode(RotationMode.Free)
-            setTilt(0f)
-        }.build()
-    }
-
-    private fun getMapView(mapFragment: TestMapFragment): MapView {
-        val mapInitListener: OnMapInitListener = mock(verboseLogging = true)
-        val mapViewCaptor = argumentCaptor<MapView>()
-
-        mapFragment.getMapAsync(mapInitListener)
-        verify(mapInitListener, timeout(5_000L)).onMapReady(
-            mapViewCaptor.capture()
-        )
-        return mapViewCaptor.firstValue
     }
 }

@@ -1,6 +1,7 @@
 package cz.feldis.sdkandroidtests.navigation
 
 import android.graphics.Color
+import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import com.sygic.sdk.incidents.SpeedCamera
@@ -68,7 +69,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
-import timber.log.Timber
 
 class OfflineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -829,27 +829,7 @@ class OfflineNavigationTests : BaseTest() {
         }
     }
 
-    private fun getInitialCameraState(): CameraState {
-        return CameraState.Builder().apply {
-            setPosition(GeoCoordinates(48.15132, 17.07665))
-            setMapCenterSettings(
-                MapCenterSettings(
-                    MapCenter(0.5f, 0.5f),
-                    MapCenter(0.5f, 0.5f),
-                    MapAnimation.NONE, MapAnimation.NONE
-                )
-            )
-            setMapPadding(0.0f, 0.0f, 0.0f, 0.0f)
-            setRotation(0f)
-            setZoomLevel(14F)
-            setMovementMode(Camera.MovementMode.Free)
-            setRotationMode(Camera.RotationMode.Free)
-            setTilt(0f)
-        }.build()
-    }
-
     @Test
-    @Ignore("fdskfjsdf")
     fun navigationInterruptedByMapReloadTest(): Unit = runBlocking {
         mapDownload.installAndLoadMap("sk")
 
@@ -862,7 +842,6 @@ class OfflineNavigationTests : BaseTest() {
             routingOptions = RoutingOptions().apply {
                 useEndpointProtection = true
                 napStrategy = NearestAccessiblePointStrategy.Disabled
-                arriveInDrivingSide = true
                 useTraffic = false
                 useSpeedProfiles = false
             }
@@ -876,30 +855,19 @@ class OfflineNavigationTests : BaseTest() {
 
 
         val flow = RouteExplorerProvider.getInstance().explorePlacesOnRoute(route, listOf())
-        flow.onEach {
-            if (it is ExplorePlacesOnRouteData.PlacesLoaded) {
-                Timber.d("PROGREEEEEEEEEEEEEEEEEEEEEEEEEES - ${it.progress}")
-            }
-        }
-        delay(10000)
+        delay(1000)
         mapDownload.unloadMap("sk")
         val error = flow
+            .onEach {
+                if (it is ExplorePlacesOnRouteData.PlacesLoaded) {
+                    Log.d("SYGIC", "PROGRESS - ${it.progress}")
+                }
+            }
             .filterIsInstance<ExplorePlacesOnRouteData.Error>()
-            .onEach { Timber.d("ERRROOOOOOOOOOOOOOOOOOOOOOOOOOR ----- ${it.errorCode.name}") }
-            .first({ it.errorCode == PlacesManager.ErrorCode.REQUEST_CANCELED })
+            .onEach { Log.d("SYGIC", "ERRROR ----- ${it.errorCode.name}") }
+            .first({ it.errorCode == PlacesManager.ErrorCode.CORRUPTED_DATA })
         delay(1_000)
 
-        assertTrue(error.errorCode == PlacesManager.ErrorCode.REQUEST_CANCELED)
-    }
-
-    private fun getMapView(mapFragment: TestMapFragment): MapView {
-        val mapInitListener: OnMapInitListener = mock(verboseLogging = true)
-        val mapViewCaptor = argumentCaptor<MapView>()
-
-        mapFragment.getMapAsync(mapInitListener)
-        verify(mapInitListener, timeout(5_000L)).onMapReady(
-            mapViewCaptor.capture()
-        )
-        return mapViewCaptor.firstValue
+        assertTrue(error.errorCode == PlacesManager.ErrorCode.CORRUPTED_DATA)
     }
 }

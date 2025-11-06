@@ -11,22 +11,30 @@ import com.sygic.sdk.LoggingSettings
 import com.sygic.sdk.MapReaderSettings
 import com.sygic.sdk.SygicEngine
 import com.sygic.sdk.buildJsonConfig
-import com.sygic.sdk.context.CoreInitException
 import com.sygic.sdk.context.SygicContext
 import com.sygic.sdk.context.SygicContextInitRequest
+import com.sygic.sdk.context.SygicContextInitResult
 import com.sygic.sdk.diagnostics.LogConnector
+import com.sygic.sdk.map.Camera
+import com.sygic.sdk.map.CameraState
+import com.sygic.sdk.map.GetMapResult
+import com.sygic.sdk.map.MapAnimation
+import com.sygic.sdk.map.MapCenter
+import com.sygic.sdk.map.MapCenterSettings
+import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.data.MapProvider
-import com.sygic.sdk.online.OnlineManager
 import com.sygic.sdk.online.OnlineManagerProvider
 import com.sygic.sdk.online.listeners.SetActiveMapProviderListener
 import com.sygic.sdk.online.results.OperationResult
+import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.position.PositionManager
 import com.sygic.sdk.position.PositionManagerProvider
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import org.junit.After
-import org.junit.Assert
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TestRule
@@ -39,13 +47,10 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import timber.log.Timber
 import java.io.IOException
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 
 abstract class BaseTest {
     private val defaultConfig = SygicEngine.JsonConfigBuilder()
-    var isEngineInitialized = false
     open lateinit var appContext: Context
     lateinit var sygicContext: SygicContext
     open lateinit var appDataPath: String
@@ -91,7 +96,7 @@ abstract class BaseTest {
             androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
         appDataPath = appContext.getExternalFilesDir(null).toString()
 
-        initializeSdk(loadMaps, betaRouting)
+        runBlocking { initializeSdk(loadMaps, betaRouting) }
     }
 
     @After
@@ -99,9 +104,7 @@ abstract class BaseTest {
         sygicContext.destroy()
     }
 
-    private fun initializeSdk(loadMaps: Boolean, betaRouting: Boolean) {
-        val latch = CountDownLatch(1)
-
+    private suspend fun initializeSdk(loadMaps: Boolean, betaRouting: Boolean) {
         val contextInitRequest = SygicContextInitRequest(
             jsonConfiguration = buildJsonConfig(buildConfig(isUAT = true)) {}.betaRouting(
                 betaRouting
@@ -112,24 +115,11 @@ abstract class BaseTest {
             clearOnlineCache = false
         )
 
-        SygicEngine.initialize(contextInitRequest, object : SygicEngine.OnInitCallback {
-            override fun onError(error: CoreInitException) {
-                Assert.fail("SDK initialization failed: $error")
-                latch.countDown()
-            }
-
-            override fun onInstance(instance: SygicContext) {
-                sygicContext = instance
-                isEngineInitialized = true
-                enableOnlineMaps()
-                runBlocking {
-                    PositionManagerProvider.getInstance().openGpsConnection()
-                }
-                latch.countDown()
-            }
-        })
-
-        latch.await(30, TimeUnit.SECONDS)
+        val initializeResult = SygicEngine.initialize(contextInitRequest)
+        assertTrue(initializeResult is SygicContextInitResult.Success)
+        sygicContext = (initializeResult as SygicContextInitResult.Success).instance
+        enableOnlineMaps()
+        PositionManagerProvider.getInstance().openGpsConnection()
     }
 
     private fun buildConfig(isUAT: Boolean = true): String {
@@ -199,7 +189,7 @@ abstract class BaseTest {
     open fun enableOnlineMaps() {
         val onlineManager = runBlocking { OnlineManagerProvider.getInstance() }
 
-        if (onlineManager.isOnlineMapStreamingEnabled())  {
+        if (onlineManager.isOnlineMapStreamingEnabled()) {
             Timber.d("Enabling online map streaming which is already enabled, skipping")
             return
         }
@@ -273,5 +263,32 @@ abstract class BaseTest {
             }
         routing.put("use_beta_online_routing", useBetaRouting)
         return sdkConfig.toString()
+    }
+
+    protected suspend fun getMapView(mapFragment: TestMapFragment): MapView =
+        withTimeout(5_000L) {
+            when (val res = mapFragment.getMapAsync()) {
+                is GetMapResult.Success -> res.mapView
+                is GetMapResult.Error -> fail("getMapAsync returned error")
+            } as MapView
+        }
+
+    protected fun getInitialCameraState(): CameraState {
+        return CameraState.Builder().apply {
+            setPosition(GeoCoordinates(48.15132, 17.07665))
+            setMapCenterSettings(
+                MapCenterSettings(
+                    MapCenter(0.5f, 0.5f),
+                    MapCenter(0.5f, 0.5f),
+                    MapAnimation.NONE, MapAnimation.NONE
+                )
+            )
+            setMapPadding(0.0f, 0.0f, 0.0f, 0.0f)
+            setRotation(0f)
+            setZoomLevel(14F)
+            setMovementMode(Camera.MovementMode.Free)
+            setRotationMode(Camera.RotationMode.Free)
+            setTilt(0f)
+        }.build()
     }
 }

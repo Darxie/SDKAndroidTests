@@ -1,5 +1,6 @@
 package cz.feldis.sdkandroidtests.search
 
+import android.util.Log
 import com.sygic.sdk.places.Place
 import com.sygic.sdk.places.PlaceCategories
 import com.sygic.sdk.position.GeoCoordinates
@@ -17,9 +18,11 @@ import com.sygic.sdk.search.SearchManager
 import com.sygic.sdk.search.SearchManagerProvider
 import com.sygic.sdk.search.SearchRequest
 import com.sygic.sdk.search.results.LocalTimeAtLocationResult
+import com.sygic.sdk.search.results.ReverseGeocodeResult
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -197,25 +200,25 @@ class SearchTests : BaseTest() {
     }
 
     @Test
-    fun reverseGeocodingCheckIfBratislava() {
+    fun reverseGeocodingCheckIfBratislava(): Unit = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
-        val listener: ReverseGeocoder.ReverseGeocodingResultListener = mock(verboseLogging = true)
 
-        reverseGeocoder
-            .reverseGeocode(
+        withTimeout(5_000L) {
+            when (val result = reverseGeocoder.reverseGeocode(
                 GeoCoordinates(48.145387813685645, 17.126208780846095),
-                setOf(),
-                listener
-            )
-        verify(listener, timeout(5_000L)).onReverseGeocodingResult(
-            argThat {
-                for (reverseGeocodingResult in this) {
-                    if (reverseGeocodingResult.names.city == "Bratislava")
-                        return@argThat true
+                setOf()
+            )) {
+                is ReverseGeocodeResult.Error -> {
+                    Log.w("SYGIC", "Reverse geocoding error: ${result.errorCode.name}")
                 }
-                false
+
+                is ReverseGeocodeResult.Success -> {
+                    for (reverseGeocodingResult in result.results) {
+                        assertTrue(reverseGeocodingResult.names.city == "Bratislava")
+                    }
+                }
             }
-        )
+        }
     }
 
     @Test
@@ -307,7 +310,8 @@ class SearchTests : BaseTest() {
         val utcUnixTimestamp = System.currentTimeMillis() / 1000L
         val location = GeoCoordinates(-37.82626706998113, 140.77709279621698) // South Australia
 
-        val result = runBlocking { reverseGeocoder.getLocalTimeAtLocation(location, utcUnixTimestamp) }
+        val result =
+            runBlocking { reverseGeocoder.getLocalTimeAtLocation(location, utcUnixTimestamp) }
         when (result) {
             is LocalTimeAtLocationResult.Success -> {
                 assertTrue(result.unixTimestamp - utcUnixTimestamp in 34200..37800)

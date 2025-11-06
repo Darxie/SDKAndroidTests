@@ -10,9 +10,10 @@ import androidx.test.rule.GrantPermissionRule
 import com.sygic.sdk.LoggingSettings
 import com.sygic.sdk.MapReaderSettings
 import com.sygic.sdk.SygicEngine
-import com.sygic.sdk.context.CoreInitException
+import com.sygic.sdk.buildJsonConfig
 import com.sygic.sdk.context.SygicContext
 import com.sygic.sdk.context.SygicContextInitRequest
+import com.sygic.sdk.context.SygicContextInitResult
 import com.sygic.sdk.diagnostics.LogConnector
 import com.sygic.sdk.map.data.MapProvider
 import com.sygic.sdk.online.OnlineManager
@@ -22,9 +23,9 @@ import com.sygic.sdk.position.PositionManager
 import com.sygic.sdk.position.PositionManagerProvider
 import cz.feldis.sdkandroidtests.BuildConfig
 import cz.feldis.sdkandroidtests.SygicActivity
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.After
-import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TestRule
@@ -36,13 +37,10 @@ import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 
 abstract class BaseHereTest {
     private val defaultConfig = SygicEngine.JsonConfigBuilder()
-    var isEngineInitialized = false
     open lateinit var appContext: Context
     lateinit var sygicContext: SygicContext
     open lateinit var appDataPath: String
@@ -85,7 +83,7 @@ abstract class BaseHereTest {
             androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
         appDataPath = appContext.getExternalFilesDir(null).toString()
 
-        initializeSdk(loadMaps = true)
+        runBlocking { initializeSdk(loadMaps = true) }
     }
 
     @After
@@ -93,34 +91,20 @@ abstract class BaseHereTest {
         sygicContext.destroy()
     }
 
-    private fun initializeSdk(loadMaps: Boolean) {
-        val latch = CountDownLatch(1)
-
+    private suspend fun initializeSdk(loadMaps: Boolean, betaRouting: Boolean = false) {
         val contextInitRequest = SygicContextInitRequest(
-            jsonConfiguration = buildConfig(isUAT = true),
+            jsonConfiguration = buildJsonConfig(buildConfig(isUAT = true)) {},
             context = appContext,
             logConnector = object : LogConnector() {},
             loadMaps = loadMaps,
             clearOnlineCache = false
         )
 
-        SygicEngine.initialize(contextInitRequest, object : SygicEngine.OnInitCallback {
-            override fun onError(error: CoreInitException) {
-                Assert.fail("SDK initialization failed: $error")
-                latch.countDown()
-            }
+        val initializeResult = SygicEngine.initialize(contextInitRequest)
+        assertTrue(initializeResult is SygicContextInitResult.Success)
+        sygicContext = (initializeResult as SygicContextInitResult.Success).instance
 
-            override fun onInstance(instance: SygicContext) {
-                sygicContext = instance
-                isEngineInitialized = true
-                runBlocking {
-                    PositionManagerProvider.getInstance().openGpsConnection()
-                }
-                latch.countDown()
-            }
-        })
-
-        latch.await(30, TimeUnit.SECONDS)
+        PositionManagerProvider.getInstance().openGpsConnection()
     }
 
     private fun buildConfig(isUAT: Boolean = true): String {

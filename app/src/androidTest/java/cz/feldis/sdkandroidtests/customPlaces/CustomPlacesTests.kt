@@ -84,33 +84,6 @@ class CustomPlacesTests : BaseTest() {
         assertTrue(result.result == CustomPlacesManager.InstallResult.SUCCESS)
     }
 
-    private fun getInitialCameraState(): CameraState {
-        return CameraState.Builder().apply {
-            setPosition(GeoCoordinates(48.15132, 17.07665))
-            setMapCenterSettings(
-                MapCenterSettings(
-                    MapCenter(0.5f, 0.5f),
-                    MapCenter(0.5f, 0.5f),
-                    MapAnimation.NONE, MapAnimation.NONE
-                )
-            )
-            setMapPadding(0.0f, 0.0f, 0.0f, 0.0f)
-            setRotation(0f)
-            setZoomLevel(14F)
-            setMovementMode(Camera.MovementMode.Free)
-            setRotationMode(Camera.RotationMode.Free)
-            setTilt(0f)
-        }.build()
-    }
-
-    private suspend fun getMapView(mapFragment: TestMapFragment): MapView =
-        withTimeout(5_000L) {
-            when (val res = mapFragment.getMapAsync()) {
-                is GetMapResult.Success -> res.mapView
-                is GetMapResult.Error -> fail("getMapAsync returned error")
-            } as MapView
-        }
-
     @Test
     fun testInstallPlaces() = runBlocking {
         val result = cpManager.installOfflineDatasets(listOf(defaultDataset), "sk")
