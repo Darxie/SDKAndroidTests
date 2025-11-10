@@ -7,7 +7,6 @@ import com.sygic.sdk.route.GuidedRouteProfile
 import com.sygic.sdk.route.PrimaryRouteRequest
 import com.sygic.sdk.route.Route
 import com.sygic.sdk.route.RouteAvoids
-import com.sygic.sdk.route.RouteDeserializerError
 import com.sygic.sdk.route.RouteManeuver
 import com.sygic.sdk.route.RouteRequest
 import com.sygic.sdk.route.RouteWarning
@@ -22,11 +21,10 @@ import com.sygic.sdk.route.listeners.EVRangeListener
 import com.sygic.sdk.route.listeners.GeometryListener
 import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
 import com.sygic.sdk.route.listeners.RouteComputeListener
-import com.sygic.sdk.route.listeners.RouteDurationListener
 import com.sygic.sdk.route.listeners.RouteElementsListener
-import com.sygic.sdk.route.listeners.RouteRequestDeserializedListener
 import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.route.listeners.TransitCountriesInfoListener
+import com.sygic.sdk.route.results.RouteRequestDeserializedResult
 import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.dimensional.Trailer
@@ -58,10 +56,7 @@ import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
-import timber.log.Timber
 import java.util.Date
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 class RouteComputeTests : BaseTest() {
     private lateinit var mapDownloadHelper: MapDownloadHelper
@@ -93,7 +88,7 @@ class RouteComputeTests : BaseTest() {
         val (newRoute, durations) = router.computeNextDurations(route, times)
 
         assertEquals("Expected route is not equal to the actual route", route, newRoute)
-        assertEquals("Expected 2 returned times, but got ${durations.size}",2, durations.size)
+        assertEquals("Expected 2 returned times, but got ${durations.size}", 2, durations.size)
     }
 
     @Test
@@ -1401,19 +1396,43 @@ class RouteComputeTests : BaseTest() {
         )
     }
 
-    private suspend fun getRouteRequest(path: String): RouteRequest =
-        suspendCoroutine { continuation ->
-            router.createRouteRequestFromJSONString(
-                readJson(path),
-                object : RouteRequestDeserializedListener {
-                    override fun onError(error: RouteDeserializerError) {
-                        Assert.fail("Deserialization error: $error")
-                    }
+    @Test
+    fun avoidableCountryHungaryBratislavaKomarno() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("hu")
 
-                    override fun onSuccess(routeRequest: RouteRequest) {
-                        continuation.resume(routeRequest)
-                    }
-                }
-            )
+        val start = GeoCoordinates(48.19528, 17.02836)
+        val destination = GeoCoordinates(47.76355, 18.12695)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                routingType = RoutingType.Fastest
+                useTraffic = false
+                useSpeedProfiles = false
+            }
+        )
+        val countryRouteAvoidables =
+            route.routeRequest.routingOptions.routeAvoids.countryRouteAvoidables
+        val huAvoidables = requireNotNull(
+            countryRouteAvoidables.firstOrNull { it.first == "hu" }
+        ) { "HU avoidables not found" }
+
+        assertTrue(
+            "Hungary as a country should be avoidable, but isn't",
+            RouteAvoids.Type.Country in huAvoidables.second)
+    }
+
+    private suspend fun getRouteRequest(path: String): RouteRequest {
+        return when (val result = router.createRouteRequestFromJSONString(
+            readJson(path)
+        )) {
+            is RouteRequestDeserializedResult.Success -> result.routeRequest
+            is RouteRequestDeserializedResult.Error ->
+                throw AssertionError("Deserialization error: ${result.error.name}")
         }
+    }
 }

@@ -27,7 +27,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.argumentCaptor
@@ -571,15 +570,13 @@ class RouteWarningTests : BaseTest() {
         mapDownloadHelper.installAndLoadMap("sk")
         val navigation = NavigationManagerProvider.getInstance()
 
-        val setVehicleProfileListener: SetVehicleProfileListener = mock(verboseLogging = true)
         val vehicleZoneListener: OnVehicleZoneListener = mock(verboseLogging = true)
 
         val vehProf = routeComputeHelper.createCombustionVehicleProfile().apply {
             generalVehicleTraits.vehicleType = VehicleType.Truck
             hazmatTraits = HazmatTraits(emptySet(), TunnelCategory.E)
         }
-        navigation
-            .setVehicleProfile(vehProf, setVehicleProfileListener)
+        navigation.setVehicleProfile(vehProf)
 
         val start = GeoCoordinates(49.0093, 20.8322)
         val destination = GeoCoordinates(49.0086, 20.8657)
@@ -611,8 +608,8 @@ class RouteWarningTests : BaseTest() {
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
-        val start = GeoCoordinates(48.1655149641659, 17.151219976297632)
-        val destination = GeoCoordinates(48.376850, 17.599600)
+        val start = GeoCoordinates(48.39468, 17.60280)
+        val destination = GeoCoordinates(48.38544, 17.61677)
         val routingOptions = RoutingOptions().apply {
             routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
             napStrategy = NearestAccessiblePointStrategy.Disabled
@@ -669,8 +666,6 @@ class RouteWarningTests : BaseTest() {
         disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
-        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
-
         val start = GeoCoordinates(48.13435749214434, 17.139510367591342)
         val destination = GeoCoordinates(48.31550136420124, 18.050290453922088)
 
@@ -680,21 +675,15 @@ class RouteWarningTests : BaseTest() {
             napStrategy = NearestAccessiblePointStrategy.Disabled
         }
 
-        val captorWarnings = argumentCaptor<List<RouteWarning>>()
         val route = routeComputeHelper.offlineRouteCompute(
             start,
             destination,
             routingOptions = options
         )
 
-        route.getRouteWarnings(routeWarningsListener)
-        verify(routeWarningsListener, timeout(10_000L)).onRouteWarnings(captorWarnings.capture())
+        val warnings = route.getRouteWarnings()
+        assertTrue(warnings.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } == null)
 
-        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.find { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad } == null
-        })
-
-        val warnings = captorWarnings.allValues.flatten()
         val tolerance = 10e-5
 
         val batteryWarnings =
@@ -716,7 +705,6 @@ class RouteWarningTests : BaseTest() {
             )
         }
     }
-
 
     @Test
     fun preferenceViolationWarningEVTest() = runBlocking {
