@@ -664,8 +664,8 @@ class RouteWarningTests : BaseTest() {
 
         val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
 
-        val start = GeoCoordinates(48.1655149641659, 17.151219976297632)
-        val destination = GeoCoordinates(48.376850,17.599600)
+        val start = GeoCoordinates(48.39468, 17.60280)
+        val destination = GeoCoordinates(48.38544, 17.61677)
         val routingOptions = RoutingOptions().apply {
             routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
             napStrategy = NearestAccessiblePointStrategy.Disabled
