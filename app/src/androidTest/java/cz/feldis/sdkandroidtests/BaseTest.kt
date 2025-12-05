@@ -178,7 +178,7 @@ abstract class BaseTest {
     open fun disableOnlineMaps() {
         val onlineManager = runBlocking { OnlineManagerProvider.getInstance() }
         if (!onlineManager.isOnlineMapStreamingEnabled()) {
-            Timber.d("Disabling online map streaming which is already disabled, skipping")
+            Log.d("SYGIC","Disabling online map streaming which is already disabled, skipping")
             return
         }
 
@@ -190,7 +190,7 @@ abstract class BaseTest {
         val onlineManager = runBlocking { OnlineManagerProvider.getInstance() }
 
         if (onlineManager.isOnlineMapStreamingEnabled()) {
-            Timber.d("Enabling online map streaming which is already enabled, skipping")
+            Log.d("SYGIC","Enabling online map streaming which is already enabled, skipping")
             return
         }
 
