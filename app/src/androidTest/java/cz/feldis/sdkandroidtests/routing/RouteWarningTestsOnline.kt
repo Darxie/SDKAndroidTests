@@ -23,7 +23,6 @@ import org.mockito.kotlin.verify
 
 class RouteWarningTestsOnline : BaseTest() {
     private lateinit var routeComputeHelper: RouteComputeHelper
-    override val betaRouting = true
 
     override fun setUp() {
         super.setUp()

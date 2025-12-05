@@ -1154,6 +1154,7 @@ class RouteComputeTests : BaseTest() {
      * In this test we check that route doesn't lead through tunnel cat. C
      */
     @Test
+    @Ignore("Map issue")
     fun tunnelCategoryCTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("gb-03")
 

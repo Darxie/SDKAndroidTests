@@ -48,7 +48,6 @@ import java.util.Date
 class RouteComputeTestsOnline : BaseTest() {
     private lateinit var mapDownloadHelper: MapDownloadHelper
     private lateinit var routeComputeHelper: RouteComputeHelper
-    override val betaRouting = true
     private lateinit var router: Router
 
     override fun setUp() {

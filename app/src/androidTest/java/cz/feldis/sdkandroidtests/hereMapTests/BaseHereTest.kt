@@ -91,7 +91,7 @@ abstract class BaseHereTest {
         sygicContext.destroy()
     }
 
-    private suspend fun initializeSdk(loadMaps: Boolean, betaRouting: Boolean = false) {
+    private suspend fun initializeSdk(loadMaps: Boolean) {
         val contextInitRequest = SygicContextInitRequest(
             jsonConfiguration = buildJsonConfig(buildConfig(isUAT = true)) {},
             context = appContext,
@@ -135,7 +135,7 @@ abstract class BaseHereTest {
                 online().apply {
                     routingUrl("https://routing-uat.api.sygic.com")
                     sSOServerUrl("https://auth-uat.api.sygic.com")
-                    productServer().onlineMapsLinkUrl("https://licensing-uat.api.sygic.com")
+                    productServer().onlineMapsLinkUrl("https://onlinemaps-uat.api.sygic.com")
                     searchUrl("https://search-uat.api.sygic.com")
                     trafficUrl("https://traffic-uat.api.sygic.com")
                     offlineMapsApiUrl("https://offlinemaps-uat.api.sygic.com")

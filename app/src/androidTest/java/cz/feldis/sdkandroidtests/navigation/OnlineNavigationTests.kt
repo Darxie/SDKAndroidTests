@@ -62,7 +62,6 @@ class OnlineNavigationTests : BaseTest() {
     private lateinit var mapDownload: MapDownloadHelper
     private val navigationManagerKtx = NavigationManagerKtx()
     private lateinit var navigation: NavigationManager
-    override val betaRouting = true
 
     @Before
     override fun setUp() {

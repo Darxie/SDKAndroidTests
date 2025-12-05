@@ -54,7 +54,7 @@ abstract class BaseTest {
     open lateinit var appContext: Context
     lateinit var sygicContext: SygicContext
     open lateinit var appDataPath: String
-    protected open val betaRouting: Boolean = false
+    protected open val betaRouting: Boolean = true
     protected open val loadMaps: Boolean = true
 
     @get:Rule
@@ -150,7 +150,7 @@ abstract class BaseTest {
                 online().apply {
                     routingUrl("https://routing-uat.api.sygic.com")
                     sSOServerUrl("https://auth-uat.api.sygic.com")
-                    productServer().onlineMapsLinkUrl("https://licensing-uat.api.sygic.com")
+                    productServer().onlineMapsLinkUrl("https://onlinemaps-uat.api.sygic.com")
                     searchUrl("https://search-uat.api.sygic.com")
                     trafficUrl("https://traffic-uat.api.sygic.com")
                     offlineMapsApiUrl("https://offlinemaps-uat.api.sygic.com")
