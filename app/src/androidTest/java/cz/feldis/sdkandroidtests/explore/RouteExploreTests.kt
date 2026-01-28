@@ -134,11 +134,9 @@ class RouteExploreTests : BaseTest() {
         val listener: RouteExplorer.OnExploreIncidentsOnRouteListener = mock(verboseLogging = true)
 
         val route = routeCompute.onlineRouteCompute(
-            GeoCoordinates(48.7429, 17.8603),
-            GeoCoordinates(48.7457, 17.86)
+            GeoCoordinates(48.73965, 17.86153),
+            GeoCoordinates(48.75368, 17.86204)
         )
-
-        routeExplorer.exploreIncidentsOnRoute(route, emptyList())
 
         routeExplorer.exploreIncidentsOnRoute(route, emptyList(), listener)
 
