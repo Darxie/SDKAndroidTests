@@ -4,6 +4,7 @@ import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.LaneInfo
 import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
+import com.sygic.sdk.navigation.routeeventnotifications.TrafficSignInfo
 import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.RouteAvoids
@@ -656,5 +657,61 @@ class HereTests : BaseHereTest() {
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    @Ignore("Task tbd")
+    @Test
+    fun trafficSignSteepHillUpwards() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            GeoCoordinates(49.009260736370905, 20.84161622186344),
+            GeoCoordinates(49.015418179634175, 20.853862524076167)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2f)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        val collectedTrafficSigns = mutableListOf<List<TrafficSignInfo>>()
+        val expectedSign = TrafficSignInfo.TrafficSign.SteepHillUpwards
+
+        try {
+            withTimeout(10_000L) {
+                navigation.trafficSigns()
+                    .onEach { infos ->
+                        collectedTrafficSigns.add(infos)
+                    }
+                    .first { trafficSignInfos ->
+                        trafficSignInfos.any { it.sign == expectedSign }
+                    }
+
+                println("✅ Steep hill upwards sign detected")
+            }
+        } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+            // Print a clear, compact summary and fail with AssertionError
+            val allNames = collectedTrafficSigns
+                .flatten()
+                .map { it.sign.name }
+                .distinct()
+                .sorted()
+
+            val baseMessage =
+                "Timed out after 10s waiting for traffic sign '${expectedSign.name}' in trafficSigns() flow."
+
+            println("❌ trafficSignSteepHillUpwards: $baseMessage")
+            if (allNames.isEmpty()) {
+                println("   No TrafficSignInfo items were received during the test.")
+            } else {
+                println("   During the test we observed the following traffic signs: $allNames")
+            }
+            throw AssertionError(baseMessage)
+        } finally {
+            navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+            navigationManagerKtx.stopNavigation(navigation)
+        }
     }
 }
