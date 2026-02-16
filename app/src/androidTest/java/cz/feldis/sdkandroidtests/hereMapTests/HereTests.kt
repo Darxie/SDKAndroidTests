@@ -659,7 +659,7 @@ class HereTests : BaseHereTest() {
         navigationManagerKtx.stopNavigation(navigation)
     }
 
-    @Ignore("Task tbd")
+    @Ignore("https://jira.sygic.com/browse/CI-3969")
     @Test
     fun trafficSignSteepHillUpwards() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
