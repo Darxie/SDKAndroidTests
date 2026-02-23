@@ -2,6 +2,7 @@ package cz.feldis.sdkandroidtests.hereMapTests
 
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
+import com.sygic.sdk.navigation.RouteProgress
 import com.sygic.sdk.navigation.routeeventnotifications.LaneInfo
 import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
 import com.sygic.sdk.position.GeoBoundingBox
@@ -12,6 +13,7 @@ import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingService
+import com.sygic.sdk.route.Waypoint
 import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import com.sygic.sdk.search.ReverseGeocoder
@@ -33,8 +35,12 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.GeoUtils
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -656,5 +662,70 @@ class HereTests : BaseHereTest() {
 
         navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
         navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    @Test
+    fun onWaypointPassGetProgress() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            GeoCoordinates(48.14609198140767, 17.127255893330364),
+            GeoCoordinates(48.145962746101866, 17.136487508187912),
+            waypoints = listOf(GeoCoordinates(48.14571546798298, 17.130799703413846))
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+
+        val progressDeferred = CompletableDeferred<RouteProgress>()
+        val testScope = this
+        val progressJob = testScope.launch {
+            while (isActive) {
+                runCatching { navigation.getRouteProgress() }
+                    .onSuccess {
+                        println("RouteProgress tick: progress=${it.progress}, distanceToEnd=${it.distanceToEnd}")
+                    }
+                    .onFailure { println("RouteProgress tick failed: ${it.message}") }
+                delay(100L)
+            }
+        }
+        val waypointListener = object : NavigationManager.OnWaypointPassListener {
+            override fun onWaypointPassed(waypoint: Waypoint) {
+                if (waypoint.type == Waypoint.Type.Via && !progressDeferred.isCompleted) {
+                    println("Waypoint passed: ${waypoint.type.name}, requesting progress...")
+                    testScope.launch {
+                        runCatching { navigation.getRouteProgress() }
+                            .onSuccess {
+//                                println("RouteProgress on Via: progress=${it.progress}, distanceToEnd=${it.distanceToEnd}, waypointTimes=${it.waypointTimes.size}, vehicleProfile=${it.vehicleProfile}")
+                                progressDeferred.complete(it)
+                            }
+                            .onFailure { progressDeferred.completeExceptionally(it) }
+                    }
+                }
+            }
+
+            override fun onFinishReached() = Unit
+        }
+
+        navigation.addOnWaypointPassListener(waypointListener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1f)
+
+        try {
+            navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+            val progress = withTimeout(30_000L) { progressDeferred.await() }
+
+            assertTrue(progress.distanceToEnd > 0f)
+            assertTrue(progress.distanceToEnd < route.routeInfo.length.toFloat())
+
+            delay(2_000L)
+        } finally {
+            progressJob.cancel()
+            navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+            navigation.removeOnWaypointPassListener(waypointListener)
+            navigationManagerKtx.stopNavigation(navigation)
+        }
     }
 }
