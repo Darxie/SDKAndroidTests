@@ -45,17 +45,17 @@ abstract class BaseHereTest {
     open lateinit var appDataPath: String
 
     @get:Rule
-    var mActivityRule: ActivityScenarioRule<SygicActivity> =
+    var activityRule: ActivityScenarioRule<SygicActivity> =
         ActivityScenarioRule(SygicActivity::class.java)
 
     @get:Rule
-    var mGrantPermissionRule: GrantPermissionRule = GrantPermissionRule.grant(
+    var grantPermissionRule: GrantPermissionRule = GrantPermissionRule.grant(
         Manifest.permission.WRITE_EXTERNAL_STORAGE,
         Manifest.permission.ACCESS_FINE_LOCATION
     )
 
     @get:Rule
-    var mWatcher: TestRule = object : TestWatcher() {
+    var watcher: TestRule = object : TestWatcher() {
         override fun starting(description: Description) {
             Log.i("SYGIC_TEST", "Starting test " + description.methodName)
         }
@@ -87,7 +87,9 @@ abstract class BaseHereTest {
 
     @After
     open fun tearDown() {
-        sygicContext.destroy()
+        if (::sygicContext.isInitialized) {
+            sygicContext.destroy()
+        }
     }
 
     private fun initializeSdk(loadMaps: Boolean) {
@@ -115,7 +117,9 @@ abstract class BaseHereTest {
             }
         })
 
-        latch.await(30, TimeUnit.SECONDS)
+        if (!latch.await(30, TimeUnit.SECONDS)) {
+            Assert.fail("SDK initialization timed out")
+        }
     }
 
     private fun buildConfig(isUAT: Boolean = true): String {
