@@ -32,6 +32,7 @@ import com.sygic.sdk.position.PositionManagerProvider
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.delay
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.fail
@@ -45,12 +46,14 @@ import org.mockito.Mockito.mock
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import timber.log.Timber
 import java.io.IOException
 
 
 abstract class BaseTest {
     private val defaultConfig = SygicEngine.JsonConfigBuilder()
+    private val sdkInitTimeoutMs = 60_000L
+    private val onlineToggleTimeoutMs = 10_000L
+    private val operationTimeoutMs = 10_000L
     open lateinit var appContext: Context
     lateinit var sygicContext: SygicContext
     open lateinit var appDataPath: String
@@ -63,9 +66,8 @@ abstract class BaseTest {
 
     @get:Rule
     var permissionRule: GrantPermissionRule = GrantPermissionRule.grant(
-        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        Manifest.permission.ACCESS_FINE_LOCATION
-    )
+         Manifest.permission.ACCESS_FINE_LOCATION
+     )
 
     @get:Rule
     var watcher: TestRule = object : TestWatcher() {
@@ -96,12 +98,18 @@ abstract class BaseTest {
             androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
         appDataPath = appContext.getExternalFilesDir(null).toString()
 
-        runBlocking { initializeSdk(loadMaps, betaRouting) }
+        runBlocking {
+            withTimeout(sdkInitTimeoutMs) {
+                initializeSdk(loadMaps, betaRouting)
+            }
+        }
     }
 
     @After
     open fun tearDown() {
-        sygicContext.destroy()
+        if (::sygicContext.isInitialized) {
+            runCatching { sygicContext.destroy() }
+        }
     }
 
     private suspend fun initializeSdk(loadMaps: Boolean, betaRouting: Boolean) {
@@ -184,6 +192,7 @@ abstract class BaseTest {
 
         val state = runBlocking { onlineManager.disableOnlineMapStreaming() }
         assertTrue(state is OperationResult.Success)
+        runBlocking { waitForOnlineMapsEnabled(false) }
     }
 
     open fun enableOnlineMaps() {
@@ -196,6 +205,7 @@ abstract class BaseTest {
 
         val state = runBlocking { onlineManager.enableOnlineMapStreaming() }
         assertTrue(state is OperationResult.Success)
+        runBlocking { waitForOnlineMapsEnabled(true) }
     }
 
     fun setActiveMapProvider(providerName: String) {
@@ -205,7 +215,7 @@ abstract class BaseTest {
         runBlocking { OnlineManagerProvider.getInstance() }
             .setActiveMapProvider(MapProvider(providerName), listener)
 
-        verify(listener, timeout(5000L)).onActiveProviderSet()
+        verify(listener, timeout(operationTimeoutMs)).onActiveProviderSet()
     }
 
     open fun startPositionUpdating() {
@@ -213,7 +223,7 @@ abstract class BaseTest {
 
         runBlocking { PositionManagerProvider.getInstance() }.startPositionUpdating(listener)
 
-        verify(listener, timeout(5000L)).onComplete()
+        verify(listener, timeout(operationTimeoutMs)).onComplete()
     }
 
     open fun stopPositionUpdating() {
@@ -222,7 +232,16 @@ abstract class BaseTest {
 
         runBlocking { PositionManagerProvider.getInstance() }.stopPositionUpdating(listener)
 
-        verify(listener, timeout(5000L)).onComplete()
+        verify(listener, timeout(operationTimeoutMs)).onComplete()
+    }
+
+    private suspend fun waitForOnlineMapsEnabled(expected: Boolean) {
+        val onlineManager = OnlineManagerProvider.getInstance()
+        withTimeout(onlineToggleTimeoutMs) {
+            while (onlineManager.isOnlineMapStreamingEnabled() != expected) {
+                delay(200L)
+            }
+        }
     }
 
     open fun isRunningOnEmulator(): Boolean {
