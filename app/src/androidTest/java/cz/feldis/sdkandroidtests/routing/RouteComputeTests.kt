@@ -1374,7 +1374,6 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    @Ignore("https://dev.azure.com/sygiclbs/Maps%20SDK%20and%20Libraries/_git/sdk/pullrequest/2561")
     fun offlineDepartureTimeTest() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
         val start = GeoCoordinates(48.145411852878745, 17.126700710236015)
