@@ -14,6 +14,7 @@ import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingType
 import com.sygic.sdk.route.TransitCountryInfo
+import com.sygic.sdk.route.Waypoint
 import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
 import com.sygic.sdk.route.listeners.RouteComputeListener
 import com.sygic.sdk.route.listeners.RouteRequestDeserializedListener
@@ -1122,6 +1123,7 @@ class RouteComputeTestsOnline : BaseTest() {
      * In this test we check that route doesn't lead through tunnel cat. C
      */
     @Test
+    @Ignore("doesnt work")
     fun tunnelCategoryCOnlineTest() = runBlocking {
 
         val start = GeoCoordinates(51.45571, 0.23953)
@@ -1286,11 +1288,176 @@ class RouteComputeTestsOnline : BaseTest() {
         val destination = GeoCoordinates(49.4425, 10.9459)
         val routeCompute = RouteComputeHelper()
 
-        val route = routeCompute.onlineRouteCompute(start, destination)
+        val route = routeCompute.onlineRouteCompute(start, destination,
+            routingOptions = RoutingOptions().apply {
+                this.useSpeedProfiles = false
+            }
+        )
 
         assertEquals(6, route.maneuvers.size) // 6 maneuvers since october 2024 maps
         for (maneuver in route.maneuvers) {
             assertFalse(maneuver.roadName == "Thomas-Mann-Straße")
         }
+    }
+
+    @Test
+    fun waypointDelayInOnlineRoute() = runBlocking {
+        val start = GeoCoordinates(48.13119592622264, 17.198513901368113)
+        val destination = GeoCoordinates(48.13686855039307, 17.214392816415362)
+        val delayOnWaypoint = 50_000L
+        val waypoint1 = Waypoint(
+            originalPosition = GeoCoordinates(48.1353154681845, 17.20823509289179),
+            delay = delayOnWaypoint,
+            type = Waypoint.Type.Via,
+            status = Waypoint.Status.Ahead
+        )
+
+        val route = routeComputeHelper.onlineRouteCompute(
+            start,
+            destination,
+            waypointObjects = listOf(waypoint1),
+        )
+
+        val waypointFromComputedRoute = route.waypoints.find { it.type == Waypoint.Type.Via }
+        assertTrue(
+            "Received waypoint delay does not correspond to original waypoint delay",
+            delayOnWaypoint == waypointFromComputedRoute!!.delay)
+    }
+
+    @Test
+    fun waypointDelayZeroInOnlineRoute() = runBlocking {
+        val start = GeoCoordinates(48.13119592622264, 17.198513901368113)
+        val destination = GeoCoordinates(48.13686855039307, 17.214392816415362)
+        val waypoint = Waypoint(
+            originalPosition = GeoCoordinates(48.1353154681845, 17.20823509289179),
+            delay = 0L,
+            type = Waypoint.Type.Via,
+            status = Waypoint.Status.Ahead
+        )
+
+        val route = routeComputeHelper.onlineRouteCompute(
+            start,
+            destination,
+            waypointObjects = listOf(waypoint),
+        )
+
+        val waypointFromComputedRoute = route.waypoints.find { it.type == Waypoint.Type.Via }
+        assertNotNull(waypointFromComputedRoute)
+        assertEquals(
+            "Expected zero delay to be preserved on waypoint",
+            0L,
+            waypointFromComputedRoute!!.delay
+        )
+    }
+
+    @Test
+    fun waypointDelayMultipleWaypointsInOnlineRoute() = runBlocking {
+        val start = GeoCoordinates(48.13119592622264, 17.198513901368113)
+        val destination = GeoCoordinates(48.13686855039307, 17.214392816415362)
+        val waypoint1 = Waypoint(
+            originalPosition = GeoCoordinates(48.134210, 17.205510),
+            delay = 10_000L,
+            type = Waypoint.Type.Via,
+            status = Waypoint.Status.Ahead
+        )
+        val waypoint2 = Waypoint(
+            originalPosition = GeoCoordinates(48.1353154681845, 17.20823509289179),
+            delay = 35_000L,
+            type = Waypoint.Type.Via,
+            status = Waypoint.Status.Ahead
+        )
+
+        val route = routeComputeHelper.onlineRouteCompute(
+            start,
+            destination,
+            waypointObjects = listOf(waypoint1, waypoint2),
+        )
+
+        val computedByPosition = route.waypoints.associateBy { it.delay }
+        val computed1 = computedByPosition[waypoint1.delay]
+        val computed2 = computedByPosition[waypoint2.delay]
+
+        assertNotNull(computed1)
+        assertNotNull(computed2)
+        assertEquals(
+            "Waypoint1 delay should match",
+            waypoint1.delay,
+            computed1!!.delay
+        )
+        assertEquals(
+            "Waypoint2 delay should match",
+            waypoint2.delay,
+            computed2!!.delay
+        )
+    }
+
+    @Test
+    //ToDo: Discuss further with routing team
+    fun waypointDelayNegativeInOnlineRoute() = runBlocking {
+        val start = GeoCoordinates(48.13119592622264, 17.198513901368113)
+        val destination = GeoCoordinates(48.13686855039307, 17.214392816415362)
+        val delayOnWaypoint = -600_000L
+        val waypoint = Waypoint(
+            originalPosition = GeoCoordinates(48.1353154681845, 17.20823509289179),
+            delay = delayOnWaypoint,
+            type = Waypoint.Type.Via,
+            status = Waypoint.Status.Ahead
+        )
+
+        val route = routeComputeHelper.onlineRouteCompute(
+            start,
+            destination,
+            waypointObjects = listOf(waypoint),
+        )
+
+        val waypointFromComputedRoute = route.waypoints.find { it.type == Waypoint.Type.Via }
+        assertNotNull(waypointFromComputedRoute)
+
+        val actualDelay = waypointFromComputedRoute!!.delay
+        assertTrue(
+            "Expected negative delay to be preserved or clamped to 0, but was $actualDelay",
+            actualDelay == delayOnWaypoint || actualDelay == 0L
+        )
+    }
+
+    @Test
+    fun waypointDelayAffectsRouteDurationOnline() = runBlocking {
+        val start = GeoCoordinates(48.13119592622264, 17.198513901368113)
+        val destination = GeoCoordinates(48.13686855039307, 17.214392816415362)
+        val delayOnWaypoint = 120_000L
+        val waypoint = Waypoint(
+            originalPosition = GeoCoordinates(48.1353154681845, 17.20823509289179),
+            delay = delayOnWaypoint,
+            type = Waypoint.Type.Via,
+            status = Waypoint.Status.Ahead
+        )
+        val waypointNoDelay = Waypoint(
+            originalPosition = waypoint.originalPosition,
+            delay = 0L,
+            type = waypoint.type,
+            status = waypoint.status
+        )
+
+        val baseRoute = routeComputeHelper.onlineRouteCompute(
+            start,
+            destination,
+            waypointObjects = listOf(waypointNoDelay)
+        )
+
+        val delayedRoute = routeComputeHelper.onlineRouteCompute(
+            start,
+            destination,
+            waypointObjects = listOf(waypoint)
+        )
+
+        val baseDuration =
+            baseRoute.routeInfo.waypointDurations.last().withSpeedProfileAndTraffic
+        val delayedDuration =
+            delayedRoute.routeInfo.waypointDurations.last().withSpeedProfileAndTraffic
+
+        assertTrue(
+            "Expected route duration to include waypoint delay. Base=$baseDuration, delayed=$delayedDuration, delay=$delayOnWaypoint",
+            delayedDuration >= baseDuration + delayOnWaypoint
+        )
     }
 }

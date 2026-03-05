@@ -7,6 +7,7 @@ import com.sygic.sdk.route.RouteRequest
 import com.sygic.sdk.route.Router
 import com.sygic.sdk.route.RouterProvider
 import com.sygic.sdk.route.RoutingOptions
+import com.sygic.sdk.route.Waypoint
 import com.sygic.sdk.route.results.ComputeRouteWithAlternativesData
 import com.sygic.sdk.utils.EnforceableAttribute
 import com.sygic.sdk.vehicletraits.VehicleProfile
@@ -39,12 +40,14 @@ class RouteComputeHelper : BaseTest() {
         start: GeoCoordinates,
         destination: GeoCoordinates,
         waypoints: List<GeoCoordinates> = emptyList(),
+        waypointObjects: List<Waypoint> = emptyList(),
         routingOptions: RoutingOptions = RoutingOptions()
     ): Route {
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
             waypoints.forEach { this.addViaPoint(it) }
+            waypointObjects.forEach { this.addViaPoint(it) }
             this.routingOptions = routingOptions
             this.routingOptions.routingService = RoutingOptions.RoutingService.Online
         }
