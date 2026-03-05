@@ -274,7 +274,9 @@ class RouteComputeTests : BaseTest() {
         val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
 
         val guidedRouteProfile = GuidedRouteProfile(polyline)
-        val routeRequest = RouteRequest(guidedRouteProfile)
+        val routeRequest = RouteRequest(
+            guidedRouteProfiles = listOf(guidedRouteProfile)
+        )
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
 
@@ -301,7 +303,9 @@ class RouteComputeTests : BaseTest() {
         val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
 
         val guidedRouteProfile = GuidedRouteProfile(polyline)
-        val routeRequest = RouteRequest(guidedRouteProfile)
+        val routeRequest = RouteRequest(
+            guidedRouteProfiles = listOf(guidedRouteProfile)
+        )
 
         val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
 
