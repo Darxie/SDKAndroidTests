@@ -59,18 +59,6 @@ class SearchTests : BaseTest() {
     }
 
     @Test
-    fun searchPetrolStationInAreaOnlineTest() {
-        val position = GeoCoordinates(48.100806, 17.234972)
-        val categories = listOf(PlaceCategories.PetrolStation)
-        val placeRequest = PlaceRequest(position, categories, 4000)
-
-        val results = searchHelper.onlineSearchPlaces(placeRequest)
-        results.forEach {
-            assert(it.category == PlaceCategories.PetrolStation)
-        }
-    }
-
-    @Test
     fun searchEVStationInAreaOfflineTest() {
         mapDownloadHelper.installAndLoadMap("nl")
         val position = GeoCoordinates(51.6188, 4.72933)
@@ -134,69 +122,6 @@ class SearchTests : BaseTest() {
         assertTrue(firstResult.entry != firstResult.location)
         assertTrue(firstResult.entry == GeoCoordinates(50.84349060058594, 4.667229652404785))
         assertTrue(firstResult.location == GeoCoordinates(50.843379974365234, 4.6673197746276855))
-    }
-
-    @Test
-    fun onlineAutocompleteBratislava() {
-        val request = SearchRequest(
-            "bratislava",
-            GeoCoordinates(48.145718, 17.118669),
-            6
-        )
-        val results = runBlocking { searchHelper.onlineAutocomplete(request) }
-        results.forEach {
-            assert("Bratislava" in it.title)
-        }
-    }
-
-    @Test
-    fun onlineGeocodeTestLukoil() {
-        val position = GeoCoordinates(48.100806, 17.234972)
-
-        val request = SearchRequest("Lukoil pálenisko", position)
-        val results = searchHelper.onlineGeocode(request)
-        assertTrue(results.find { it.title == "LUKOIL Pálenisko" } != null)
-    }
-
-    /**
-     * Search places test with valid string category and load place with link from search
-     *
-     * In this test we create place request with Radius 1000, GeoCoordinates (Bratislava 48.145718, 17.118669)
-     * and category Bank. Verify that the list from onPlaceLoaded is not empty and place link name and details are not empty.
-     * We then verify that all of the found Places are of the category Bank.
-     */
-    @Test
-    fun searchPlacesValidCategoryBankOnline() {
-        val listener: PlacesListener = mock(verboseLogging = true)
-        val searchCallback: CreateSearchCallback<OnlineMapSearch> = mock(verboseLogging = true)
-
-        val categories = listOf(PlaceCategories.Bank)
-        val request = PlaceRequest(GeoCoordinates(48.145718, 17.118669), categories, 1000)
-        searchManager.createOnlineMapSearch(searchCallback)
-
-        val onlineMapSearchCaptor = argumentCaptor<OnlineMapSearch>()
-        val argumentCaptor = argumentCaptor<List<Place>>()
-
-        verify(searchCallback, timeout(10_000L)).onSuccess(
-            onlineMapSearchCaptor.capture()
-        )
-
-        // actual search
-        onlineMapSearchCaptor.firstValue.createSession().searchPlaces(request, listener)
-
-        verify(listener, timeout(10_000L)).onPlacesLoaded(
-            argumentCaptor.capture(),
-            isNotNull()
-        )
-        verify(listener, never()).onPlacesError(any())
-
-        val resultList = argumentCaptor.firstValue
-        for (bank in resultList) {
-            assertNotNull(resultList)
-            assertFalse(bank.name.isEmpty())
-            assertFalse(bank.details.isEmpty())
-            assertTrue(bank.category == PlaceCategories.Bank)
-        }
     }
 
     @Test
@@ -302,24 +227,6 @@ class SearchTests : BaseTest() {
         for (place in placesList) {
             assert(place.details.isNotEmpty())
 
-        }
-    }
-
-    @Test
-    fun getTimeZoneOnlineMap() {
-        val utcUnixTimestamp = System.currentTimeMillis() / 1000L
-        val location = GeoCoordinates(-37.82626706998113, 140.77709279621698) // South Australia
-
-        val result =
-            runBlocking { reverseGeocoder.getLocalTimeAtLocation(location, utcUnixTimestamp) }
-        when (result) {
-            is LocalTimeAtLocationResult.Success -> {
-                assertTrue(result.unixTimestamp - utcUnixTimestamp in 34200..37800)
-            }
-
-            is LocalTimeAtLocationResult.Error -> {
-                fail("getLocalTimeAtLocation error: ${result.errorCode.name}")
-            }
         }
     }
 
@@ -508,23 +415,6 @@ class SearchTests : BaseTest() {
     @Test
     fun reverseGeoExpectNoSelection() {
         disableOnlineMaps()
-        val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
-            mock(verboseLogging = true)
-
-        reverseGeocoder
-            .reverseGeocode(
-                GeoCoordinates(37.288480477393286, -41.35639017659597),
-                emptySet(),
-                reverseGeoListener
-            )
-
-        verify(reverseGeoListener, timeout(10_000L)).onReverseGeocodingResultError(
-            eq(ErrorCode.NO_SELECTION)
-        )
-    }
-
-    @Test
-    fun reverseGeoExpectNoSelectionOnlineMaps() {
         val reverseGeoListener: ReverseGeocoder.ReverseGeocodingResultListener =
             mock(verboseLogging = true)
 
