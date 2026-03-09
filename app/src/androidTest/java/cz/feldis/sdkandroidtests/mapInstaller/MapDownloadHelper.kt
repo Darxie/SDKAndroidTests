@@ -9,6 +9,8 @@ import com.sygic.sdk.map.listeners.MapStatusListener
 import com.sygic.sdk.map.listeners.MapsResultListener
 import com.sygic.sdk.map.listeners.ResultListener
 import cz.feldis.sdkandroidtests.BaseTest
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import org.mockito.ArgumentMatchers.anyList
 
 class MapDownloadHelper : BaseTest() {
@@ -44,10 +46,11 @@ class MapDownloadHelper : BaseTest() {
         )
     }
 
-    fun uninstallMap(iso: String) {
+    fun uninstallMap(iso: String) = runBlocking {
         val uninstallListener: MapResultListener = mock(verboseLogging = true)
         installer.uninstallMap(iso, uninstallListener)
         verify(uninstallListener, timeout(15000)).onMapResult(eq(iso), any())
+        delay(1000)
     }
 
     fun resetMapLocale() {
@@ -62,7 +65,7 @@ class MapDownloadHelper : BaseTest() {
         verify(listener, timeout(20_000L)).onResult(eq(MapInstaller.LoadResult.Success))
     }
 
-    fun unloadAllMaps() {
+    fun unloadAllMaps() = runBlocking {
         val listener: MapsResultListener = mock(verboseLogging = true)
         installer.getAvailableCountries(
             installed = true,
@@ -72,7 +75,7 @@ class MapDownloadHelper : BaseTest() {
                 }
             }
         )
+        delay(1000)
         verify(listener, timeout(10_000L)).onMapsResult(anyList(), eq(MapInstaller.LoadResult.Success))
-
     }
 }
