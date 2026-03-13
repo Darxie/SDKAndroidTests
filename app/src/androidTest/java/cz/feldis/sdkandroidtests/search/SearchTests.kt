@@ -4,6 +4,7 @@ import android.util.Log
 import com.sygic.sdk.places.Place
 import com.sygic.sdk.places.PlaceCategories
 import com.sygic.sdk.position.GeoCoordinates
+import com.sygic.sdk.search.AutocompleteResult
 import com.sygic.sdk.search.CreateSearchCallback
 import com.sygic.sdk.search.HouseNumberResult
 import com.sygic.sdk.search.OfflineMapSearch
@@ -56,6 +57,22 @@ class SearchTests : BaseTest() {
         mapDownloadHelper = MapDownloadHelper()
         reverseGeocoder = runBlocking { ReverseGeocoderProvider.getInstance() }
         searchManager = runBlocking { SearchManagerProvider.getInstance() }
+    }
+
+    private fun offlineAutocompleteForMap(
+        mapCode: String,
+        searchInput: String,
+        location: GeoCoordinates,
+        maxResults: Int? = null
+    ): List<AutocompleteResult> {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap(mapCode)
+        val request = if (maxResults == null) {
+            SearchRequest(searchInput, location)
+        } else {
+            SearchRequest(searchInput, location, maxResults)
+        }
+        return searchHelper.offlineAutocomplete(request)
     }
 
     @Test
@@ -410,6 +427,167 @@ class SearchTests : BaseTest() {
         assertTrue(
             "The subtitle is not 'Nové Mesto nad Váhom, Slovensko', but is '${result.first().subtitle}'",
             result.any { it.subtitle == "Nové Mesto nad Váhom, Slovensko" })
+    }
+
+    @Test
+    fun searchPostalSKWithSpace() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "915 01",
+            location = GeoCoordinates(48.74409946027763, 17.887561142146495)
+        )
+        val result = searchHelper.offlineAutocomplete(searchRequest)
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue(
+            "The result should contain an item with the title '915 01'",
+            result.any { it.title == "915 01" })
+        assertTrue(
+            "The type of the result is not 'POSTAL_CODE'",
+            result.any { it.type == ResultType.POSTAL_CODE })
+    }
+
+    @Test
+    fun searchPostalUKWithLowercaseAndSpace() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("gb")
+        val searchRequest = SearchRequest(
+            searchInput = "mk2 2ru",
+            location = GeoCoordinates(51.141742277855585, -1.012316722312827)
+        )
+        val result = searchHelper.offlineAutocomplete(searchRequest)
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue(
+            "The result should contain an item with the title 'MK2 2RU'",
+            result.any { it.title == "MK2 2RU" })
+        assertTrue(
+            "The type of the result is not 'POSTAL_CODE'",
+            result.any { it.type == ResultType.POSTAL_CODE })
+    }
+
+    @Test
+    fun offlineAutocompleteBratislava() {
+        disableOnlineMaps()
+        mapDownloadHelper.installAndLoadMap("sk")
+        val searchRequest = SearchRequest(
+            searchInput = "bratislava",
+            location = GeoCoordinates(48.145718, 17.118669),
+            8
+        )
+        val result = searchHelper.offlineAutocomplete(searchRequest)
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue(
+            "Expected at least one Bratislava entry in title",
+            result.any { it.title.contains("Bratislava", ignoreCase = true) })
+    }
+
+    @Test
+    fun searchPostalSKMaxResultsOne() {
+        val result = offlineAutocompleteForMap(
+            mapCode = "sk",
+            searchInput = "91501",
+            location = GeoCoordinates(48.74409946027763, 17.887561142146495),
+            maxResults = 1
+        )
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue("Expected at most 1 result, got ${result.size}", result.size <= 1)
+        assertTrue("Expected postal code 91501 in results", result.any { it.title == "91501" })
+    }
+
+    @Test
+    fun searchPostalUKMaxResultsOne() {
+        val result = offlineAutocompleteForMap(
+            mapCode = "gb",
+            searchInput = "MK22RU",
+            location = GeoCoordinates(51.141742277855585, -1.012316722312827),
+            maxResults = 1
+        )
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue("Expected at most 1 result, got ${result.size}", result.size <= 1)
+        assertTrue("Expected postal code MK2 2RU in results", result.any { it.title == "MK2 2RU" })
+    }
+
+    @Test
+    fun searchPostalUKMixedCase() {
+        val result = offlineAutocompleteForMap(
+            mapCode = "gb",
+            searchInput = "Mk2 2rU",
+            location = GeoCoordinates(51.141742277855585, -1.012316722312827)
+        )
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue(
+            "Expected normalized UK postal code MK2 2RU in results",
+            result.any { it.title == "MK2 2RU" && it.type == ResultType.POSTAL_CODE })
+    }
+
+    @Test
+    fun searchSoutocicoUppercase() {
+        val result = offlineAutocompleteForMap(
+            mapCode = "pt",
+            searchInput = "SOUTOCICO",
+            location = GeoCoordinates(48.144334505339934, 17.136729455651594)
+        )
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue(
+            "The result should contain an item with the title 'Soutocico'",
+            result.any { it.title == "Soutocico" })
+    }
+
+    @Test
+    fun autocompleteEyckeveldWithoutHouseNumber() {
+        val result = offlineAutocompleteForMap(
+            mapCode = "be",
+            searchInput = "Eyckeveld",
+            location = GeoCoordinates(50.84367811558576, 4.667406856390823)
+        )
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue(
+            "Expected at least one Eyckeveld suggestion",
+            result.any { it.title.contains("Eyckeveld", ignoreCase = true) })
+    }
+
+    @Test
+    fun offlineAutocompleteBratislavaMaxResultsTwo() {
+        val result = offlineAutocompleteForMap(
+            mapCode = "sk",
+            searchInput = "bratislava",
+            location = GeoCoordinates(48.145718, 17.118669),
+            maxResults = 2
+        )
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue("Expected at most 2 results, got ${result.size}", result.size <= 2)
+        assertTrue(
+            "Expected at least one Bratislava entry in title",
+            result.any { it.title.contains("Bratislava", ignoreCase = true) })
+    }
+
+    @Test
+    fun offlineAutocompleteBratislavaTitlesNotBlank() {
+        val result = offlineAutocompleteForMap(
+            mapCode = "sk",
+            searchInput = "bratislava",
+            location = GeoCoordinates(48.145718, 17.118669),
+            maxResults = 8
+        )
+        assertTrue("Search found no results, empty list", result.isNotEmpty())
+        assertTrue(
+            "Expected all Bratislava autocomplete titles to be non-blank",
+            result.all { it.title.isNotBlank() })
+    }
+
+    @Test
+    fun searchPostalSKExpectedTitleHasPostalCodeType() {
+        val result = offlineAutocompleteForMap(
+            mapCode = "sk",
+            searchInput = "91501",
+            location = GeoCoordinates(48.74409946027763, 17.887561142146495)
+        )
+        val expectedResult = result.firstOrNull { it.title == "91501" }
+        assertNotNull("Expected result with title 91501 was not found", expectedResult)
+        assertTrue(
+            "Expected result 91501 to have type POSTAL_CODE",
+            expectedResult!!.type == ResultType.POSTAL_CODE
+        )
     }
 
     @Test
