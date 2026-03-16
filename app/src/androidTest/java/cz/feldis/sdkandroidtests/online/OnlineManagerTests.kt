@@ -4,6 +4,8 @@ import com.sygic.sdk.online.OnlineManager
 import com.sygic.sdk.online.OnlineManagerProvider
 import cz.feldis.sdkandroidtests.BaseTest
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.eq
@@ -20,6 +22,22 @@ class OnlineManagerTests : BaseTest() {
     }
 
     override fun tearDown() {
+    }
+
+    private fun ensureMapStreamingEnabled() {
+        if (!onlineManager.isOnlineMapStreamingEnabled()) {
+            val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+            onlineManager.enableOnlineMapStreaming(listener)
+            verify(listener, timeout(STATUS_TIMEOUT)).onSuccess()
+        }
+    }
+
+    private fun ensureMapStreamingDisabled() {
+        if (onlineManager.isOnlineMapStreamingEnabled()) {
+            val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+            onlineManager.disableOnlineMapStreaming(listener)
+            verify(listener, timeout(STATUS_TIMEOUT)).onSuccess()
+        }
     }
 
     /**
@@ -119,6 +137,82 @@ class OnlineManagerTests : BaseTest() {
 
         verify(listener2, timeout(STATUS_TIMEOUT))
             .onError(eq(OnlineManager.MapStreamingError.ModeAlreadyInUse))
+    }
+
+    @Test
+    fun mapStreamingEnabledStateAfterEnable() {
+        ensureMapStreamingDisabled()
+        val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+
+        onlineManager.enableOnlineMapStreaming(listener)
+
+        verify(listener, timeout(STATUS_TIMEOUT)).onSuccess()
+        assertTrue("Online map streaming should be enabled", onlineManager.isOnlineMapStreamingEnabled())
+    }
+
+    @Test
+    fun mapStreamingDisabledStateAfterDisable() {
+        ensureMapStreamingEnabled()
+        val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+
+        onlineManager.disableOnlineMapStreaming(listener)
+
+        verify(listener, timeout(STATUS_TIMEOUT)).onSuccess()
+        assertFalse("Online map streaming should be disabled", onlineManager.isOnlineMapStreamingEnabled())
+    }
+
+    @Test
+    fun mapStreamingEnableDisableRoundTripState() {
+        ensureMapStreamingDisabled()
+        val enableListener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+        val disableListener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+
+        onlineManager.enableOnlineMapStreaming(enableListener)
+        verify(enableListener, timeout(STATUS_TIMEOUT)).onSuccess()
+        onlineManager.disableOnlineMapStreaming(disableListener)
+        verify(disableListener, timeout(STATUS_TIMEOUT)).onSuccess()
+
+        assertFalse(
+            "Online map streaming should be disabled after enable/disable round trip",
+            onlineManager.isOnlineMapStreamingEnabled()
+        )
+    }
+
+    @Test
+    fun mapStreamingDisableEnableRoundTripState() {
+        ensureMapStreamingEnabled()
+        val disableListener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+        val enableListener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+
+        onlineManager.disableOnlineMapStreaming(disableListener)
+        verify(disableListener, timeout(STATUS_TIMEOUT)).onSuccess()
+        onlineManager.enableOnlineMapStreaming(enableListener)
+        verify(enableListener, timeout(STATUS_TIMEOUT)).onSuccess()
+
+        assertTrue(
+            "Online map streaming should be enabled after disable/enable round trip",
+            onlineManager.isOnlineMapStreamingEnabled()
+        )
+    }
+
+    @Test
+    fun mapStreamingEnableSuccessCallbackCalledOnce() {
+        ensureMapStreamingDisabled()
+        val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+
+        onlineManager.enableOnlineMapStreaming(listener)
+
+        Mockito.verify(listener, Mockito.timeout(STATUS_TIMEOUT).times(1)).onSuccess()
+    }
+
+    @Test
+    fun mapStreamingDisableSuccessCallbackCalledOnce() {
+        ensureMapStreamingEnabled()
+        val listener: OnlineManager.MapStreamingListener = mock(verboseLogging = true)
+
+        onlineManager.disableOnlineMapStreaming(listener)
+
+        Mockito.verify(listener, Mockito.timeout(STATUS_TIMEOUT).times(1)).onSuccess()
     }
 
     companion object {
