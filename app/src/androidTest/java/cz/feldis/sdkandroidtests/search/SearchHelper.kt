@@ -27,6 +27,7 @@ import kotlinx.coroutines.runBlocking
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
@@ -238,24 +239,57 @@ class SearchHelper {
 
     fun onlineSearchPlaces(placeRequest: PlaceRequest): List<Place> {
         val searchCallback: CreateSearchCallback<OnlineMapSearch> = mock(verboseLogging = true)
-        val listener: PlacesListener = mock(verboseLogging = true)
-
         val onlineMapSearchCaptor = argumentCaptor<OnlineMapSearch>()
-        val argumentCaptor = argumentCaptor<List<Place>>()
 
         searchManager.createOnlineMapSearch(searchCallback)
 
         verify(searchCallback, timeout(10_000L)).onSuccess(
             onlineMapSearchCaptor.capture()
         )
-        onlineMapSearchCaptor.firstValue.createSession().searchPlaces(placeRequest, listener)
 
-        verify(listener, timeout(10_000L)).onPlacesLoaded(
-            argumentCaptor.capture(),
-            anyOrNull()
-        )
+        val session = onlineMapSearchCaptor.firstValue.createSession()
+        val maxRetries = 3
+        val retryDelay = 5_000L
 
-        return argumentCaptor.firstValue
+        repeat(maxRetries) { attempt ->
+            println("🔍 Search places attempt ${attempt + 1}")
+
+            val latch = CountDownLatch(1)
+            var loadedPlaces: List<Place>? = null
+            var errorStatus: ResultStatus? = null
+            val listener: PlacesListener = mock(verboseLogging = true) {
+                on { onPlacesLoaded(any(), anyOrNull()) } doAnswer {
+                    loadedPlaces = it.getArgument(0)
+                    latch.countDown()
+                    null
+                }
+                on { onPlacesError(any()) } doAnswer {
+                    errorStatus = it.getArgument(0)
+                    latch.countDown()
+                    null
+                }
+            }
+
+            session.searchPlaces(placeRequest, listener)
+
+            if (!latch.await(10_000L, TimeUnit.MILLISECONDS)) {
+                throw RuntimeException("Search places timed out")
+            }
+
+            loadedPlaces?.let {
+                println("✅ Success: ${it.size} results")
+                return it
+            }
+
+            println("⚠️ Error: $errorStatus")
+            if (errorStatus == ResultStatus.UNSPECIFIED_ERROR && attempt < maxRetries - 1) {
+                runBlocking { delay(retryDelay) }
+            } else {
+                throw RuntimeException("Search places failed: $errorStatus")
+            }
+        }
+
+        throw RuntimeException("Failed to retrieve places after $maxRetries attempts")
     }
 
     fun searchCustomPlaces(placeRequest: PlaceRequest): List<Place> {

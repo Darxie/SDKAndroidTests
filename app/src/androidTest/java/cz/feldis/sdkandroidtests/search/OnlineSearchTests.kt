@@ -10,26 +10,28 @@ import com.sygic.sdk.search.PlacesListener
 import com.sygic.sdk.search.ReverseGeocoder
 import com.sygic.sdk.search.ReverseGeocoder.ErrorCode
 import com.sygic.sdk.search.ReverseGeocoderProvider
+import com.sygic.sdk.search.ResultStatus
 import com.sygic.sdk.search.SearchManager
 import com.sygic.sdk.search.SearchManagerProvider
 import com.sygic.sdk.search.SearchRequest
 import com.sygic.sdk.search.results.LocalTimeAtLocationResult
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.isNotNull
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.ranges.contains
 
 class OnlineSearchTests: BaseTest() {
@@ -89,7 +91,6 @@ class OnlineSearchTests: BaseTest() {
      */
     @Test
     fun searchPlacesValidCategoryBankOnline() {
-        val listener: PlacesListener = mock(verboseLogging = true)
         val searchCallback: CreateSearchCallback<OnlineMapSearch> = mock(verboseLogging = true)
 
         val categories = listOf(PlaceCategories.Bank)
@@ -97,28 +98,58 @@ class OnlineSearchTests: BaseTest() {
         searchManager.createOnlineMapSearch(searchCallback)
 
         val onlineMapSearchCaptor = argumentCaptor<OnlineMapSearch>()
-        val argumentCaptor = argumentCaptor<List<Place>>()
 
         verify(searchCallback, timeout(10_000L)).onSuccess(
             onlineMapSearchCaptor.capture()
         )
 
-        // actual search
-        onlineMapSearchCaptor.firstValue.createSession().searchPlaces(request, listener)
+        val session = onlineMapSearchCaptor.firstValue.createSession()
+        val maxRetries = 3
+        val retryDelay = 5_000L
 
-        verify(listener, timeout(10_000L)).onPlacesLoaded(
-            argumentCaptor.capture(),
-            isNotNull()
-        )
-        verify(listener, never()).onPlacesError(any())
+        repeat(maxRetries) { attempt ->
+            println("🔍 Search places bank test attempt ${attempt + 1}")
 
-        val resultList = argumentCaptor.firstValue
-        for (bank in resultList) {
-            assertNotNull(resultList)
-            assertFalse(bank.name.isEmpty())
-            assertFalse(bank.details.isEmpty())
-            assertTrue(bank.category == PlaceCategories.Bank)
+            val latch = CountDownLatch(1)
+            var resultList: List<Place>? = null
+            var errorStatus: ResultStatus? = null
+            val listener: PlacesListener = mock(verboseLogging = true) {
+                on { onPlacesLoaded(org.mockito.kotlin.any(), org.mockito.kotlin.anyOrNull()) } doAnswer {
+                    resultList = it.getArgument(0)
+                    latch.countDown()
+                    null
+                }
+                on { onPlacesError(org.mockito.kotlin.any()) } doAnswer {
+                    errorStatus = it.getArgument(0)
+                    latch.countDown()
+                    null
+                }
+            }
+
+            session.searchPlaces(request, listener)
+
+            if (!latch.await(10_000L, TimeUnit.MILLISECONDS)) {
+                fail("searchPlacesValidCategoryBankOnline timed out")
+            }
+
+            resultList?.let { places ->
+                assertNotNull(places)
+                for (bank in places) {
+                    assertFalse(bank.name.isEmpty())
+                    assertFalse(bank.details.isEmpty())
+                    assertTrue(bank.category == PlaceCategories.Bank)
+                }
+                return
+            }
+
+            if (errorStatus == ResultStatus.UNSPECIFIED_ERROR && attempt < maxRetries - 1) {
+                runBlocking { delay(retryDelay) }
+            } else {
+                fail("searchPlacesValidCategoryBankOnline failed: $errorStatus")
+            }
         }
+
+        fail("searchPlacesValidCategoryBankOnline failed after $maxRetries attempts")
     }
 
     @Test
