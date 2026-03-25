@@ -86,5 +86,6 @@ class MapDownloadHelper : BaseTest() {
             unloadResult is MapInstaller.LoadResult.Success
         )
         Log.d("SYGIC", "Maps unloaded successfully: ${result.mapIsos}")
+        delay(1000)
     }
 }

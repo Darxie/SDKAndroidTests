@@ -56,6 +56,9 @@ import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import timber.log.Timber
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class OnlineNavigationTests : BaseTest() {
     private lateinit var routeCompute: RouteComputeHelper
@@ -69,6 +72,7 @@ class OnlineNavigationTests : BaseTest() {
         mapDownload = MapDownloadHelper()
         routeCompute = RouteComputeHelper()
         navigation = runBlocking { NavigationManagerProvider.getInstance() }
+        mapDownload.unloadAllMaps()
     }
 
     @Test
@@ -588,6 +592,170 @@ class OnlineNavigationTests : BaseTest() {
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
         navigation.removeOnRouteRecomputeProgressListener(listener)
         navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    /**
+     * Ensures a recompute cycle is finalized in expected order:
+     * progress(100) -> finished.
+     */
+    @Test
+    fun onRouteRecomputeProgress100BeforeFinishedOnline() {
+        runBlocking {
+            val route = routeCompute.onlineRouteCompute(
+                GeoCoordinates(48.1447, 17.1317),
+                GeoCoordinates(48.1461, 17.1285)
+            )
+            val expectedProgress100 =
+                NavigationManager.OnRouteRecomputeListener.RecomputeProgressData(route, 100)
+
+            val finishedCount = AtomicInteger(0)
+            val orderingViolation = AtomicReference<String?>(null)
+            val seenProgress100InCurrentCycle = AtomicBoolean(false)
+
+            val listener = object : NavigationManager.OnRouteRecomputeListener {
+                override fun onRouteRecomputeStarted(data: NavigationManager.OnRouteRecomputeListener.RecomputeStartedData) {
+                    seenProgress100InCurrentCycle.set(false)
+                    Timber.d("[recompute-order][online] started reason=${data.reason}")
+                }
+
+                override fun onRouteRecomputeProgress(data: NavigationManager.OnRouteRecomputeListener.RecomputeProgressData) {
+                    Timber.d("[recompute-order][online] progress=${data.progress}")
+                    if (data == expectedProgress100) {
+                        seenProgress100InCurrentCycle.set(true)
+                        Timber.d("[recompute-order][online] progress 100 observed")
+                    }
+                }
+
+                override fun onRouteRecomputeFinished(data: NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData) {
+                    finishedCount.incrementAndGet()
+                    Timber.d(
+                        "[recompute-order][online] finished result=${data.result}, seen100=${seenProgress100InCurrentCycle.get()}"
+                    )
+                    if (!seenProgress100InCurrentCycle.get()) {
+                        orderingViolation.compareAndSet(
+                            null,
+                            "onRouteRecomputeFinished arrived before progress 100"
+                        )
+                    }
+                }
+            }
+
+            navigationManagerKtx.setRouteForNavigation(route, navigation)
+            navigation.addOnRouteRecomputeProgressListener(listener)
+
+            val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+            val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
+            val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+
+            try {
+                Timber.d("[recompute-order][online] starting simulator")
+                navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+                withTimeout(25_000L) {
+                    while (finishedCount.get() == 0 && orderingViolation.get() == null) {
+                        delay(100)
+                    }
+                }
+
+                assertTrue(
+                    orderingViolation.get() ?: "Expected at least one recompute finished callback",
+                    finishedCount.get() > 0 && orderingViolation.get() == null
+                )
+                Timber.d("[recompute-order][online] passed; finishedCount=${finishedCount.get()}")
+            } finally {
+                Timber.d("[recompute-order][online] cleanup")
+                navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+                navigation.removeOnRouteRecomputeProgressListener(listener)
+                navigationManagerKtx.stopNavigation(navigation)
+            }
+        }
+    }
+
+    /**
+     * Stress variant of recompute callback order check.
+     * Runs multiple independent attempts to increase chance of catching nondeterministic ordering issues.
+     */
+    @Test
+    fun onRouteRecomputeProgress100BeforeFinishedOnlineRepeatedly() {
+        runBlocking {
+            val attempts = 10
+
+            repeat(attempts) { index ->
+                val attempt = index + 1
+                Timber.d("[recompute-order][online][attempt $attempt/$attempts] setup")
+
+                val route = routeCompute.onlineRouteCompute(
+                    GeoCoordinates(48.1447, 17.1317),
+                    GeoCoordinates(48.1461, 17.1285)
+                )
+                val expectedProgress100 =
+                    NavigationManager.OnRouteRecomputeListener.RecomputeProgressData(route, 100)
+
+                val finishedCount = AtomicInteger(0)
+                val orderingViolation = AtomicReference<String?>(null)
+                val seenProgress100InCurrentCycle = AtomicBoolean(false)
+
+                val listener = object : NavigationManager.OnRouteRecomputeListener {
+                    override fun onRouteRecomputeStarted(data: NavigationManager.OnRouteRecomputeListener.RecomputeStartedData) {
+                        seenProgress100InCurrentCycle.set(false)
+                        Timber.d("[recompute-order][online][attempt $attempt] started reason=${data.reason}")
+                    }
+
+                    override fun onRouteRecomputeProgress(data: NavigationManager.OnRouteRecomputeListener.RecomputeProgressData) {
+                        Timber.d("[recompute-order][online][attempt $attempt] progress=${data.progress}")
+                        if (data == expectedProgress100) {
+                            seenProgress100InCurrentCycle.set(true)
+                            Timber.d("[recompute-order][online][attempt $attempt] progress 100 observed")
+                        }
+                    }
+
+                    override fun onRouteRecomputeFinished(data: NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData) {
+                        finishedCount.incrementAndGet()
+                        Timber.d(
+                            "[recompute-order][online][attempt $attempt] finished result=${data.result}, seen100=${seenProgress100InCurrentCycle.get()}"
+                        )
+                        if (!seenProgress100InCurrentCycle.get()) {
+                            orderingViolation.compareAndSet(
+                                null,
+                                "Attempt $attempt: onRouteRecomputeFinished arrived before progress 100"
+                            )
+                        }
+                    }
+                }
+
+                navigationManagerKtx.setRouteForNavigation(route, navigation)
+                navigation.addOnRouteRecomputeProgressListener(listener)
+
+                val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+                val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
+                val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+
+                try {
+                    Timber.d("[recompute-order][online][attempt $attempt] starting simulator")
+                    navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+                    withTimeout(25_000L) {
+                        while (finishedCount.get() == 0 && orderingViolation.get() == null) {
+                            delay(100)
+                        }
+                    }
+
+                    val isValid = finishedCount.get() > 0 && orderingViolation.get() == null
+                    assertTrue(
+                        orderingViolation.get()
+                            ?: "Attempt $attempt: expected at least one recompute finished callback",
+                        isValid
+                    )
+                    Timber.d("[recompute-order][online][attempt $attempt] passed; finishedCount=${finishedCount.get()}")
+                } finally {
+                    Timber.d("[recompute-order][online][attempt $attempt] cleanup")
+                    navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+                    navigation.removeOnRouteRecomputeProgressListener(listener)
+                    navigationManagerKtx.stopNavigation(navigation)
+                    delay(300)
+                }
+            }
+        }
     }
 
     /**

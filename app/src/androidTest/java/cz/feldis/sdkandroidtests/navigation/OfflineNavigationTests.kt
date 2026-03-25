@@ -69,8 +69,15 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class OfflineNavigationTests : BaseTest() {
+    companion object {
+        private const val TAG = "OfflineNavigationTests"
+    }
+
     private lateinit var routeCompute: RouteComputeHelper
     private lateinit var mapDownload: MapDownloadHelper
     private lateinit var navigation: NavigationManager
@@ -660,6 +667,19 @@ class OfflineNavigationTests : BaseTest() {
         mapDownload.installAndLoadMap("sk")
         val listener: NavigationManager.OnRouteRecomputeListener =
             mock(verboseLogging = true)
+        val loggingListener = object : NavigationManager.OnRouteRecomputeListener {
+            override fun onRouteRecomputeStarted(data: NavigationManager.OnRouteRecomputeListener.RecomputeStartedData) {
+                Log.d(TAG, "[recompute] started reason=${data.reason}")
+            }
+
+            override fun onRouteRecomputeProgress(data: NavigationManager.OnRouteRecomputeListener.RecomputeProgressData) {
+                Log.d(TAG, "[recompute] progress=${data.progress}")
+            }
+
+            override fun onRouteRecomputeFinished(data: NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData) {
+                Log.d(TAG, "[recompute] finished result=${data.result}")
+            }
+        }
         val route = routeCompute.offlineRouteCompute(
             GeoCoordinates(48.1447, 17.1317),
             GeoCoordinates(48.1461, 17.1285)
@@ -667,9 +687,11 @@ class OfflineNavigationTests : BaseTest() {
 
         navigationManagerKtx.setRouteForNavigation(route, navigation)
         navigation.addOnRouteRecomputeProgressListener(listener)
+        navigation.addOnRouteRecomputeProgressListener(loggingListener)
         val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
         val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
         val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+        Log.d(TAG, "[recompute] starting simulator for onRouteRecomputeProgressOffline")
         navigationManagerKtx.startSimulator(logSimulatorAdapter)
 
         val recomputeStartedData = NavigationManager.OnRouteRecomputeListener.RecomputeStartedData(
@@ -714,6 +736,7 @@ class OfflineNavigationTests : BaseTest() {
             listener, Mockito.timeout(20_000L).times(1)
         )
             .onRouteRecomputeFinished(eq(recomputeFinishedData))
+        Log.d(TAG, "[recompute] verified finished(success)")
 
         Mockito.verify(
             listener, never()
@@ -722,7 +745,177 @@ class OfflineNavigationTests : BaseTest() {
 
         navigationManagerKtx.stopSimulator(logSimulatorAdapter)
         navigation.removeOnRouteRecomputeProgressListener(listener)
+        navigation.removeOnRouteRecomputeProgressListener(loggingListener)
         navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    /**
+     * Ensures a recompute cycle is finalized in the expected order:
+     * progress(100) -> finished.
+     */
+    @Test
+    fun onRouteRecomputeProgress100BeforeFinishedOffline() {
+        runBlocking {
+            mapDownload.installAndLoadMap("sk")
+
+            val route = routeCompute.offlineRouteCompute(
+                GeoCoordinates(48.1447, 17.1317),
+                GeoCoordinates(48.1461, 17.1285)
+            )
+            val expectedProgress100 =
+                NavigationManager.OnRouteRecomputeListener.RecomputeProgressData(route, 100)
+
+            val finishedCount = AtomicInteger(0)
+            val orderingViolation = AtomicReference<String?>(null)
+            val seenProgress100InCurrentCycle = AtomicBoolean(false)
+
+            val listener = object : NavigationManager.OnRouteRecomputeListener {
+                override fun onRouteRecomputeStarted(data: NavigationManager.OnRouteRecomputeListener.RecomputeStartedData) {
+                    seenProgress100InCurrentCycle.set(false)
+                    Log.d(TAG, "[recompute-order] started reason=${data.reason}")
+                }
+
+                override fun onRouteRecomputeProgress(data: NavigationManager.OnRouteRecomputeListener.RecomputeProgressData) {
+                    Log.d(TAG, "[recompute-order] progress=${data.progress}")
+                    if (data == expectedProgress100) {
+                        seenProgress100InCurrentCycle.set(true)
+                        Log.d(TAG, "[recompute-order] progress 100 observed")
+                    }
+                }
+
+                override fun onRouteRecomputeFinished(data: NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData) {
+                    finishedCount.incrementAndGet()
+                    Log.d(
+                        TAG,
+                        "[recompute-order] finished result=${data.result}, seen100=${seenProgress100InCurrentCycle.get()}"
+                    )
+                    if (!seenProgress100InCurrentCycle.get()) {
+                        orderingViolation.compareAndSet(
+                            null,
+                            "onRouteRecomputeFinished arrived before progress 100"
+                        )
+                    }
+                }
+            }
+
+            navigationManagerKtx.setRouteForNavigation(route, navigation)
+            navigation.addOnRouteRecomputeProgressListener(listener)
+
+            val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+            val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
+            val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+
+            try {
+                Log.d(TAG, "[recompute-order] starting simulator")
+                navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+                withTimeout(25_000L) {
+                    while (finishedCount.get() == 0 && orderingViolation.get() == null) {
+                        delay(100)
+                    }
+                }
+
+                assertTrue(
+                    orderingViolation.get() ?: "Expected at least one recompute finished callback",
+                    finishedCount.get() > 0 && orderingViolation.get() == null
+                )
+                Log.d(TAG, "[recompute-order] verification passed; finishedCount=${finishedCount.get()}")
+            } finally {
+                Log.d(TAG, "[recompute-order] cleanup")
+                navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+                navigation.removeOnRouteRecomputeProgressListener(listener)
+                navigationManagerKtx.stopNavigation(navigation)
+            }
+        }
+    }
+
+    /**
+     * Stress variant of recompute callback order check.
+     * Runs multiple independent attempts to increase chance of catching nondeterministic ordering issues.
+     */
+    @Test
+    fun onRouteRecomputeProgress100BeforeFinishedOfflineRepeatedly() {
+        runBlocking {
+            mapDownload.installAndLoadMap("sk")
+            val attempts = 10
+
+            repeat(attempts) { index ->
+                val attempt = index + 1
+                Log.d(TAG, "[recompute-order][attempt $attempt/$attempts] setup")
+
+                val route = routeCompute.offlineRouteCompute(
+                    GeoCoordinates(48.1447, 17.1317),
+                    GeoCoordinates(48.1461, 17.1285)
+                )
+                val expectedProgress100 =
+                    NavigationManager.OnRouteRecomputeListener.RecomputeProgressData(route, 100)
+
+                val finishedCount = AtomicInteger(0)
+                val orderingViolation = AtomicReference<String?>(null)
+                val seenProgress100InCurrentCycle = AtomicBoolean(false)
+
+                val listener = object : NavigationManager.OnRouteRecomputeListener {
+                    override fun onRouteRecomputeStarted(data: NavigationManager.OnRouteRecomputeListener.RecomputeStartedData) {
+                        seenProgress100InCurrentCycle.set(false)
+                        Log.d(TAG, "[recompute-order][attempt $attempt] started reason=${data.reason}")
+                    }
+
+                    override fun onRouteRecomputeProgress(data: NavigationManager.OnRouteRecomputeListener.RecomputeProgressData) {
+                        Log.d(TAG, "[recompute-order][attempt $attempt] progress=${data.progress}")
+                        if (data == expectedProgress100) {
+                            seenProgress100InCurrentCycle.set(true)
+                            Log.d(TAG, "[recompute-order][attempt $attempt] progress 100 observed")
+                        }
+                    }
+
+                    override fun onRouteRecomputeFinished(data: NavigationManager.OnRouteRecomputeListener.RecomputeFinishedData) {
+                        finishedCount.incrementAndGet()
+                        Log.d(
+                            TAG,
+                            "[recompute-order][attempt $attempt] finished result=${data.result}, seen100=${seenProgress100InCurrentCycle.get()}"
+                        )
+                        if (!seenProgress100InCurrentCycle.get()) {
+                            orderingViolation.compareAndSet(
+                                null,
+                                "Attempt $attempt: onRouteRecomputeFinished arrived before progress 100"
+                            )
+                        }
+                    }
+                }
+
+                navigationManagerKtx.setRouteForNavigation(route, navigation)
+                navigation.addOnRouteRecomputeProgressListener(listener)
+
+                val nmeaDataProvider = NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+                val logSimulator = NmeaLogSimulatorProvider.getInstance(nmeaDataProvider)
+                val logSimulatorAdapter = NmeaLogSimulatorAdapter(logSimulator)
+
+                try {
+                    Log.d(TAG, "[recompute-order][attempt $attempt] starting simulator")
+                    navigationManagerKtx.startSimulator(logSimulatorAdapter)
+
+                    withTimeout(25_000L) {
+                        while (finishedCount.get() == 0 && orderingViolation.get() == null) {
+                            delay(100)
+                        }
+                    }
+
+                    val isValid = finishedCount.get() > 0 && orderingViolation.get() == null
+                    assertTrue(
+                        orderingViolation.get()
+                            ?: "Attempt $attempt: expected at least one recompute finished callback",
+                        isValid
+                    )
+                    Log.d(TAG, "[recompute-order][attempt $attempt] passed; finishedCount=${finishedCount.get()}")
+                } finally {
+                    Log.d(TAG, "[recompute-order][attempt $attempt] cleanup")
+                    navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+                    navigation.removeOnRouteRecomputeProgressListener(listener)
+                    navigationManagerKtx.stopNavigation(navigation)
+                    delay(300)
+                }
+            }
+        }
     }
 
     @Test
