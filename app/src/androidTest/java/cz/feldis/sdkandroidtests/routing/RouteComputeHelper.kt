@@ -74,12 +74,14 @@ class RouteComputeHelper : BaseTest() {
         start: GeoCoordinates,
         destination: GeoCoordinates,
         waypoints: List<GeoCoordinates> = emptyList(),
+        waypointObjects: List<Waypoint> = emptyList(),
         routingOptions: RoutingOptions = RoutingOptions()
     ): Route {
         val request = RouteRequest().apply {
             this.setStart(start)
             this.setDestination(destination)
             waypoints.forEach { this.addViaPoint(it) }
+            waypointObjects.forEach { this.addViaPoint(it) }
             this.routingOptions = routingOptions
             this.routingOptions.routingService = RoutingOptions.RoutingService.Offline
         }

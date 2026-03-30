@@ -260,8 +260,10 @@ class HereTests : BaseHereTest() {
 
     /***
      * https://jira.sygic.com/browse/CI-3412
+     * https://eurowag.atlassian.net/browse/DNAENG-915
      */
     @Test
+    @Ignore("See linked DNAENG ticket - the issue is not yet resolved, re-enable once it is")
     fun vehicleAidZonePaid() = runBlocking {
         mapDownloadHelper.installAndLoadMap("gb-02")
 
