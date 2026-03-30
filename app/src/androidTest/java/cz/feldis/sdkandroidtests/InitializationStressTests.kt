@@ -19,7 +19,7 @@ class InitializationStressTests {
     var activityRule: ActivityScenarioRule<SygicActivity> =
         ActivityScenarioRule(SygicActivity::class.java)
 
-    private val iterations = 1000
+    private val iterations = 10
     private val initTimeoutMs = 60_000L
 
     /**

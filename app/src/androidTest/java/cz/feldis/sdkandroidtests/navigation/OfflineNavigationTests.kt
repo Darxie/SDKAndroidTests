@@ -13,6 +13,7 @@ import com.sygic.sdk.map.MapCenter
 import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.listeners.OnMapInitListener
+import com.sygic.sdk.map.`object`.MapRoute
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
@@ -315,21 +316,27 @@ class OfflineNavigationTests : BaseTest() {
 
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
-        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
-        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+        try {
+            navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+            navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
-        var count = 0
-        // verify that the callback has been called at least 5 times with value different than -1
-        verify(listener, timeout(20_000L).atLeastOnce()).onIncidentsInfoChanged(argThat {
-            this.forEach {
-                if (it.recommendedSpeed != -1) {
-                    count += 1
+            var count = 0
+            // verify that the callback has been called at least 5 times with value different than -1
+            verify(listener, timeout(20_000L).atLeastOnce()).onIncidentsInfoChanged(argThat {
+                this.forEach {
+                    if (it.recommendedSpeed != -1) {
+                        count += 1
+                    }
+                    if (count >= 5)
+                        return@argThat true
                 }
-                if (count >= 5)
-                    return@argThat true
-            }
-            false
-        })
+                false
+            })
+        } finally {
+            navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+            navigation.removeOnIncidentListener(listener)
+            navigationManagerKtx.stopNavigation(navigation)
+        }
     }
 
     @Test
@@ -347,18 +354,24 @@ class OfflineNavigationTests : BaseTest() {
 
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
-        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
-        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+        try {
+            navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+            navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
 
-        verify(listener, timeout(20_000L)).onIncidentsInfoChanged(argThat {
-            this.forEach {
-                if (it.incident is SpeedCamera) {
-                    val expectedSpeedcam = it.incident as SpeedCamera
-                    if (expectedSpeedcam.speedLimit == 130) return@argThat true
+            verify(listener, timeout(20_000L)).onIncidentsInfoChanged(argThat {
+                this.forEach {
+                    if (it.incident is SpeedCamera) {
+                        val expectedSpeedcam = it.incident as SpeedCamera
+                        if (expectedSpeedcam.speedLimit == 130) return@argThat true
+                    }
                 }
-            }
-            false
-        })
+                false
+            })
+        } finally {
+            navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+            navigation.removeOnIncidentListener(listener)
+            navigationManagerKtx.stopNavigation(navigation)
+        }
     }
 
     @Test
@@ -826,6 +839,7 @@ class OfflineNavigationTests : BaseTest() {
         } finally {
             scenario.moveToState(Lifecycle.State.DESTROYED)
             navigationManagerKtx.stopSimulator(logSimulatorAdapter)
+            navigationManagerKtx.stopNavigation(navigation)
         }
     }
 
@@ -851,23 +865,133 @@ class OfflineNavigationTests : BaseTest() {
 
         val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
         val simulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
-        navigationManagerKtx.startSimulator(simulatorAdapter)
 
+        try {
+            navigationManagerKtx.startSimulator(simulatorAdapter)
 
-        val flow = RouteExplorerProvider.getInstance().explorePlacesOnRoute(route, listOf())
-        delay(1000)
-        mapDownload.unloadMap("sk")
-        val error = flow
-            .onEach {
-                if (it is ExplorePlacesOnRouteData.PlacesLoaded) {
-                    Log.d("SYGIC", "PROGRESS - ${it.progress}")
+            val flow = RouteExplorerProvider.getInstance().explorePlacesOnRoute(route, listOf())
+            delay(1000)
+            mapDownload.unloadMap("sk")
+            val error = flow
+                .onEach {
+                    if (it is ExplorePlacesOnRouteData.PlacesLoaded) {
+                        Log.d("SYGIC", "PROGRESS - ${it.progress}")
+                    }
+                }
+                .filterIsInstance<ExplorePlacesOnRouteData.Error>()
+                .onEach { Log.d("SYGIC", "ERRROR ----- ${it.errorCode.name}") }
+                .first({ it.errorCode == PlacesManager.ErrorCode.CORRUPTED_DATA })
+            delay(1_000)
+
+            assertTrue(error.errorCode == PlacesManager.ErrorCode.CORRUPTED_DATA)
+        } finally {
+            navigationManagerKtx.stopSimulator(simulatorAdapter)
+            navigationManagerKtx.stopNavigation(navigation)
+        }
+    }
+
+    @Test
+    fun onWaypointPassRestrictedDestinationTestOffline() = runBlocking {
+        disableOnlineMaps()
+        mapDownload.installAndLoadMap("at")
+        val listener: NavigationManager.OnWaypointPassListener = mock(verboseLogging = true)
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+        val mapView = getMapView(mapFragment)
+        var demonstrateSimulatorAdapter: RouteDemonstrateSimulatorAdapter? = null
+
+        try {
+            val route = routeCompute.offlineRouteCompute(
+                GeoCoordinates(48.258950, 16.457700),
+                GeoCoordinates(48.257590, 16.455430),
+                listOf(GeoCoordinates(48.258140, 16.456600)),
+                routingOptions = RoutingOptions().apply {
+                    useEndpointProtection = true
+                    napStrategy = NearestAccessiblePointStrategy.Disabled
+                    arriveInDrivingSide = true
+                    useTraffic = true
+                    useSpeedProfiles = true
+                }
+            )
+
+            navigationManagerKtx.setRouteForNavigation(route, navigation)
+            navigation.addOnWaypointPassListener(listener)
+            mapView.cameraModel.setRotationMode(Camera.RotationMode.Vehicle)
+            mapView.cameraModel.setMovementMode(Camera.MovementMode.FollowGpsPositionWithAutozoom)
+            mapView.cameraModel.setTilt(45F)
+            mapView.mapDataModel.addMapObject(MapRoute.from(route).build())
+
+            val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+            demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+            navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 6F)
+            navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+            // check the order of calls: first onWaypointPassed, then onFinishReached
+            val inOrder: InOrder = inOrder(listener)
+            inOrder.verify(listener, timeout(60_000L)).onWaypointPassed(any())
+            inOrder.verify(listener, timeout(60_000L)).onFinishReached()
+        } finally {
+            demonstrateSimulatorAdapter?.let { navigationManagerKtx.stopSimulator(it) }
+            navigation.removeOnWaypointPassListener(listener)
+            navigationManagerKtx.stopNavigation(navigation)
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        }
+    }
+
+    /**
+     * Stress reproducer for native teardown race in position source switching.
+     *
+     * This repeatedly alternates RouteDemonstrate and NMEA simulators while
+     * stopping/setting navigation in between to exercise SetPositionDataSource
+     * and ResetRoadSnapping paths under pressure.
+     */
+    @Test
+    fun positionSourceSwitchStressReproducer_noNativeCrash() = runBlocking {
+        disableOnlineMaps()
+        mapDownload.installAndLoadMap("sk")
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.147682401781026, 17.14365655304184),
+            GeoCoordinates(48.15310362223699, 17.147190865317768)
+        )
+
+        val routeSimulator = RouteDemonstrateSimulatorAdapter(
+            RouteDemonstrateSimulatorProvider.getInstance(route)
+        )
+        val nmeaSimulator = NmeaLogSimulatorAdapter(
+            NmeaLogSimulatorProvider.getInstance(
+                NmeaFileDataProvider(appContext, "SVK-Kosicka.nmea")
+            )
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+
+        try {
+            repeat(40) { index ->
+                val simulator = if (index % 2 == 0) routeSimulator else nmeaSimulator
+                navigationManagerKtx.setSpeedMultiplier(simulator, 6F)
+                navigationManagerKtx.startSimulator(simulator)
+                delay(150)
+                navigationManagerKtx.stopSimulator(simulator)
+
+                // Periodically force navigation teardown/re-setup to stress source switching.
+                if (index % 5 == 0) {
+                    navigationManagerKtx.stopNavigation(navigation)
+                    navigationManagerKtx.setRouteForNavigation(route, navigation)
                 }
             }
-            .filterIsInstance<ExplorePlacesOnRouteData.Error>()
-            .onEach { Log.d("SYGIC", "ERRROR ----- ${it.errorCode.name}") }
-            .first({ it.errorCode == PlacesManager.ErrorCode.CORRUPTED_DATA })
-        delay(1_000)
+        } finally {
+            runCatching { navigationManagerKtx.stopSimulator(routeSimulator) }
+            runCatching { navigationManagerKtx.stopSimulator(nmeaSimulator) }
+            runCatching { navigationManagerKtx.stopNavigation(navigation) }
+        }
 
-        assertTrue(error.errorCode == PlacesManager.ErrorCode.CORRUPTED_DATA)
+        // Test is successful if process remains alive and reaches this point.
+        assertTrue(true)
     }
 }
