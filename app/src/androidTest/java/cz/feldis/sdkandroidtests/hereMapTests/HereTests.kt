@@ -716,4 +716,60 @@ class HereTests : BaseHereTest() {
             navigationManagerKtx.stopNavigation(navigation)
         }
     }
+
+    @Test
+    fun violatedProhibitedTruckZoneHere() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.12936, 17.17969)
+        val destination = GeoCoordinates(48.12995, 17.17831)
+        val routingOptions = RoutingOptions().apply {
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+            vehicleProfile = VehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedTruckZone } != null
+        })
+    }
+
+    @Test
+    fun violatedProhibitedAndTruckZoneHere() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.14640, 17.12530)
+        val destination = GeoCoordinates(48.14597, 17.12555)
+        val routingOptions = RoutingOptions().apply {
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+            vehicleProfile = VehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedZone } != null
+        })
+    }
 }

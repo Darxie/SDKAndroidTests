@@ -20,6 +20,7 @@ import com.sygic.sdk.navigation.StreetDetail
 import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
 import com.sygic.sdk.navigation.explorer.results.ExplorePlacesOnRouteData
 import com.sygic.sdk.navigation.routeeventnotifications.HighwayExitInfo
+import com.sygic.sdk.navigation.routeeventnotifications.SpeedLimitInfo
 import com.sygic.sdk.places.PlacesManager
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.Route
@@ -43,6 +44,7 @@ import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
 import cz.feldis.sdkandroidtests.routing.RouteComputeHelper
 import cz.feldis.sdkandroidtests.utils.NmeaLogSimulatorAdapter
 import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
@@ -1186,5 +1188,146 @@ class OfflineNavigationTests : BaseTest() {
 
         // Test is successful if process remains alive and reaches this point.
         assertTrue(true)
+    }
+
+
+    @Test
+    fun checkSpeedUnitsGbRoundingOfflineTest(): Unit = runBlocking {
+        mapDownload.installAndLoadMap("gb")
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(51.68334, -0.04733),
+            GeoCoordinates(51.68254, -0.03761)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+
+        try {
+            navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+            navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+            val timeoutMs = 25_000L
+            var lastObserved = "<no speedLimits emission>"
+            Log.d(TAG, "[speed-units][gb-rounding] waiting for next limit 70 mph / 113 km/h")
+
+            try {
+                withTimeout(timeoutMs) {
+                    navigation.speedLimits()
+                        .onEach {
+                            val snapshot =
+                                "countryUnits=${it.countrySpeedUnits}, currentKmh=${it.getSpeedLimit(SpeedLimitInfo.SpeedUnits.Kilometers)}, currentMph=${it.getSpeedLimit(SpeedLimitInfo.SpeedUnits.Miles)}, nextKmh=${it.getNextSpeedLimit(SpeedLimitInfo.SpeedUnits.Kilometers)}, nextMph=${it.getNextSpeedLimit(SpeedLimitInfo.SpeedUnits.Miles)}"
+                            lastObserved = snapshot
+                            Log.d(TAG, "[speed-units][gb-rounding] $snapshot")
+                        }
+                        .first {
+                            val nextKmh = it.getNextSpeedLimit(SpeedLimitInfo.SpeedUnits.Kilometers)
+                            val nextMph = it.getNextSpeedLimit(SpeedLimitInfo.SpeedUnits.Miles)
+
+                            nextKmh == 113 && nextMph == 70
+                        }
+                }
+            } catch (e: TimeoutCancellationException) {
+                throw AssertionError(
+                    "Timed out after ${timeoutMs}ms waiting for next speed limit 70 mph / 113 km/h. Last observed emission: $lastObserved",
+                    e
+                )
+            }
+        } finally {
+            navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+            navigationManagerKtx.stopNavigation(navigation)
+        }
+    }
+
+    @Test
+    fun checkSpeedUnitsGbCountryUnitsOfflineTest() = runBlocking {
+        mapDownload.installAndLoadMap("gb")
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(51.68334, -0.04733),
+            GeoCoordinates(51.68254, -0.03761)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+
+        try {
+            navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+            navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+            val timeoutMs = 25_000L
+            var lastObserved = "<no speedLimits emission>"
+
+            val info = try {
+                withTimeout(timeoutMs) {
+                    navigation.speedLimits()
+                        .onEach {
+                            val snapshot =
+                                "countryUnits=${it.countrySpeedUnits}, nextKmh=${it.getNextSpeedLimit(SpeedLimitInfo.SpeedUnits.Kilometers)}, nextMph=${it.getNextSpeedLimit(SpeedLimitInfo.SpeedUnits.Miles)}"
+                            lastObserved = snapshot
+                            Log.d(TAG, "[speed-units][gb-country] $snapshot")
+                        }
+                        .first { it.getNextSpeedLimit(SpeedLimitInfo.SpeedUnits.Miles) > 0 }
+                }
+            } catch (e: TimeoutCancellationException) {
+                throw AssertionError(
+                    "Timed out after ${timeoutMs}ms waiting for GB country speed units. Last observed emission: $lastObserved",
+                    e
+                )
+            }
+
+            assertEquals(SpeedLimitInfo.SpeedUnits.Miles, info.countrySpeedUnits)
+        } finally {
+            navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+            navigationManagerKtx.stopNavigation(navigation)
+        }
+    }
+
+    @Test
+    fun checkSpeedUnitsGbNextLimitRawAndConvertedOfflineTest() = runBlocking {
+        mapDownload.installAndLoadMap("gb")
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(51.68334, -0.04733),
+            GeoCoordinates(51.68254, -0.03761)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+
+        try {
+            navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+            navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+            val timeoutMs = 25_000L
+            var lastObserved = "<no speedLimits emission>"
+
+            val info = try {
+                withTimeout(timeoutMs) {
+                    navigation.speedLimits()
+                        .onEach {
+                            val snapshot =
+                                "rawNextKmh=${it.nextSpeedLimit}, nextKmh=${it.getNextSpeedLimit(SpeedLimitInfo.SpeedUnits.Kilometers)}, nextMph=${it.getNextSpeedLimit(SpeedLimitInfo.SpeedUnits.Miles)}"
+                            lastObserved = snapshot
+                            Log.d(TAG, "[speed-units][gb-next-raw] $snapshot")
+                        }
+                        .first { it.getNextSpeedLimit(SpeedLimitInfo.SpeedUnits.Miles) == 70 }
+                }
+            } catch (e: TimeoutCancellationException) {
+                throw AssertionError(
+                    "Timed out after ${timeoutMs}ms waiting for GB next speed limit 70 mph. Last observed emission: $lastObserved",
+                    e
+                )
+            }
+
+            assertEquals(113, info.getNextSpeedLimit(SpeedLimitInfo.SpeedUnits.Kilometers))
+            assertTrue("Expected raw next km/h near 113, was ${info.nextSpeedLimit}", info.nextSpeedLimit in 112.5f..113.5f)
+        } finally {
+            navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+            navigationManagerKtx.stopNavigation(navigation)
+        }
     }
 }

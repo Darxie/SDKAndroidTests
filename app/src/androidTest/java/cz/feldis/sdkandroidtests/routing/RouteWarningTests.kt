@@ -732,6 +732,88 @@ class RouteWarningTests : BaseTest() {
             this.find { it is RouteWarning.LocationWarning.EVPreferenceViolation } != null
         })
     }
+
+    @Test
+    fun noViolatedZone() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.15183, 17.18078)
+        val destination = GeoCoordinates(48.15064, 17.17934)
+        val routingOptions = RoutingOptions().apply {
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedZone } == null
+        })
+    }
+
+    @Test
+    fun violatedProhibitedAndTruckZone() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.18222, 17.02091)
+        val destination = GeoCoordinates(48.18269, 17.01773)
+        val routingOptions = RoutingOptions().apply {
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+            vehicleProfile = VehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedZone } != null
+        })
+    }
+
+    @Test
+    fun violatedProhibitedTruckZone() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(48.1512,17.0557)
+        val destination = GeoCoordinates(48.1521,17.056)
+        val routingOptions = RoutingOptions().apply {
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+            vehicleProfile = VehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+            }
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedTruckZone } != null
+        })
+    }
 }
 
 fun checkFirstTwoDigits(num: Double, expected: String): Boolean {
