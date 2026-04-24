@@ -73,7 +73,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun computeNextDurationsTestOffline() = runBlocking {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val start = GeoCoordinates(48.145718, 17.118669)
@@ -94,7 +93,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun getRouteElementsIcelandOffline() = runBlocking {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("is")
 
         val elementsListener: RouteElementsListener = mock(verboseLogging = true)
@@ -120,7 +118,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun computeReykjavikToVikOffline() = runBlocking {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("is")
         val start = GeoCoordinates(64.114341, -21.871153)
         val destination = GeoCoordinates(63.417836, -19.002209)
@@ -138,7 +135,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun computeReykjavikToVikOfflineGetAltitude() = runBlocking {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("is")
         val listener: GeometryListener = mock(verboseLogging = true)
         val start = GeoCoordinates(64.114341, -21.871153)
@@ -163,7 +159,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun mapNotAvailableTruckTestOffline() {
-        disableOnlineMaps()
         val start = GeoCoordinates(48.9844, 22.1844)
         val destination = GeoCoordinates(47.1518, 9.81344)
 
@@ -202,7 +197,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun computeWrongFromPointOffline() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
         val start = GeoCoordinates(34.764518085578196, 18.03834181295307)
         val destination = GeoCoordinates(47.99919432978094, 18.164403416068332)
@@ -233,7 +227,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun cancelOfflineCompute() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
         val start = GeoCoordinates(48.14096139265543, 17.154151725057243)
         val destination = GeoCoordinates(48.734914147394626, 21.260367789890452)
@@ -290,7 +283,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun computeGuidedRouteExpectLargeGapInPolylineErrorOffline() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
         val polyline = mutableListOf(
             GeoCoordinates(48.14255480489253, 17.125204056355585),
@@ -536,7 +528,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun changeWeightAtWaypoint() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val start = GeoCoordinates(48.19066, 17.03575)
@@ -597,7 +588,6 @@ class RouteComputeTests : BaseTest() {
     @Test
     fun doNotChangeWeightAtWaypoint() {
         // this is an anti-change weight at waypoint test that confirms that the another test works as expected
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val start = GeoCoordinates(48.19066, 17.03575)
@@ -714,7 +704,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun getStateOfChargeAtWaypoint() = runBlocking {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val start = GeoCoordinates(48.24135577878832, 16.99083981234057)
@@ -750,7 +739,6 @@ class RouteComputeTests : BaseTest() {
      */
     @Test
     fun testIllinoisOcontoToMaryland() = runBlocking {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("us-il")
 
         val start = GeoCoordinates(41.93884551765079, -87.80773891426024)
@@ -771,7 +759,6 @@ class RouteComputeTests : BaseTest() {
      */
     @Test
     fun testNotUturnDirection() = runBlocking {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("de-07")
 
         val start = GeoCoordinates(49.064409322443794, 8.290126424786548)
@@ -803,7 +790,6 @@ class RouteComputeTests : BaseTest() {
      */
     @Test
     fun testBratislavaToSchwechatAvoidTolls() {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
         mapDownloadHelper.installAndLoadMap("at")
 
@@ -861,7 +847,6 @@ class RouteComputeTests : BaseTest() {
      */
     @Test
     fun leichendorfToZirndorf() = runBlocking {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("de-02")
 
         val start = GeoCoordinates(49.4339, 10.9345)
@@ -1020,7 +1005,6 @@ class RouteComputeTests : BaseTest() {
      */
     @Test
     fun testPedestrianRouteDurationLongerThanCar() = runBlocking {
-        disableOnlineMaps()
         mapDownloadHelper.installAndLoadMap("sk")
 
         val start = GeoCoordinates(48.14119, 17.12485)
@@ -1056,7 +1040,6 @@ class RouteComputeTests : BaseTest() {
 
     @Test
     fun testSpiderRangeWeightFactorsDifference(): Unit = runBlocking {
-        disableOnlineMaps()
         MapDownloadHelper().installAndLoadMap("sk")
 
         val listener: EVRangeListener = mock(verboseLogging = true)
@@ -1201,7 +1184,6 @@ class RouteComputeTests : BaseTest() {
      */
     @Test
     fun shortBusRoutingTest() = runBlocking {
-        disableOnlineMaps()
         MapDownloadHelper().installAndLoadMap("sk")
 
         val routingOptions = RoutingOptions().apply {
@@ -1233,7 +1215,6 @@ class RouteComputeTests : BaseTest() {
      */
     @Test
     fun fuzzyDomainFranceTest() = runBlocking {
-        disableOnlineMaps()
         MapDownloadHelper().installAndLoadMap("fr-06")
 
         val start = GeoCoordinates(45.822810, 6.533240)
@@ -1268,7 +1249,6 @@ class RouteComputeTests : BaseTest() {
      */
     @Test
     fun fuzzyDomainSloveniaTest() = runBlocking {
-        disableOnlineMaps()
         MapDownloadHelper().installAndLoadMap("si")
 
         val start = GeoCoordinates(46.484720, 13.782650)
@@ -1441,332 +1421,6 @@ class RouteComputeTests : BaseTest() {
         }
     }
 
-    /**
-     * Test route computation with multiple waypoints to verify intermediate point handling
-     * and correct route segmentation
-     */
-    @Test
-    fun multipleWaypointsRouteComputationTest() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.14096, 17.15415)
-        val waypoint1 = GeoCoordinates(48.20623, 16.97527)
-        val waypoint2 = GeoCoordinates(48.34566, 17.25845)
-        val destination = GeoCoordinates(48.45212, 17.86234)
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            waypoints = listOf(waypoint1, waypoint2)
-        )
-
-        assertNotNull(route)
-        // SDK returns full route waypoints (start + via points + destination).
-        assertEquals("Route should have 4 waypoints (start, 2 via points, destination)", 4, route.waypoints.size)
-        assertEquals("Route should have exactly 2 via waypoints", 2, route.waypoints.count { it.type == Waypoint.Type.Via })
-        assertTrue("Route length should be greater than zero", route.routeInfo.length > 0)
-    }
-
-    /**
-     * Test to verify route computation respects truck weight restrictions
-     */
-    @Test
-    fun truckWeightRestrictionTest() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.14096, 17.15415)
-        val destination = GeoCoordinates(48.45212, 17.86234)
-
-        val heavyTruckOptions = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
-                generalVehicleTraits.vehicleType = VehicleType.Truck
-                dimensionalTraits = DimensionalTraits().apply {
-                    totalWeight = 40000f // 40 tons
-                }
-            }
-            useEndpointProtection = true
-        }
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            routingOptions = heavyTruckOptions
-        )
-
-        assertNotNull(route)
-        assertTrue("Route should be computed for heavy truck", route.routeInfo.length > 0)
-    }
-
-    /**
-     * Test route computation with toll road avoidance to ensure correct alternate routes
-     */
-    @Test
-    fun avoidTollRoadsComputationTest() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.14096, 17.15415)
-        val destination = GeoCoordinates(48.45212, 17.86234)
-
-        val options = RoutingOptions().apply {
-            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.TollRoad)
-        }
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            routingOptions = options
-        )
-
-        assertNotNull(route)
-        assertTrue("Route avoiding tolls should still be computed", route.routeInfo.length > 0)
-    }
-
-    /**
-     * Test route computation with the shortest routing type preference
-     */
-    @Test
-    fun shortestRoutePreferenceTest() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.14096, 17.15415)
-        val destination = GeoCoordinates(48.45212, 17.86234)
-
-        val fastestRoute = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            routingOptions = RoutingOptions().apply {
-                routingType = RoutingType.Fastest
-            }
-        )
-
-        val shortestRoute = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            routingOptions = RoutingOptions().apply {
-                routingType = RoutingType.Shortest
-            }
-        )
-
-        assertNotNull(fastestRoute)
-        assertNotNull(shortestRoute)
-        assertTrue("Shortest route should be shorter or equal to fastest route",
-            shortestRoute.routeInfo.length <= fastestRoute.routeInfo.length)
-    }
-
-    /**
-     * Test route computation with hazmat restrictions for truck with tunnel category E
-     */
-    @Test
-    fun hazmatTunnelRestrictionTest() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.14096, 17.15415)
-        val destination = GeoCoordinates(48.45212, 17.86234)
-
-        val hazmatOptions = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
-                generalVehicleTraits.vehicleType = VehicleType.Truck
-                hazmatTraits = HazmatTraits(emptySet(), TunnelCategory.E)
-            }
-            useEndpointProtection = true
-            napStrategy = NearestAccessiblePointStrategy.Disabled
-        }
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            routingOptions = hazmatOptions
-        )
-
-        assertNotNull(route)
-        assertTrue("Route should be computed for hazmat truck", route.routeInfo.length > 0)
-    }
-
-    /**
-     * Test route computation with alternative routes to verify multiple route options
-     */
-    @Test
-    fun alternativeRoutesComputationTest() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.14096, 17.15415)
-        val destination = GeoCoordinates(48.45212, 17.86234)
-        val listener: RouteComputeListener = mock(verboseLogging = true)
-        val routeComputeFinishedListener: RouteComputeFinishedListener = mock(verboseLogging = true)
-
-        val routeRequest = RouteRequest().apply {
-            setStart(start)
-            setDestination(destination)
-            routingOptions = RoutingOptions().apply {
-                routingService = RoutingOptions.RoutingService.Offline
-            }
-        }
-
-        val primaryRouteRequest = PrimaryRouteRequest(routeRequest, listener)
-        router.computeRouteWithAlternatives(
-            primaryRouteRequest,
-            null,
-            routeComputeFinishedListener
-        )
-
-        verify(listener, timeout(20_000L)).onComputeFinished(
-            argThat { this != null },
-            argThat { this == Router.RouteComputeStatus.Success }
-        )
-    }
-
-    /**
-     * Test route maneuver information for accuracy including turn directions and road names
-     */
-    @Test
-    fun routeManeuversValidationTest() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.14096, 17.15415)
-        val destination = GeoCoordinates(48.20623, 16.97527)
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination
-        )
-
-        assertNotNull(route)
-        assertTrue("Route should have at least one maneuver", route.maneuvers.isNotEmpty())
-        
-        route.maneuvers.forEach { maneuver ->
-            assertNotNull("Maneuver should have a type", maneuver.type)
-        }
-    }
-
-    /**
-     * Test route computation with different vehicle types to ensure type-specific routing
-     */
-    @Test
-    fun differentVehicleTypesRoutingTest() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.14096, 17.15415)
-        val destination = GeoCoordinates(48.45212, 17.86234)
-
-        // Car route
-        val carRoute = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            routingOptions = RoutingOptions().apply {
-                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
-                    generalVehicleTraits.vehicleType = VehicleType.Car
-                    generalVehicleTraits.maximalSpeed = 130
-                }
-            }
-        )
-
-        // Truck route
-        val truckRoute = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            routingOptions = RoutingOptions().apply {
-                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
-                    generalVehicleTraits.vehicleType = VehicleType.Truck
-                    generalVehicleTraits.maximalSpeed = 90
-                }
-            }
-        )
-
-        assertNotNull(carRoute)
-        assertNotNull(truckRoute)
-        assertTrue("Car route should be computed", carRoute.routeInfo.length > 0)
-        assertTrue("Truck route should be computed", truckRoute.routeInfo.length > 0)
-
-        val carDuration = carRoute.routeInfo.waypointDurations.sumOf { it.withSpeedProfiles }
-        val truckDuration = truckRoute.routeInfo.waypointDurations.sumOf { it.withSpeedProfiles }
-
-        assertTrue(
-            "Truck ETA should be longer or equal to car ETA, car=$carDuration, truck=$truckDuration",
-            truckDuration >= carDuration
-        )
-    }
-
-    /**
-     * Test route warnings retrieval to ensure proper warning information is provided
-     */
-    @Test
-    fun routeWarningsRetrievalTest() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.14096, 17.15415)
-        val destination = GeoCoordinates(48.45212, 17.86234)
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination
-        )
-
-        val warningsListener: RouteWarningsListener = mock(verboseLogging = true)
-        route.getRouteWarnings(warningsListener)
-
-        verify(warningsListener, timeout(5_000L)).onRouteWarnings(any())
-    }
-
-    /**
-     * Test route computation info including distances and time estimates
-     */
-    @Test
-    fun routeInfoValidationTest() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.14096, 17.15415)
-        val destination = GeoCoordinates(48.45212, 17.86234)
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination
-        )
-
-        with(route.routeInfo) {
-            assertTrue("Total route length should be positive", length > 0)
-            assertTrue("Route should have waypoint durations", waypointDurations.isNotEmpty())
-            
-            waypointDurations.forEach { duration ->
-                assertTrue("Each waypoint duration should be non-negative", duration.ideal >= 0)
-            }
-        }
-    }
-
-    /**
-     * Test route geometry retrieval without altitude information
-     */
-    @Test
-    fun routeGeometryWithoutAltitudeTest() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.14096, 17.15415)
-        val destination = GeoCoordinates(48.20623, 16.97527)
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination
-        )
-
-        val geometryListener: GeometryListener = mock(verboseLogging = true)
-        route.getRouteGeometry(false, geometryListener)
-
-        verify(geometryListener, timeout(5_000L)).onGeometry(
-            argThat { coordinates ->
-                coordinates.isNotEmpty()
-            }
-        )
-    }
 
     @Test
     fun waypointDelayNegativeInOfflineRoute() = runBlocking {

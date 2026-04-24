@@ -25,7 +25,6 @@ import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
 import com.sygic.sdk.vehicletraits.powertrain.FuelType
 import com.sygic.sdk.vehicletraits.powertrain.PowerRange
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
-import cz.feldis.sdkandroidtests.BaseTest
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -33,7 +32,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 
-class RouteComputeHelper : BaseTest() {
+class RouteComputeHelper {
     private val router = runBlocking { RouterProvider.getInstance() }
 
     suspend fun onlineRouteCompute(

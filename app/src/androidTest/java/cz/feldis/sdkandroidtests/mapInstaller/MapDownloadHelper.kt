@@ -3,12 +3,11 @@ package cz.feldis.sdkandroidtests.mapInstaller
 import android.util.Log
 import com.sygic.sdk.map.MapInstaller
 import com.sygic.sdk.map.MapInstallerProvider
-import cz.feldis.sdkandroidtests.BaseTest
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 
-class MapDownloadHelper : BaseTest() {
+class MapDownloadHelper {
 
     private val installer = runBlocking { MapInstallerProvider.getInstance() }
 
