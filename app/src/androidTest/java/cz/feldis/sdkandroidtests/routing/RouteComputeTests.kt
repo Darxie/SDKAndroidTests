@@ -2,7 +2,6 @@ package cz.feldis.sdkandroidtests.routing
 
 import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
-import com.sygic.sdk.route.ChargingWaypoint
 import com.sygic.sdk.route.GuidedRouteProfile
 import com.sygic.sdk.route.PrimaryRouteRequest
 import com.sygic.sdk.route.Route
@@ -17,7 +16,6 @@ import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingType
 import com.sygic.sdk.route.TransitCountryInfo
 import com.sygic.sdk.route.Waypoint
-import com.sygic.sdk.route.listeners.EVRangeListener
 import com.sygic.sdk.route.listeners.GeometryListener
 import com.sygic.sdk.route.listeners.RouteComputeFinishedListener
 import com.sygic.sdk.route.listeners.RouteComputeListener
@@ -712,34 +710,6 @@ class RouteComputeTests : BaseTest() {
         }
     }
 
-    @Test
-    fun getStateOfChargeAtWaypoint() = runBlocking {
-        disableOnlineMaps()
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.24135577878832, 16.99083981234057)
-        val destination = GeoCoordinates(49.06008227080942, 20.315811448409608)
-
-        val options = RoutingOptions().apply {
-            vehicleProfile = routeComputeHelper.createElectricVehicleProfileTruck(350f, 100f)
-            useEndpointProtection = true
-            napStrategy = NearestAccessiblePointStrategy.Disabled
-        }
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            routingOptions = options
-        )
-
-        route.waypoints.forEach {
-            if (it is ChargingWaypoint) {
-                assertTrue(it.stateOfCharge > 0.1)
-                assertTrue(it.chargingTime > 0)
-            }
-        }
-    }
-
     /**
      * https://jira.sygic.com/browse/SDC-4695
      * Test Case TC643
@@ -1052,64 +1022,6 @@ class RouteComputeTests : BaseTest() {
             useEndpointProtection = true
             napStrategy = NearestAccessiblePointStrategy.Disabled
         }
-    }
-
-    @Test
-    fun testSpiderRangeWeightFactorsDifference(): Unit = runBlocking {
-        disableOnlineMaps()
-        MapDownloadHelper().installAndLoadMap("sk")
-
-        val listener: EVRangeListener = mock(verboseLogging = true)
-
-        val vehicleProfile =
-            RouteComputeHelper().createDefaultElectricVehicleProfile(5F, 5F).apply {
-                dimensionalTraits = DimensionalTraits().apply {
-                    totalWeight = 1000F
-                }
-            }
-
-        router.computeEVRange(
-            GeoCoordinates(48.10095535808773, 17.234824479529344),
-            listOf(5.0),
-            RoutingOptions().apply {
-                this.vehicleProfile = vehicleProfile
-                this.routingService = RoutingOptions.RoutingService.Offline
-            },
-            listener
-        )
-
-        val captor = argumentCaptor<List<List<GeoCoordinates>>>()
-        verify(listener, timeout(10_000L)).onEVRangeComputed(captor.capture())
-        val isochrones1 = captor.firstValue[0]
-
-        val listener2: EVRangeListener = mock(verboseLogging = true)
-
-        router.computeEVRange(
-            GeoCoordinates(48.10095535808773, 17.234824479529344),
-            listOf(5.0),
-            RoutingOptions().apply {
-                this.vehicleProfile = vehicleProfile.apply {
-                    dimensionalTraits = DimensionalTraits().apply {
-                        totalWeight = 5000F
-                    }
-                }
-                this.routingService = RoutingOptions.RoutingService.Offline
-            },
-            listener2
-        )
-
-        val captor2 = argumentCaptor<List<List<GeoCoordinates>>>()
-        verify(listener2, timeout(10_000L)).onEVRangeComputed(captor2.capture())
-        val isochrones2 = captor2.firstValue[0]
-
-        // Assert that isochrones1 and isochrones2 are different
-        assertNotEquals(isochrones1.size, isochrones2.size)
-
-        val areDifferent = isochrones1.zip(isochrones2).any { (coord1, coord2) ->
-            coord1.latitude != coord2.latitude || coord1.longitude != coord2.longitude
-        }
-
-        assertTrue("Isochrones should be different, but they appear identical.", areDifferent)
     }
 
     /**

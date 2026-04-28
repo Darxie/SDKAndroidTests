@@ -171,6 +171,7 @@ abstract class BaseTest {
             logging {
                 addLoggingItem(loggingItemBuilder)
             }
+            rendererSettings().useVulkan(true)
         }.build()
     }
 
