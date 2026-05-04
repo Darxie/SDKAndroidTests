@@ -453,15 +453,27 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
     // region ----- Acceptance A: core EV contract -----
 
     /**
-     * The SDK contract for automatic charging: after planned stops, the driver reaches the
-     * destination with battery at or above the configured reserve threshold.
+     * The SDK contract for automatic charging: when the trip is feasible, after planned stops the
+     * driver reaches the destination with battery at or above the configured reserve threshold.
+     *
+     * Uses a realistic 0.2 kWh/km consumption (instead of the inflated 1.0 kWh/km used elsewhere
+     * for forcing many charging stops) so that the long cross-Slovakia route is clearly feasible
+     * with the chosen battery — otherwise the SDK's best-effort behaviour kicks in and emits
+     * LowBatteryAtDestination / InsufficientBatteryCharge warnings instead of meeting the contract.
      */
     @Test
     fun routeArrivesAboveReserveThreshold() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
 
-        val options = smallBatteryCarOptions()
-        val profile = options.vehicleProfile!!
+        val profile = buildCarElectricProfile(
+            batteryCapacity = 50F,
+            remainingCapacity = 15F,
+            consumptionData = ConsumptionData(
+                consumptionCurve = mapOf(1.0 to 0.2, 100.0 to 0.2),
+                weightFactors = mapOf(1000.0 to 0.5, 5000.0 to 1.0, 10000.0 to 1.0)
+            )
+        )
+        val options = evRoutingOptions(profile)
         val powertrain = profile.powertrainTraits as PowertrainTraits.ElectricPowertrain
         val reserveThreshold = powertrain.chargingPreferences.reserveThreshold
         val capacity = powertrain.battery.capacity
@@ -472,10 +484,11 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
         val destination = route.waypoints.last()
         val arrivalKwh = router.getRemainingBatteryCapacityAt(destination, profile, route)
         val arrivalSoc = arrivalKwh / capacity
+        val warnings = route.getRouteWarnings()
 
         assertTrue(
             "Arrival SoC ($arrivalSoc) must be >= reserve threshold ($reserveThreshold). " +
-                    "Arrival kWh=$arrivalKwh, capacity=$capacity",
+                    "Arrival kWh=$arrivalKwh, capacity=$capacity, warnings=$warnings",
             arrivalSoc >= reserveThreshold
         )
     }
