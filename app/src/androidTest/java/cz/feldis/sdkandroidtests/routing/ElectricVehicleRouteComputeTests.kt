@@ -4,6 +4,7 @@ import com.sygic.sdk.navigation.explorer.RouteExplorerProvider
 import com.sygic.sdk.navigation.explorer.results.ExploreChargingStationsOnRouteData
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.ChargingWaypoint
+import com.sygic.sdk.route.Route
 import com.sygic.sdk.route.RouteRequest
 import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.Router
@@ -48,10 +49,18 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
     private lateinit var routeComputeHelper: RouteComputeHelper
     private lateinit var router: Router
 
-    // Long cross-Slovakia route that exceeds the range of a small EV battery — reliably forces
-    // at least one charging stop.
+    // Long cross-Slovakia route that exceeds the range of a small EV battery — used for tests
+    // that need many (≥5) charging stops or compare two compute configurations on a long trip.
+    // Computing this is expensive (offline EV detour search), so it is *not* shared.
     private val longRouteStart = GeoCoordinates(48.24135577878832, 16.99083981234057)
     private val longRouteDestination = GeoCoordinates(49.06008227080942, 20.315811448409608)
+
+    // Medium-length Bratislava → Nitra-area route (~80 km). With smallBatteryCarOptions it forces
+    // 2–3 charging stops, which is enough for ordering / presence / consistency assertions but
+    // computes much faster than the long cross-Slovakia route. Used as the shared base route for
+    // the cluster of tests that only inspect properties of an EV-charged route.
+    private val mediumRouteStart = GeoCoordinates(48.13435749214434, 17.139510367591342)
+    private val mediumRouteDestination = GeoCoordinates(48.31550136420124, 18.050290453922088)
 
     // Short Bratislava route (~3 km) used for LowBatteryAtDestination where we need the route
     // to be reachable but arrive below the destination threshold.
@@ -64,6 +73,28 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
         routeComputeHelper = RouteComputeHelper()
         router = runBlocking { RouterProvider.getInstance() }
         disableOnlineMaps()
+    }
+
+    /**
+     * Returns the medium-length route computed with [smallBatteryCarOptions], computing it once
+     * per test-class run and caching the result. Tests that only need a route with a few charging
+     * waypoints (and don't mutate the route) should call this instead of recomputing — avoids
+     * paying for an EV detour search per test.
+     */
+    private suspend fun smallBatteryMediumRoute(): Route {
+        sharedSmallBatteryMediumRoute?.let { return it }
+        mapDownloadHelper.installAndLoadMap("sk")
+        val route = routeComputeHelper.offlineRouteCompute(
+            mediumRouteStart, mediumRouteDestination,
+            routingOptions = smallBatteryCarOptions()
+        )
+        sharedSmallBatteryMediumRoute = route
+        return route
+    }
+
+    companion object {
+        @Volatile
+        private var sharedSmallBatteryMediumRoute: Route? = null
     }
 
     // region ----- Tests moved from RouteComputeTests -----
@@ -158,19 +189,13 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
      */
     @Test
     fun getChargingWaypointsMatchesRouteWaypoints() = runBlocking {
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            longRouteStart,
-            longRouteDestination,
-            routingOptions = smallBatteryCarOptions()
-        )
+        val route = smallBatteryMediumRoute()
 
         val fromRouter = router.getChargingWaypoints(route)
         val fromRouteWaypoints = route.waypoints.filterIsInstance<ChargingWaypoint>()
 
         assertTrue(
-            "Expected at least one charging waypoint on a long route with a small battery",
+            "Expected at least one charging waypoint on a route with a small battery",
             fromRouter.isNotEmpty()
         )
         assertEquals(fromRouteWaypoints.size, fromRouter.size)
@@ -182,13 +207,8 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
      */
     @Test
     fun remainingBatteryCapacityDecreasesBeforeFirstChargingStop() = runBlocking {
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val options = smallBatteryCarOptions()
-        val route = routeComputeHelper.offlineRouteCompute(
-            longRouteStart, longRouteDestination, routingOptions = options
-        )
-        val profile = options.vehicleProfile!!
+        val route = smallBatteryMediumRoute()
+        val profile = smallBatteryCarOptions().vehicleProfile!!
 
         val firstCharging = route.waypoints.filterIsInstance<ChargingWaypoint>().firstOrNull()
         assertNotNull("Expected at least one charging waypoint", firstCharging)
@@ -210,12 +230,7 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
      */
     @Test
     fun chargingWaypointHasPositiveChargingPower() = runBlocking {
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            longRouteStart, longRouteDestination,
-            routingOptions = smallBatteryCarOptions()
-        )
+        val route = smallBatteryMediumRoute()
         val chargingWaypoints = route.waypoints.filterIsInstance<ChargingWaypoint>()
         assertTrue("Expected at least one charging waypoint", chargingWaypoints.isNotEmpty())
         chargingWaypoints.forEach {
@@ -231,12 +246,7 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
      */
     @Test
     fun autoGeneratedChargingWaypointsAreSuggestedByRouting() = runBlocking {
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            longRouteStart, longRouteDestination,
-            routingOptions = smallBatteryCarOptions()
-        )
+        val route = smallBatteryMediumRoute()
         val chargingWaypoints = route.waypoints.filterIsInstance<ChargingWaypoint>()
         assertTrue("Expected at least one charging waypoint", chargingWaypoints.isNotEmpty())
         chargingWaypoints.forEach {
@@ -273,23 +283,17 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
     }
 
     /**
-     * The default value of useAutomaticChargingWaypoints is true, and a long trip with a small
+     * The default value of useAutomaticChargingWaypoints is true, and a trip with a small
      * battery yields at least one charging waypoint.
      */
     @Test
     fun enabledAutomaticChargingWaypointsProducesChargingWaypoint() = runBlocking {
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val options = smallBatteryCarOptions()
         assertTrue(
             "useAutomaticChargingWaypoints must default to true",
-            options.useAutomaticChargingWaypoints
+            smallBatteryCarOptions().useAutomaticChargingWaypoints
         )
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            longRouteStart, longRouteDestination, routingOptions = options
-        )
-        val chargingWaypoints = route.waypoints.filterIsInstance<ChargingWaypoint>()
+        val chargingWaypoints =
+            smallBatteryMediumRoute().waypoints.filterIsInstance<ChargingWaypoint>()
         assertTrue(
             "Expected at least one auto-generated charging waypoint",
             chargingWaypoints.isNotEmpty()
@@ -494,17 +498,12 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
     }
 
     /**
-     * A long EV trip must include non-zero driving duration plus non-zero charging time, and
-     * driving time must dominate charging time (we expect hours of driving vs. minutes of charging).
+     * An EV trip needing at least one charging stop must have non-zero driving duration plus
+     * non-zero charging time, and driving time must dominate charging time.
      */
     @Test
     fun totalDurationIncludesChargingTime() = runBlocking {
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            longRouteStart, longRouteDestination,
-            routingOptions = smallBatteryCarOptions()
-        )
+        val route = smallBatteryMediumRoute()
         val chargingWaypoints = route.waypoints.filterIsInstance<ChargingWaypoint>()
         assertTrue("Expected at least one charging stop", chargingWaypoints.isNotEmpty())
 
@@ -527,13 +526,7 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
      */
     @Test
     fun chargingWaypointsInAscendingDistanceOrder() = runBlocking {
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            longRouteStart, longRouteDestination,
-            routingOptions = smallBatteryCarOptions()
-        )
-        val distances = route.waypoints.filterIsInstance<ChargingWaypoint>()
+        val distances = smallBatteryMediumRoute().waypoints.filterIsInstance<ChargingWaypoint>()
             .map { it.distanceFromStart }
         assertTrue("Expected at least one charging waypoint", distances.isNotEmpty())
         assertEquals(
@@ -549,13 +542,8 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
      */
     @Test
     fun chargingWaypointsHaveValidPlace() = runBlocking {
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val route = routeComputeHelper.offlineRouteCompute(
-            longRouteStart, longRouteDestination,
-            routingOptions = smallBatteryCarOptions()
-        )
-        val chargingWaypoints = route.waypoints.filterIsInstance<ChargingWaypoint>()
+        val chargingWaypoints =
+            smallBatteryMediumRoute().waypoints.filterIsInstance<ChargingWaypoint>()
         assertTrue("Expected at least one charging waypoint", chargingWaypoints.isNotEmpty())
         chargingWaypoints.forEach { cw ->
             val place = cw.place
@@ -785,13 +773,8 @@ class ElectricVehicleRouteComputeTests : BaseTest() {
      */
     @Test
     fun exploreChargingStationsIncludesRouteWaypointStations() = runBlocking {
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val options = smallBatteryCarOptions()
-        val profile = options.vehicleProfile!!
-        val route = routeComputeHelper.offlineRouteCompute(
-            longRouteStart, longRouteDestination, routingOptions = options
-        )
+        val route = smallBatteryMediumRoute()
+        val profile = smallBatteryCarOptions().vehicleProfile!!
         val routeStations = route.waypoints.filterIsInstance<ChargingWaypoint>()
         assertTrue("Need charging waypoints to compare", routeStations.isNotEmpty())
 
