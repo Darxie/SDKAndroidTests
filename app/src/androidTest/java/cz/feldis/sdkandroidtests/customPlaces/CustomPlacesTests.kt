@@ -47,6 +47,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Ignore
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
@@ -103,6 +104,35 @@ class CustomPlacesTests : BaseTest() {
         assertEquals(cpManager.getMode(), CustomPlacesManager.Mode.ONLINE)
         cpManager.setMode(CustomPlacesManager.Mode.OFFLINE)
         assertEquals(cpManager.getMode(), CustomPlacesManager.Mode.OFFLINE)
+    }
+
+    /**
+     * After installing offline custom places from a JSON dataset, autocomplete must locate a
+     * place by its Eurowag id (EW id). This proves the EW id is indexed as a search token and
+     * the place's metadata (title, subtitle, category) round-trips through the offline store.
+     */
+    @Ignore("https://jira.sygic.com/browse/CI-4100")
+    @Test
+    fun autocompleteFindsOfflineCustomPlaceByEurowagId() = runBlocking {
+        val installResult = cpManager.installOfflinePlacesFromJson(readJson("svk_custom_places.json"))
+        assertEquals(
+            "Expected SUCCESS install, got ${installResult.result} (${installResult.message})",
+            CustomPlacesManager.InstallResult.SUCCESS,
+            installResult.result
+        )
+
+        val nearbyCoordinates = GeoCoordinates(48.2718, 17.7697)
+        val ewId = "SK095"
+        val results = searchHelper.offlineAutocompleteCustomPlaces(
+            SearchRequest(searchInput = ewId, location = nearbyCoordinates)
+        )
+        assertTrue(
+            "Expected at least one autocomplete result for EW id '$ewId', got none",
+            results.isNotEmpty()
+        )
+
+        val match = results.first()
+        assertEquals("Eurowag - Malacky", match.title)
     }
 
     @Test
