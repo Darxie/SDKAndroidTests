@@ -1,6 +1,106 @@
 {
   "add_or_update": [
     {
+      "search_priority": 9,
+      "display_name": [
+        {
+          "search_tokens": [
+            {
+              "index": "Eurowag - Malacky Priemyselná Malacky 901 01 SK",
+              "refinement": ""
+            },
+            {
+              "index": "SK095",
+              "refinement": ""
+            },
+            {
+              "index": "filkooo",
+              "refinement": ""
+            }
+          ],
+          "title": "Eurowag - Malacky",
+          "subtitle": "Priemyselná, 901 01, Malacky"
+        }
+      ],
+      "place_data": [
+        {
+          "key": "EWLocationId",
+          "values": [
+            "SK095"
+          ]
+        },
+        {
+          "key": "SYStreet",
+          "values": [
+            "Priemyselná"
+          ]
+        },
+        {
+          "key": "SYCity",
+          "values": [
+            "Malacky"
+          ]
+        },
+        {
+          "key": "SYPostal",
+          "values": [
+            "901 01"
+          ]
+        },
+        {
+          "key": "SYIso",
+          "values": [
+            "SK"
+          ]
+        },
+        {
+          "key": "SYOpenHours",
+          "values": [
+            "[[[(h0m0){h24m0}]*[(t2){d1}]]+[[(h0m0){h24m0}]*[(t3){d1}]]+[[(h0m0){h24m0}]*[(t4){d1}]]+[[(h0m0){h24m0}]*[(t5){d1}]]+[[(h0m0){h24m0}]*[(t6){d1}]]+[[(h0m0){h24m0}]*[(t7){d1}]]+[[(h0m0){h24m0}]*[(t1){d1}]]]"
+          ]
+        },
+        {
+          "key": "EWOpenHours",
+          "values": [
+            "00:00-24:00",
+            "00:00-24:00",
+            "00:00-24:00",
+            "00:00-24:00",
+            "00:00-24:00",
+            "00:00-24:00",
+            "00:00-24:00"
+          ]
+        },
+        {
+          "key": "EWFuelAttributes",
+          "values": [
+            "cameraRecord",
+            "underThreeAndHalfTons",
+            "overThreeAndHalfTons",
+            "selfService",
+            "ewPrime",
+            "nonstop",
+            "ewTruckPark"
+          ]
+        },
+        {
+          "key": "EWProducts",
+          "values": [
+            "adBlueDispenser",
+            "hvo100",
+            "dieselRegular"
+          ]
+        }
+      ],
+      "id": "55e8927e-8c3a-4e16-b62c-c4d754d06227",
+      "iso": "sk",
+      "location": "48.42155555555556,17.032333333333334",
+      "category": "EWPayFuelStation",
+      "fields": {
+        "0": "SK095"
+      }
+    },
+    {
       "id": "00000000-0000-0000-0000-000020e90001",
       "iso": "sk",
       "location": "48.25835,17.75454",
