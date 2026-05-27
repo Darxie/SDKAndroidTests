@@ -183,6 +183,7 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.awaitRenderedFrames(2)
 
         val original = MapMarker.at(markerCoord)
+            .setAnchorPosition(0.5f, 0.7f)
             .withIcon(makeIconBitmap())
             .withLabel(StyledText("before"))
             .build()
@@ -192,6 +193,7 @@ class MapMarkerUpdateTests : BaseTest() {
         assertTrue(originalId != 0)
 
         val updated = original.toBuilder()
+            .setAnchorPosition(0.5f, 0.7f)
             .withLabel(StyledText("after"))
             .build()
         assertTrue(mapView.mapDataModel.updateMapObject(updated))
