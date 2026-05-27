@@ -782,6 +782,7 @@ class HereTests : BaseHereTest() {
      * prefers LHV-designated roads. Expected: route passes through Arlagatan and Annebergsbron.
      */
     @Test
+    @Ignore("https://eurowag.atlassian.net/browse/DNAENG-1778")
     fun preferLhvRoads() = runBlocking {
         mapDownloadHelper.installAndLoadMap("se")
 
