@@ -13,6 +13,7 @@ import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingService
+import com.sygic.sdk.route.listeners.GeometryListener
 import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.route.simulator.RouteDemonstrateSimulatorProvider
 import com.sygic.sdk.search.ReverseGeocoder
@@ -22,6 +23,7 @@ import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.dimensional.SemiTrailer
 import com.sygic.sdk.vehicletraits.dimensional.Trailer
+import com.sygic.sdk.vehicletraits.dimensional.WheeledVehicle
 import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
@@ -62,7 +64,7 @@ class HereTests : BaseHereTest() {
         mapDownloadHelper = MapDownloadHelper()
         routeComputeHelper = RouteComputeHelper()
         navigation = runBlocking { NavigationManagerProvider.getInstance() }
-        disableOnlineMaps()
+        // online maps disabled during init
     }
 
     @Test
@@ -771,5 +773,69 @@ class HereTests : BaseHereTest() {
         verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
             this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedZone } != null
         })
+    }
+    /**
+     * https://jira.sygic.com/browse/SDC-13008
+     * TC930
+     *
+     * Verifies that when routing an LHV (Long Heavy Vehicle) in Sweden, the route
+     * prefers LHV-designated roads. Expected: route passes through Arlagatan and Annebergsbron.
+     */
+    @Test
+    fun preferLhvRoads() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("se")
+
+        val start = GeoCoordinates(57.724620, 12.941670)
+        val destination = GeoCoordinates(57.683610, 12.793250)
+
+        val vehicleProfile = VehicleProfile().apply {
+            generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Truck
+                maximalSpeed = 90
+            }
+            dimensionalTraits = DimensionalTraits().apply {
+                totalLength = 16500
+                totalWeight = 40000F
+                totalHeight = 4000
+                totalWidth = 2500
+                wheeledVehicle = WheeledVehicle(listOf(Axle(2, 10000F, 3)))
+                semiTrailer = SemiTrailer(0, false, listOf(Axle(2, 10000F, 3)))
+            }
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        val listener: GeometryListener = mock(verboseLogging = true)
+        route.getRouteGeometry(true, listener)
+
+        val arlagatanBBox = GeoBoundingBox(
+            GeoCoordinates(57.71904, 12.94517),
+            GeoCoordinates(57.71704, 12.94717)
+        )
+        val annebergsbronBBox = GeoBoundingBox(
+            GeoCoordinates(57.71729, 12.93672),
+            GeoCoordinates(57.71529, 12.93872)
+        )
+
+        val geometryCaptor = argumentCaptor<List<GeoCoordinates>>()
+        verify(listener, timeout(5_000L)).onGeometry(geometryCaptor.capture())
+        val geometry = geometryCaptor.firstValue
+
+        assertTrue(
+            "Route should pass through Arlagatan (57.71804, 12.94617)",
+            geometry.any { GeoUtils.isPointInBoundingBox(it, arlagatanBBox) }
+        )
+        assertTrue(
+            "Route should pass through Annebergsbron (57.71629, 12.93772)",
+            geometry.any { GeoUtils.isPointInBoundingBox(it, annebergsbronBBox) }
+        )
     }
 }

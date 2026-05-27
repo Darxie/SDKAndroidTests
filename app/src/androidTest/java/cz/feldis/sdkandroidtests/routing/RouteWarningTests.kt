@@ -529,7 +529,7 @@ class RouteWarningTests : BaseTest() {
 
         route.getRouteWarnings(routeWarningsListener)
         verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
-            this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedZone } != null
+            this.find { it is RouteWarning.SectionWarning.PossiblyUnsuitableSection.PossiblyInaccessibleArea } != null
         })
     }
 

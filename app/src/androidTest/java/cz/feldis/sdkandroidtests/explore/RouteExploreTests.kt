@@ -24,6 +24,7 @@ import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
@@ -53,6 +54,34 @@ class RouteExploreTests : BaseTest() {
     private lateinit var trafficManager: TrafficManager
     private lateinit var routeExplorer: RouteExplorer
     private val scope = CoroutineScope(Dispatchers.Unconfined)
+
+    /**
+     * Polls Mockito's invocation list waiting for a terminal callback on
+     * [RouteExplorer.OnExplorePlacesOnRouteListener]: either `onExplorePlacesError(_)`
+     * or `onExplorePlacesLoaded(_, 100)`. Returns `true` if such a callback arrived
+     * within [timeoutMs], `false` otherwise.
+     *
+     * Use this after the reload storm in DNAENG-1571 tests: the fix in 0d0ac936c2b
+     * moves the analyzer's fail/recover dispatch to the persistent dispatcher so a
+     * locked core thread pool can no longer swallow the terminal callback. Without
+     * the fix the analyzer can hang with no terminal callback at all.
+     */
+    private suspend fun awaitTerminalExploreCallback(
+        listener: RouteExplorer.OnExplorePlacesOnRouteListener,
+        timeoutMs: Long = 15_000
+    ): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            val invocations = Mockito.mockingDetails(listener).invocations
+            val terminal = invocations.any { inv ->
+                inv.method.name == "onExplorePlacesError" ||
+                (inv.method.name == "onExplorePlacesLoaded" && inv.arguments.getOrNull(1) == 100)
+            }
+            if (terminal) return true
+            delay(200)
+        }
+        return false
+    }
 
     override fun setUp() {
         super.setUp()
@@ -248,6 +277,214 @@ class RouteExploreTests : BaseTest() {
         // Ensure that the first and last invocation checks were performed
         assertTrue(firstInvocationSize >= 0)  // Ensure that the first invocation was recorded
         assertTrue(lastInvocationSize >= 0)   // Ensure that the last invocation was recorded
+    }
+
+    /**
+     * Regression for DNAENG-1571 (SDK commit 0d0ac936c2b): a data race in
+     * PoiOnRouteAnalyzer. Before the fix, its `.fail(...)` handler was scheduled on the
+     * regular dispatcher, which is locked during map reload — the failure callback then
+     * either ran on the wrong (core) pool or was dropped entirely, leaving the analyzer
+     * stuck without `Reset()`/`Finished()` being called and subsequent invocations
+     * crashing or hanging. The fix routes the failure path through
+     * `PersistentDispatcherLocator` via `.recover(...)`, so cleanup always lands on a
+     * dispatcher that is not locked during map reload.
+     *
+     * The test boots navigation + simulator + `OnPlaceListener` (which is what drives
+     * `PoiOnRouteAnalyzer`), then unloads and reloads the Slovak map several times while
+     * the analyzer is running. A regression would manifest as a native crash, a deadlock,
+     * or a stuck analyzer that fails to deliver place updates after the reload storm
+     * settles.
+     */
+    @Test
+    fun reloadSkMapDuringNavigationDoesNotCrashPoiAnalyzer() = runBlocking {
+        disableOnlineMaps()
+        val mapDownloadHelper = MapDownloadHelper()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val route = routeCompute.offlineRouteCompute(
+            start = GeoCoordinates(48.15343979881289, 17.13600525926161), // Bratislava
+            destination = GeoCoordinates(48.71977, 21.25785)              // Košice
+        )
+
+        val placeListener: NavigationManager.OnPlaceListener = mock(verboseLogging = true)
+        val navigation = NavigationManagerProvider.getInstance()
+        navigation.addOnPlaceListener(placeListener)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val simulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.startSimulator(simulatorAdapter)
+
+        // Let the analyzer establish itself before we start yanking the map out.
+        delay(1500)
+
+        // Stress the analyzer's failure path: unload + reload the Slovak map repeatedly
+        // while navigation (and PoiOnRouteAnalyzer behind it) is active.
+        val mapInstaller = MapInstallerProvider.getInstance()
+        repeat(10) {
+            mapInstaller.unloadMap("sk")
+            delay(200)
+            mapInstaller.loadMap("sk")
+            delay(400)
+        }
+
+        // Allow any in-flight analyzer task to finish/recover cleanly. This is a smoke
+        // test — its job is just to prove that the reload storm does not crash native
+        // code (SIGSEGV / SIGABRT inside the analyzer). The companion explorer test
+        // [reloadSkMapDuringExplorePlacesOnRouteDoesNotCrashAnalyzer] makes the
+        // deterministic terminal-callback assertion; the streaming OnPlaceListener
+        // here doesn't fire predictably enough after a reload to support that check.
+        delay(2000)
+
+        navigationManagerKtx.stopSimulator(simulatorAdapter)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigation.removeOnPlaceListener(placeListener)
+    }
+
+    /**
+     * Sister test to [reloadSkMapDuringNavigationDoesNotCrashPoiAnalyzer]: a cross-border
+     * route (Košice → Salzburg) with the Austrian map being reloaded during navigation.
+     * `PoiOnRouteAnalyzer` chunks the entire remaining route into per-rect analyses, so
+     * even early in the journey it queries map data from Austria — reloading `at`
+     * exercises the same race the fix targets, but on a foreign country's map.
+     *
+     * Requires `sk`, `cz`, `at` offline maps (Košice → Brno → Vienna → Salzburg is the
+     * most natural offline-routable path with these three).
+     */
+    @Test
+    fun reloadAtMapDuringNavigationDoesNotCrashPoiAnalyzer() = runBlocking {
+        disableOnlineMaps()
+        val mapDownloadHelper = MapDownloadHelper()
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("cz")
+        mapDownloadHelper.installAndLoadMap("at")
+
+        val route = routeCompute.offlineRouteCompute(
+            start = GeoCoordinates(48.71977, 21.25785), // Košice
+            destination = GeoCoordinates(47.80949, 13.05501) // Salzburg
+        )
+
+        val placeListener: NavigationManager.OnPlaceListener = mock(verboseLogging = true)
+        val navigation = NavigationManagerProvider.getInstance()
+        navigation.addOnPlaceListener(placeListener)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val simulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.startSimulator(simulatorAdapter)
+
+        // Let the analyzer start crunching the Austrian portion of the route.
+        delay(1500)
+
+        // Stress the analyzer's failure path against the Austrian map specifically.
+        val mapInstaller = MapInstallerProvider.getInstance()
+        repeat(10) {
+            mapInstaller.unloadMap("at")
+            delay(200)
+            mapInstaller.loadMap("at")
+            delay(400)
+        }
+
+        // Smoke-only: see comment in reloadSkMapDuringNavigationDoesNotCrashPoiAnalyzer.
+        delay(2000)
+
+        navigationManagerKtx.stopSimulator(simulatorAdapter)
+        navigationManagerKtx.stopNavigation(navigation)
+        navigation.removeOnPlaceListener(placeListener)
+    }
+
+    /**
+     * Companion to [reloadSkMapDuringNavigationDoesNotCrashPoiAnalyzer] that triggers the
+     * same analyzer through [RouteExplorer.explorePlacesOnRoute] instead of via
+     * `NavigationManager.addOnPlaceListener`. The route-explorer path doesn't need an
+     * active navigation/simulator — a bare route is enough to drive the analyzer along
+     * the rects.
+     */
+    @Test
+    fun reloadSkMapDuringExplorePlacesOnRouteDoesNotCrashAnalyzer() = runBlocking {
+        disableOnlineMaps()
+        val mapDownloadHelper = MapDownloadHelper()
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val route = routeCompute.offlineRouteCompute(
+            start = GeoCoordinates(48.15343979881289, 17.13600525926161), // Bratislava
+            destination = GeoCoordinates(48.71977, 21.25785)              // Košice
+        )
+
+        val placeListener: RouteExplorer.OnExplorePlacesOnRouteListener = mock(verboseLogging = true)
+        val categories = listOf("SYRestArea", "SYPetrolStation")
+
+        // Kick off the analyzer; it processes the route rect-by-rect asynchronously.
+        routeExplorer.explorePlacesOnRoute(route, categories, placeListener)
+
+        // Let the analyzer actually start working before we yank the map out from under it.
+        // Without this warmup the very first unloadMap fires before any rect has been
+        // processed and the analyzer simply reports REQUEST_CANCELED — that's not the
+        // path the underlying fix protects.
+        delay(1000)
+
+        // Stress the analyzer's failure path: unload + reload the Slovak map repeatedly
+        // while the rect-by-rect analysis is in flight.
+        val mapInstaller = MapInstallerProvider.getInstance()
+        repeat(10) {
+            mapInstaller.unloadMap("sk")
+            delay(200)
+            mapInstaller.loadMap("sk")
+            delay(400)
+        }
+
+        // Without the fix the dispatcher can be left locked while a fail/recover lambda
+        // is still queued — the terminal callback then never fires and the analyzer hangs.
+        assertTrue(
+            "Analyzer never reached a terminal state (onExplorePlacesError or " +
+            "onExplorePlacesLoaded with progress=100) within 15s after the reload storm — " +
+            "fail/recover callback may be stuck on a locked dispatcher (DNAENG-1571).",
+            awaitTerminalExploreCallback(placeListener)
+        )
+    }
+
+    /**
+     * Companion to [reloadAtMapDuringNavigationDoesNotCrashPoiAnalyzer], driving the
+     * analyzer via [RouteExplorer.explorePlacesOnRoute] on a cross-border route and
+     * reloading the Austrian map. Same install set (`sk`, `cz`, `at`) and same rationale
+     * as the navigation-driven sister test.
+     */
+    @Test
+    fun reloadAtMapDuringExplorePlacesOnRouteDoesNotCrashAnalyzer() = runBlocking {
+        disableOnlineMaps()
+        val mapDownloadHelper = MapDownloadHelper()
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("cz")
+        mapDownloadHelper.installAndLoadMap("at")
+
+        val route = routeCompute.offlineRouteCompute(
+            start = GeoCoordinates(48.71977, 21.25785),    // Košice
+            destination = GeoCoordinates(47.80949, 13.05501) // Salzburg
+        )
+
+        val placeListener: RouteExplorer.OnExplorePlacesOnRouteListener = mock(verboseLogging = true)
+        val categories = listOf("SYRestArea", "SYPetrolStation")
+
+        routeExplorer.explorePlacesOnRoute(route, categories, placeListener)
+
+        // Let the analyzer get past the SK/CZ rects before we start cycling AT — otherwise
+        // it would be cancelled before AT is even relevant.
+        delay(1000)
+
+        val mapInstaller = MapInstallerProvider.getInstance()
+        repeat(10) {
+            mapInstaller.unloadMap("at")
+            delay(200)
+            mapInstaller.loadMap("at")
+            delay(400)
+        }
+
+        assertTrue(
+            "Analyzer never reached a terminal state (onExplorePlacesError or " +
+            "onExplorePlacesLoaded with progress=100) within 15s after the reload storm — " +
+            "fail/recover callback may be stuck on a locked dispatcher (DNAENG-1571).",
+            awaitTerminalExploreCallback(placeListener)
+        )
     }
 
     @Test

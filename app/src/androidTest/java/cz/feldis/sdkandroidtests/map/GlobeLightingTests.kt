@@ -262,4 +262,111 @@ class GlobeLightingTests : BaseTest() {
         delay(1000)
         scenario.moveToState(Lifecycle.State.DESTROYED)
     }
+
+    /**
+     * Basic lifecycle: set a mode on one MapView, tear the activity down completely, then
+     * spin up a fresh MapView and apply a different mode. The new MapView must accept
+     * setGlobeLightMode normally — no state from the previous instance must linger and
+     * trigger a crash.
+     */
+    @Test
+    fun setGlobeLightModeSurvivesMapViewRecreation(): Unit = runBlocking {
+        val firstFragment = TestMapFragment.newInstance(getInitialCameraState())
+        val firstScenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, firstFragment)
+                .commitNow()
+        }
+        val firstMapView = getMapView(firstFragment)
+        delay(1000)
+
+        val firstResult = firstMapView.setGlobeLightMode(MapView.GlobeLightMode.Custom(1f, 1f, 1f))
+        assertEquals(MapView.SetGlobeLightModeResult.Success, firstResult)
+        delay(500)
+        firstScenario.moveToState(Lifecycle.State.DESTROYED)
+        delay(1000)
+
+        val secondFragment = TestMapFragment.newInstance(getInitialCameraState())
+        val secondScenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, secondFragment)
+                .commitNow()
+        }
+        val secondMapView = getMapView(secondFragment)
+        delay(1000)
+
+        val secondResult = secondMapView.setGlobeLightMode(MapView.GlobeLightMode.Camera)
+        assertEquals(MapView.SetGlobeLightModeResult.Success, secondResult)
+
+        secondScenario.moveToState(Lifecycle.State.DESTROYED)
+    }
+
+    /**
+     * Simulates a user repeatedly switching between Sygic and another foreground app:
+     * 5 rounds of (create MapView → set globe light mode → destroy). Each round picks a
+     * different mode. The whole sequence must complete without a crash and every setter
+     * must report Success.
+     *
+     * Catches regressions in per-MapView teardown of native globe-lighting state — e.g.
+     * if a destroyed MapView left a dangling native listener that the next setGlobeLightMode
+     * would touch, this would explode somewhere in the middle of the loop.
+     */
+    @Test
+    fun setGlobeLightModeRepeatedAppSwitchingDoesNotCrash(): Unit = runBlocking {
+        val modes = listOf(
+            MapView.GlobeLightMode.Automatic,
+            MapView.GlobeLightMode.Custom(1f, 0f, 0f),
+            MapView.GlobeLightMode.Camera,
+            MapView.GlobeLightMode.Custom(-1f, -1f, -1f),
+            MapView.GlobeLightMode.Automatic
+        )
+
+        modes.forEachIndexed { round, mode ->
+            val fragment = TestMapFragment.newInstance(getInitialCameraState())
+            val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+                it.supportFragmentManager.beginTransaction()
+                    .add(android.R.id.content, fragment)
+                    .commitNow()
+            }
+            val mapView = getMapView(fragment)
+            delay(800)
+
+            val listener: MapView.SetGlobeLightModeListener = mock(verboseLogging = true)
+            mapView.setGlobeLightMode(mode, listener)
+            verify(listener, timeout(5_000L)).onSuccess()
+            verify(listener, never()).onError()
+            delay(500)
+
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            delay(800)
+        }
+    }
+
+    /**
+     * Race scenario: fire setGlobeLightMode and immediately destroy the activity, before
+     * the asynchronous callback has any chance to arrive. The engine must release the
+     * pending callback cleanly — no native callback into a freed MapView pointer, no
+     * unhandled exception bubbling up to the test thread.
+     */
+    @Test
+    fun setGlobeLightModeFollowedByImmediateDestroyDoesNotCrash(): Unit = runBlocking {
+        val fragment = TestMapFragment.newInstance(getInitialCameraState())
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, fragment)
+                .commitNow()
+        }
+        val mapView = getMapView(fragment)
+        delay(1000)
+
+        val listener: MapView.SetGlobeLightModeListener = mock(verboseLogging = true)
+        mapView.setGlobeLightMode(MapView.GlobeLightMode.Custom(0.5f, 0.5f, 0.5f), listener)
+        // Do NOT wait for onSuccess — destroy while the callback may still be in flight.
+        scenario.moveToState(Lifecycle.State.DESTROYED)
+        delay(1500)
+        // Reaching this point without an exception or crash is the assertion. The
+        // listener may have received either onSuccess (if the callback raced ahead of
+        // destroy) or nothing at all — both outcomes are acceptable; what is not
+        // acceptable is a native crash or a test process termination.
+    }
 }

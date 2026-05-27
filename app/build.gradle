@@ -6,7 +6,11 @@ plugins {
 
 android {
     compileSdk = 36
-    ndkVersion = "21.1.6352462"
+    // Must match the SDK source build (see sdk2/Interface/Source/Android/SdkProject/gradle/libs.versions.toml).
+    // Mismatched NDK versions cause AGP to bundle a libc++_shared.so incompatible with the
+    // SDK .so files, producing native crashes deep in STL/dispatch internals during normal
+    // MapView lifecycle (e.g. SIGSEGV inside CMapView::Enable through SurfaceChangeListener).
+    ndkVersion = "29.0.14206865"
     defaultConfig {
         applicationId "com.sygic.sdk.test.android"
         minSdk = 29
@@ -36,6 +40,15 @@ android {
     }
     buildFeatures {
         buildConfig true
+    }
+    packaging {
+        jniLibs {
+            // Compress native libs in the APK. The SDK builds .so files with full debug
+            // symbols when consumed from source, which pushes the uncompressed APK past
+            // the ZIP32 4 GiB central-directory offset limit. Compression typically cuts
+            // .so payload by 50–70 % and keeps us comfortably under the limit.
+            useLegacyPackaging = false
+        }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

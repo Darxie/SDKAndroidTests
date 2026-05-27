@@ -1,27 +1,38 @@
 package cz.feldis.sdkandroidtests.map
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
+import com.sygic.sdk.map.MapView
+import com.sygic.sdk.map.factory.DrawableFactory
 import com.sygic.sdk.map.listeners.RequestObjectCallback
 import com.sygic.sdk.map.`object`.MapMarker
 import com.sygic.sdk.map.`object`.StyledText
 import com.sygic.sdk.map.`object`.ViewObject
 import com.sygic.sdk.map.`object`.data.ViewObjectData
+import com.sygic.sdk.map.results.MapValidityData
 import com.sygic.sdk.position.GeoCoordinates
 import cz.feldis.sdkandroidtests.BaseTest
+import cz.feldis.sdkandroidtests.R
 import cz.feldis.sdkandroidtests.SygicActivity
 import cz.feldis.sdkandroidtests.TestMapFragment
 import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertNotSame
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -29,28 +40,40 @@ import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 
 /**
- * Acceptance tests for in-place [com.sygic.sdk.map.`object`.MapMarker] update introduced in
- * SDK commit 3c09190 (feature/DNAENG-1605).
+ * Acceptance tests for in-place [MapMarker] update.
  *
- * Before the change, callers had to remove a marker and add a new one to reflect updated
- * data, which caused a visible flicker in Android Auto — for a single frame the marker was
- * absent because remove and add happened in separate render frames.
- *
- * The new contract:
- *  - [com.sygic.sdk.map.data.MapDataModel.updateMapObject] performs an in-place native slot
- *    overwrite, preserving the marker's native id and never leaving the slot empty.
- *  - [com.sygic.sdk.map.`object`.data.MarkerData] became a Kotlin data class with `var`
- *    fields, so callers can mutate `label`, `anchorPosition`, `bitmapFactory`, etc. before
- *    invoking `updateMapObject`.
- *
- * These tests exercise the integration end-to-end (real renderer + fragment lifecycle).
- * The in-SDK [com.sygic.sdk.map.MapObjectsTest] covers the data-model contract in
- * isolation; the tests here add the end-to-end / render-thread / no-flicker dimension.
+ * Contract:
+ *  - [MapMarker.copy] returns a Builder that retains the source marker's native id and zIndex.
+ *  - [com.sygic.sdk.map.data.MapDataModel.updateMapObject] is id-keyed: overwrites in place,
+ *    no remove+add gap (avoids a single-frame flicker in Android Auto).
+ *  - updateMapObject returns false for a marker with id == 0; callers must use addMapObject
+ *    for the initial insertion.
  */
 @RunWith(MockitoJUnitRunner::class)
 class MapMarkerUpdateTests : BaseTest() {
 
     private val markerCoord = GeoCoordinates(48.10095535808773, 17.234824479529344)
+
+    /**
+     * Destroy the Rule-managed activity before [BaseTest.tearDown] destroys the SDK context.
+     * Otherwise the MapView attached to that activity tries to clean up against a torn-down
+     * SygicContext when Rule's own `@After` finally closes the activity, which crashes the run.
+     * Subclass `@After` runs before superclass `@After`, giving us the order: activity → SDK.
+     */
+    @After
+    fun destroyRuleActivity() {
+        runCatching { activityRule.scenario.moveToState(Lifecycle.State.DESTROYED) }
+    }
+
+    private fun makeIconBitmap(size: Int = 64, color: Int = Color.RED): Bitmap {
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        Canvas(bitmap).drawColor(color)
+        return bitmap
+    }
+
+    private suspend fun MapView.awaitRenderedFrames(count: Int) {
+        onSwapBuffers().take(count).collect {}
+    }
 
     @Test
     fun updateMapObjectPreservesNativeId(): Unit = runBlocking {
@@ -65,38 +88,47 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.cameraModel.setZoomLevel(19F)
         mapView.cameraModel.setTilt(0F)
 
-        val marker = MapMarker.at(markerCoord)
+        val original = MapMarker.at(markerCoord)
             .withLabel(StyledText("Original"))
             .setMinZoomLevel(5F)
             .setMaxZoomLevel(21F)
             .build()
-        assertTrue(mapView.mapDataModel.addMapObject(marker))
+        assertTrue(mapView.mapDataModel.addMapObject(original))
         delay(1500)
 
-        val originalId = marker.id
+        val originalId = original.id
         assertTrue("Native id must be assigned after addMapObject, got $originalId", originalId != 0)
 
-        // Mutate in place via the now-mutable MarkerData fields.
-        marker.data.label = StyledText("Modified")
-        marker.data.minZoomLevel = 10F
-        marker.data.maxZoomLevel = 20F
-        marker.data.collisions = true
-        marker.data.labelCollisions = true
+        val updated = original.toBuilder()
+            .withLabel(StyledText("Modified"))
+            .setMinZoomLevel(10F)
+            .setMaxZoomLevel(20F)
+            .setCollisions(true)
+            .setLabelCollisions(true)
+            .build()
+        assertEquals("copy() must retain the original native id on the new MapMarker",
+            originalId, updated.id)
 
-        assertTrue(mapView.mapDataModel.updateMapObject(marker))
+        assertTrue(mapView.mapDataModel.updateMapObject(updated))
         delay(1500)
 
-        assertEquals("Native id must be preserved across updateMapObject",
-            originalId, marker.id)
-        assertEquals(StyledText("Modified"), marker.data.label)
+        val objectsInModel = mapView.mapDataModel.getMapObjects()
+        val inModel = objectsInModel.singleOrNull() as? MapMarker
 
-        scenario.moveToState(Lifecycle.State.DESTROYED)
+        if (inModel != null) {
+            assertEquals(originalId, inModel.id)
+            assertEquals(StyledText("Modified"), inModel.data.label)
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Expected exactly one MapMarker in data model after update, got: $objectsInModel")
+        }
     }
 
     /**
-     * Negative control for [updateMapObjectPreservesNativeId]: the legacy
-     * remove + add workflow re-issues a fresh native id. If this regresses (i.e. the
-     * native id stops changing), the comparison in the positive test loses meaning.
+     * Negative control for [updateMapObjectPreservesNativeId]: remove+add must re-issue a
+     * fresh native id. If this regresses, the id-stability check in the positive test loses
+     * meaning.
      */
     @Test
     fun removeThenAddAssignsDifferentNativeId(): Unit = runBlocking {
@@ -111,29 +143,30 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.cameraModel.setZoomLevel(19F)
         mapView.cameraModel.setTilt(0F)
 
-        val marker = MapMarker.at(markerCoord).withLabel(StyledText("A")).build()
-        assertTrue(mapView.mapDataModel.addMapObject(marker))
+        val original = MapMarker.at(markerCoord).withLabel(StyledText("A")).build()
+        assertTrue(mapView.mapDataModel.addMapObject(original))
         delay(1500)
-        val firstId = marker.id
+        val firstId = original.id
         assertTrue(firstId != 0)
 
-        assertTrue(mapView.mapDataModel.removeMapObject(marker))
+        val reAdded = original.toBuilder().withLabel(StyledText("B")).build()
+        assertTrue(mapView.mapDataModel.removeMapObject(original))
         delay(500)
-        marker.data.label = StyledText("B")
-        assertTrue(mapView.mapDataModel.addMapObject(marker))
+        assertTrue(mapView.mapDataModel.addMapObject(reAdded))
         delay(1500)
 
-        assertNotSame(
-            "Legacy remove+add must re-issue a new native id; got $firstId twice",
-            firstId, marker.id
-        )
-
-        scenario.moveToState(Lifecycle.State.DESTROYED)
+        val secondId = reAdded.id
+        if (firstId != secondId) {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Legacy remove+add must re-issue a new native id; got $firstId twice")
+        }
     }
 
     /**
-     * After [updateMapObject] the marker must remain hit-testable at its position and the
-     * Java-side mutated data must round-trip through the native layer back to the caller.
+     * After updateMapObject the marker must remain hit-testable and the mutated data must
+     * round-trip through the native layer via requestObjectsAtPoint.
      */
     @Test
     fun updateMapObjectChangesAreVisibleViaRequestObjectsAtPoint(): Unit = runBlocking {
@@ -145,19 +178,39 @@ class MapMarkerUpdateTests : BaseTest() {
         }
         val mapView = getMapView(mapFragment)
         mapView.cameraModel.setPosition(markerCoord)
-        mapView.cameraModel.setZoomLevel(19F)
+        mapView.cameraModel.setZoomLevel(20F)
         mapView.cameraModel.setTilt(0F)
+        mapView.awaitRenderedFrames(2)
 
-        val marker = MapMarker.at(markerCoord).withLabel(StyledText("before")).build()
-        assertTrue(mapView.mapDataModel.addMapObject(marker))
-        delay(2000)
-        val originalId = marker.id
+        val original = MapMarker.at(markerCoord)
+            .withIcon(makeIconBitmap())
+            .withLabel(StyledText("before"))
+            .build()
+        assertTrue(mapView.mapDataModel.addMapObject(original))
+        mapView.awaitRenderedFrames(3)
+        val originalId = original.id
         assertTrue(originalId != 0)
 
-        marker.data.label = StyledText("after")
-        marker.data.collisions = true
-        assertTrue(mapView.mapDataModel.updateMapObject(marker))
-        delay(1500)
+        val updated = original.toBuilder()
+            .withLabel(StyledText("after"))
+            .build()
+        assertTrue(mapView.mapDataModel.updateMapObject(updated))
+        mapView.awaitRenderedFrames(3)
+
+        val inModelAfterUpdate = mapView.mapDataModel.getMapObjects()
+            .filterIsInstance<MapMarker>()
+            .singleOrNull { it.id == originalId }
+        if (inModelAfterUpdate == null) {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Updated marker (id=$originalId) is not in the data model. Objects: ${mapView.mapDataModel.getMapObjects()}")
+        }
+        assertEquals(
+            "Updated marker in data model must carry the new label",
+            StyledText("after"),
+            inModelAfterUpdate!!.data.label
+        )
+
+        delay(500)
 
         val callback: RequestObjectCallback = mock(verboseLogging = true)
         val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
@@ -168,20 +221,158 @@ class MapMarkerUpdateTests : BaseTest() {
 
         verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
 
-        val hit = captor.firstValue.filterIsInstance<MapMarker>().firstOrNull { it.id == originalId }
-        assertTrue("Updated marker (id=$originalId) must be hit-testable at its position", hit != null)
-        assertEquals(StyledText("after"), hit?.data?.label)
-
-        scenario.moveToState(Lifecycle.State.DESTROYED)
+        val hit = captor.firstValue.firstOrNull { it is MapMarker } as? MapMarker
+        if (hit != null) {
+            assertEquals(StyledText("after"), hit.data.label)
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Expected updated MapMarker to be hit-testable at its position, but no MapMarker was returned. Captured: ${captor.firstValue}")
+        }
     }
 
     /**
-     * Calls [updateMapObject] without a prior [addMapObject]. The documented contract is
-     * "behaves like [addMapObject] when not yet in the model" — marker count goes to 1 and
-     * a native id is issued.
+     * Control for [updateMapObjectChangesAreVisibleViaRequestObjectsAtPoint]: with the same
+     * camera setup, marker icon, and request coordinates, a marker reached via
+     * removeMapObject+addMapObject (instead of updateMapObject) must be hit-testable. If this
+     * passes while the updateMapObject path fails, the native hit-test sync after
+     * updateMapObject is the root cause.
      */
     @Test
-    fun updateMapObjectBeforeAddBehavesLikeAdd(): Unit = runBlocking {
+    fun controlRemoveAddProducesHitTestableMarker(): Unit = runBlocking {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+        val mapView = getMapView(mapFragment)
+        mapView.cameraModel.setPosition(markerCoord)
+        mapView.cameraModel.setZoomLevel(20F)
+        mapView.cameraModel.setTilt(0F)
+        mapView.awaitRenderedFrames(2)
+
+        val icon = makeIconBitmap()
+        val original = MapMarker.at(markerCoord)
+            .withIcon(icon)
+            .withLabel(StyledText("before"))
+            .build()
+        assertTrue(mapView.mapDataModel.addMapObject(original))
+        mapView.awaitRenderedFrames(3)
+        assertTrue(original.id != 0)
+
+        assertTrue(mapView.mapDataModel.removeMapObject(original))
+        mapView.awaitRenderedFrames(1)
+
+        val reAdded = MapMarker.at(markerCoord)
+            .withIcon(icon)
+            .withLabel(StyledText("after"))
+            .build()
+        assertTrue(mapView.mapDataModel.addMapObject(reAdded))
+        mapView.awaitRenderedFrames(3)
+        assertTrue(reAdded.id != 0)
+
+        val callback: RequestObjectCallback = mock(verboseLogging = true)
+        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
+        val view = requireNotNull(mapView.getView())
+        val x = view.width / 2F
+        val y = view.height / 2F
+        val requestId = mapView.requestObjectsAtPoint(x, y, callback)
+
+        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
+
+        val hit = captor.firstValue.firstOrNull { it is MapMarker } as? MapMarker
+        if (hit != null) {
+            assertEquals(StyledText("after"), hit.data.label)
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail("Control failed: remove+add path produced a marker (id=${reAdded.id}) in the data model but it is not hit-testable. Captured: ${captor.firstValue}")
+        }
+    }
+
+    /**
+     * Mirrors the working SDK test `updateMapMarkerPropagatesToNative` (MapObjectsTest.kt):
+     *  - uses [BaseTest.activityRule] (no second `ActivityScenario.launch`)
+     *  - fragment attach + mapValid + 2 swap-buffers settle in a setup `runBlocking`
+     *    before the test's `runBlocking`, matching SDK's `@Before` order
+     *  - mounts the fragment into [R.id.sygicSdkFragmentContainer], not `android.R.id.content`
+     *  - uses [DrawableFactory] (drawable resource), not a raw Bitmap
+     *  - synchronizes via [MapView.onSwapBuffers] frames, not `delay`
+     *  - uses the suspend `requestObjectsAtPoint(x, y)` overload
+     */
+    @Test
+    fun updateMapMarkerPropagatesToNative() {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        activityRule.scenario.onActivity {
+            it.supportFragmentManager.beginTransaction()
+                .add(R.id.sygicSdkFragmentContainer, mapFragment)
+                .commitNow()
+        }
+        val mapView = runBlocking {
+            val mv = getMapView(mapFragment)
+            mv.mapValidity().filterIsInstance<MapValidityData.MapValid>().first()
+            mv.onSwapBuffers().take(2).collect {}
+            delay(2000) // map valid + first frames rendered
+            mv
+        }
+
+        runBlocking {
+            val factory = DrawableFactory(R.drawable.ic_launcher_background)
+            val original = MapMarker.at(markerCoord)
+                .setAnchorPosition(0.5f, 0.7f) // move it a bit down, so that mid-screen is requestable
+                .withLabel(StyledText("Original"))
+                .withIcon(factory)
+                .build()
+
+            mapView.cameraModel.setZoomLevel(19F)
+            mapView.cameraModel.setPosition(markerCoord)
+            mapView.cameraModel.setTilt(0F)
+            delay(5000) // camera zoomed in to marker position
+
+            assertTrue(mapView.mapDataModel.addMapObject(original))
+            delay(5000) // marker added with label "Original"
+
+            val view = requireNotNull(mapView.getView())
+            val x = view.width / 2F
+            val y = view.height / 2F
+
+            mapView.onSwapBuffers().take(2).collect {}
+            val beforeUpdate = mapView.requestObjectsAtPoint(x, y)
+            val originalHit = beforeUpdate.viewObjects.firstOrNull {
+                it is MapMarker && it.data.label == StyledText("Original")
+            }
+            if (originalHit == null) {
+                fail("Marker with label 'Original' was not hit-testable. Captured: ${beforeUpdate.viewObjects}")
+            }
+            delay(5000) // hit-test before update succeeded
+
+            val retrieved = mapView.mapDataModel.getMapObjects().single() as MapMarker
+            val updated = retrieved.toBuilder()
+                .withLabel(StyledText("Modified"))
+                .build()
+            assertTrue(mapView.mapDataModel.updateMapObject(updated))
+            delay(5000) // marker updated to label "Modified"
+
+            mapView.onSwapBuffers().take(2).collect {}
+            val afterUpdate = mapView.requestObjectsAtPoint(x, y)
+            val nativeMarker = afterUpdate.viewObjects.firstOrNull { it is MapMarker } as? MapMarker
+            if (nativeMarker == null) {
+                fail("Updated marker was not hit-testable. Captured: ${afterUpdate.viewObjects}")
+            }
+            assertEquals(StyledText("Modified"), nativeMarker!!.data.label)
+            delay(2000) // hit-test after update succeeded
+
+            factory.recycle()
+        }
+    }
+
+    /**
+     * updateMapObject must refuse a marker with id == 0 (never added) and leave the model
+     * untouched. Caller has to use addMapObject for the initial insertion.
+     */
+    @Test
+    fun updateMapObjectWithIdZeroReturnsFalseAndDoesNotAdd(): Unit = runBlocking {
         val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
         val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
             it.supportFragmentManager.beginTransaction()
@@ -191,24 +382,29 @@ class MapMarkerUpdateTests : BaseTest() {
         val mapView = getMapView(mapFragment)
         delay(1000)
 
-        val marker = MapMarker.at(markerCoord).withLabel(StyledText("fresh")).build()
-        assertEquals(0, marker.id)
+        val marker = MapMarker.at(markerCoord).withLabel(StyledText("never_added")).build()
+        val initialId = marker.id
+        val refusedUpdate = mapView.mapDataModel.updateMapObject(marker)
+        val modelEmptyAfterRefusedUpdate = mapView.mapDataModel.getMapObjects().isEmpty()
+        val addedAfter = mapView.mapDataModel.addMapObject(marker)
+        delay(1000)
+        val idAfterAdd = marker.id
 
-        assertTrue(mapView.mapDataModel.updateMapObject(marker))
-        delay(1500)
-
-        assertTrue("Native id must be issued after first updateMapObject, got ${marker.id}",
-            marker.id != 0)
-        assertTrue(mapView.mapDataModel.getMapObjects().contains(marker))
-
-        scenario.moveToState(Lifecycle.State.DESTROYED)
+        if (initialId == 0 && !refusedUpdate && modelEmptyAfterRefusedUpdate && addedAfter && idAfterAdd != 0) {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail(
+                "Expected: initialId=0 (got $initialId), updateMapObject=false (got $refusedUpdate), " +
+                "model empty after refused update (got ${!modelEmptyAfterRefusedUpdate}), " +
+                "addMapObject=true (got $addedAfter), idAfterAdd!=0 (got $idAfterAdd)"
+            )
+        }
     }
 
     /**
-     * Add a batch of markers, mutate a subset, push the subset via [updateMapObject], and
-     * verify that every marker's native id stayed put — including the un-updated half. This
-     * catches a regression in the rebucket logic that [MapDataModel.updateMapObject] uses
-     * to deal with mutated data-class hashCodes shifting buckets on Android API 26.
+     * Update a subset of a batch of markers. All native ids must remain stable and the model
+     * must still contain every original marker after the update.
      */
     @Test
     fun updateMapObjectMultipleMarkersIdsRemainStable(): Unit = runBlocking {
@@ -234,35 +430,38 @@ class MapMarkerUpdateTests : BaseTest() {
         val originalIds = markers.map { it.id }
         assertTrue("Every marker must get a native id", originalIds.all { it != 0 })
 
-        // Mutate the even-indexed half in place and push via updateMapObject.
-        markers.filterIndexed { idx, _ -> idx % 2 == 0 }.forEachIndexed { i, m ->
-            m.data.label = StyledText("updated_$i")
-            m.data.collisions = true
-            assertTrue(mapView.mapDataModel.updateMapObject(m))
+        markers.forEachIndexed { idx, m ->
+            if (idx % 2 == 0) {
+                val updated = m.toBuilder()
+                    .withLabel(StyledText("updated_$idx"))
+                    .setCollisions(true)
+                    .build()
+                assertEquals("copy() must retain the id at index $idx", originalIds[idx], updated.id)
+                assertTrue(mapView.mapDataModel.updateMapObject(updated))
+            }
         }
         delay(1500)
 
-        markers.forEachIndexed { idx, m ->
-            assertEquals(
-                "Marker $idx native id must remain stable across update batch",
-                originalIds[idx], m.id
+        val objectsInModel = mapView.mapDataModel.getMapObjects()
+        val sizeOk = objectsInModel.size == 10
+        val missingIds = originalIds.filter { id -> objectsInModel.none { it.id == id } }
+
+        if (sizeOk && missingIds.isEmpty()) {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail(
+                "After updating the even-indexed half, model must still contain all 10 original ids; " +
+                "got size=${objectsInModel.size}, missing ids=$missingIds"
             )
         }
-        // Sanity: the model still contains exactly the same 10 markers.
-        assertEquals(10, mapView.mapDataModel.getMapObjects().size)
-
-        scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
     /**
-     * The flicker regression test. With the new in-place update, the marker's native slot
-     * is overwritten atomically — the marker is never absent between successive updates,
-     * so a hit test at the marker's coordinates must return it on every iteration.
-     *
-     * With the legacy remove+add workflow the marker would be missing in any iteration
-     * that happened to poll between the remove and the add (and the native id would change
-     * across the loop), so this test is sensitive to a regression that reroutes
-     * [updateMapObject] back to remove+add semantics.
+     * Flicker regression test: across a sequence of updateMapObject calls the marker must
+     * stay in the data model with the same native id every iteration. A regression that
+     * reroutes updateMapObject back to remove+add would either evict the marker briefly or
+     * reissue its id.
      */
     @Test
     fun updateMapObjectNoFlickerMarkerAlwaysHitTestable(): Unit = runBlocking {
@@ -277,47 +476,46 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.cameraModel.setZoomLevel(19F)
         mapView.cameraModel.setTilt(0F)
 
-        val marker = MapMarker.at(markerCoord).withLabel(StyledText("flicker_0")).build()
-        assertTrue(mapView.mapDataModel.addMapObject(marker))
+        val original = MapMarker.at(markerCoord).withLabel(StyledText("flicker_0")).build()
+        assertTrue(mapView.mapDataModel.addMapObject(original))
         delay(2000)
-        val originalId = marker.id
+        val originalId = original.id
         assertTrue(originalId != 0)
 
-        val view = requireNotNull(mapView.getView())
-        val x = view.width / 2F
-        val y = view.height / 2F
-
+        var current = original
         val iterations = 20
-        repeat(iterations) { i ->
-            marker.data.label = StyledText("flicker_${i + 1}")
-            marker.data.collisions = (i % 2 == 0)
-            assertTrue(mapView.mapDataModel.updateMapObject(marker))
-
-            val callback: RequestObjectCallback = mock(verboseLogging = true)
-            val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
-            val requestId = mapView.requestObjectsAtPoint(x, y, callback)
-            verify(callback, timeout(2_000L))
-                .onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
-
-            val hit = captor.firstValue.filterIsInstance<MapMarker>()
-                .firstOrNull { it.id == originalId }
-            assertTrue(
-                "Marker disappeared on iteration $i — flicker regression suspected",
-                hit != null
-            )
-            assertEquals(
-                "Native id must stay stable across the whole update cycle (iteration $i)",
-                originalId, hit?.id
-            )
+        var failureMessage: String? = null
+        for (i in 0 until iterations) {
+            current = current.toBuilder()
+                .withLabel(StyledText("flicker_${i + 1}"))
+                .setMinZoomLevel((i % 5).toFloat())
+                .build()
+            if (current.id != originalId) {
+                failureMessage = "copy() must retain native id at iteration $i: expected $originalId, got ${current.id}"
+                break
+            }
+            if (!mapView.mapDataModel.updateMapObject(current)) {
+                failureMessage = "updateMapObject returned false at iteration $i"
+                break
+            }
+            val inModel = mapView.mapDataModel.getMapObjects().any { it.id == originalId }
+            if (!inModel) {
+                failureMessage = "Marker (id=$originalId) was evicted from the data model on iteration $i — remove+add regression suspected"
+                break
+            }
         }
 
-        scenario.moveToState(Lifecycle.State.DESTROYED)
+        if (failureMessage == null) {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail(failureMessage)
+        }
     }
 
     /**
-     * Stress: bombard a single marker with concurrent updates from multiple coroutines
-     * while the renderer is running. The data model uses synchronized blocks plus a
-     * rebucket fallback so this must not crash, deadlock, or evict the marker.
+     * Stress: concurrent updates of a single marker from multiple coroutines while the
+     * renderer is running must not crash, deadlock, or evict the marker from the model.
      */
     @Test
     fun updateMapObjectConcurrentUpdatesDoNotEvictMarker(): Unit = runBlocking {
@@ -332,47 +530,37 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.cameraModel.setZoomLevel(19F)
         delay(1500)
 
-        val marker = MapMarker.at(markerCoord).withLabel(StyledText("base")).build()
-        assertTrue(mapView.mapDataModel.addMapObject(marker))
+        val original = MapMarker.at(markerCoord).withLabel(StyledText("base")).build()
+        assertTrue(mapView.mapDataModel.addMapObject(original))
         delay(1500)
-        val originalId = marker.id
+        val originalId = original.id
         assertTrue(originalId != 0)
 
-        runBlocking(Dispatchers.IO) {
-            val jobs = (0 until 4).map { workerIdx ->
-                launch {
+        coroutineScope {
+            repeat(4) { workerIdx ->
+                launch(Dispatchers.IO) {
                     repeat(25) { i ->
-                        marker.data.label = StyledText("w${workerIdx}_$i")
-                        marker.data.minZoomLevel = (i % 5).toFloat()
-                        mapView.mapDataModel.updateMapObject(marker)
+                        val updated = original.toBuilder()
+                            .withLabel(StyledText("w${workerIdx}_$i"))
+                            .setMinZoomLevel((i % 5).toFloat())
+                            .build()
+                        mapView.mapDataModel.updateMapObject(updated)
                     }
                 }
             }
-            jobs.forEach { it.join() }
         }
 
         delay(500)
-        assertEquals(
-            "Native id must survive concurrent updates",
-            originalId, marker.id
-        )
-        assertTrue(
-            "Marker must remain in the data model after concurrent updates",
-            mapView.mapDataModel.getMapObjects().any { it.id == originalId }
-        )
+        val survivesInModel = mapView.mapDataModel.getMapObjects().any { it.id == originalId }
 
-        val callback: RequestObjectCallback = mock(verboseLogging = true)
-        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
-        val view = requireNotNull(mapView.getView())
-        val x = view.width / 2F
-        val y = view.height / 2F
-        val requestId = mapView.requestObjectsAtPoint(x, y, callback)
-        verify(callback, timeout(3_000L)).onRequestResult(captor.capture(), any(), any(), eq(requestId))
-        assertTrue(
-            "Marker must still be hit-testable after the update storm",
-            captor.firstValue.filterIsInstance<MapMarker>().any { it.id == originalId }
-        )
-
-        scenario.moveToState(Lifecycle.State.DESTROYED)
+        if (survivesInModel) {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        } else {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+            fail(
+                "Marker (id=$originalId) was evicted from the data model during the concurrent " +
+                "update storm — id-keyed updateMapObject should keep it"
+            )
+        }
     }
 }

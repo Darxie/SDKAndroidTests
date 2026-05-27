@@ -127,7 +127,7 @@ abstract class BaseHereTest {
         return defaultConfig.apply {
             license(BuildConfig.LICENSE_KEY_HERE)
             authentication(BuildConfig.SYGIC_SDK_CLIENT_ID_HERE)
-            mapReaderSettings().startupOnlineMapsEnabled(true)
+            mapReaderSettings().startupOnlineMapsEnabled(false)
             storageFolders().rootPath("$appDataPath/here")
             mapReaderSettings()
                 .startupPoiProvider(MapReaderSettings.StartupPoiProvider.CUSTOM_PLACES)
