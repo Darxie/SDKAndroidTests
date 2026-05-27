@@ -20,6 +20,8 @@ import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Acceptance tests for [MapView.setGlobeLightMode] introduced in SDK commit dda02f37
@@ -48,6 +50,7 @@ class GlobeLightingTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
+        mapView.cameraModel.setZoomLevel(0F)
         delay(1000)
 
         val listener: MapView.SetGlobeLightModeListener = mock(verboseLogging = true)
@@ -68,6 +71,7 @@ class GlobeLightingTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
+        mapView.cameraModel.setZoomLevel(0F)
         delay(1000)
 
         val result = mapView.setGlobeLightMode(
@@ -94,7 +98,7 @@ class GlobeLightingTests : BaseTest() {
         }
         val mapView = getMapView(mapFragment)
         mapView.cameraModel.setPosition(GeoCoordinates(0.0, 0.0))
-        mapView.cameraModel.setZoomLevel(2F)
+        mapView.cameraModel.setZoomLevel(0F)
         mapView.cameraModel.setTilt(0F)
         delay(1500)
 
@@ -120,7 +124,7 @@ class GlobeLightingTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
-        mapView.cameraModel.setZoomLevel(3F)
+        mapView.cameraModel.setZoomLevel(0F)
         delay(1500)
 
         val modes = listOf(
@@ -158,6 +162,7 @@ class GlobeLightingTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
+        mapView.cameraModel.setZoomLevel(0F)
         delay(1000)
 
         val result = mapView.setGlobeLightMode(MapView.GlobeLightMode.Custom(0f, 0f, 0f))
@@ -188,6 +193,7 @@ class GlobeLightingTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
+        mapView.cameraModel.setZoomLevel(0F)
         delay(1000)
 
         val executor = Executors.newSingleThreadExecutor { r ->
@@ -237,7 +243,7 @@ class GlobeLightingTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(mapFragment)
-        mapView.cameraModel.setZoomLevel(3F)
+        mapView.cameraModel.setZoomLevel(0F)
         delay(1500)
 
         val listeners = List(5) { mock<MapView.SetGlobeLightModeListener>(verboseLogging = true) }
@@ -278,6 +284,7 @@ class GlobeLightingTests : BaseTest() {
                 .commitNow()
         }
         val firstMapView = getMapView(firstFragment)
+        firstMapView.cameraModel.setZoomLevel(0F)
         delay(1000)
 
         val firstResult = firstMapView.setGlobeLightMode(MapView.GlobeLightMode.Custom(1f, 1f, 1f))
@@ -293,6 +300,7 @@ class GlobeLightingTests : BaseTest() {
                 .commitNow()
         }
         val secondMapView = getMapView(secondFragment)
+        secondMapView.cameraModel.setZoomLevel(0F)
         delay(1000)
 
         val secondResult = secondMapView.setGlobeLightMode(MapView.GlobeLightMode.Camera)
@@ -329,6 +337,7 @@ class GlobeLightingTests : BaseTest() {
                     .commitNow()
             }
             val mapView = getMapView(fragment)
+            mapView.cameraModel.setZoomLevel(0F)
             delay(800)
 
             val listener: MapView.SetGlobeLightModeListener = mock(verboseLogging = true)
@@ -340,6 +349,50 @@ class GlobeLightingTests : BaseTest() {
             scenario.moveToState(Lifecycle.State.DESTROYED)
             delay(800)
         }
+    }
+
+    /**
+     * Visual sanity check for [MapView.GlobeLightMode.Custom]: with the camera parked above
+     * the equator at globe zoom, step the light direction around the Y (pole) axis in 6°
+     * increments — 60 steps per revolution × 5 revolutions = 300 steps at 50ms each (~15s
+     * total). The lit hemisphere should smoothly rotate around the globe five times in a row,
+     * simulating the sun orbiting the Earth.
+     *
+     * Every setter must report Success; the renderer must stay live the whole loop.
+     */
+    @Test
+    fun setGlobeLightModeCustomRotatesSunAroundGlobe(): Unit = runBlocking {
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, mapFragment)
+                .commitNow()
+        }
+        val mapView = getMapView(mapFragment)
+        mapView.cameraModel.setPosition(GeoCoordinates(0.0, 0.0))
+        mapView.cameraModel.setZoomLevel(0F)
+        mapView.cameraModel.setTilt(0F)
+        mapView.cameraModel.setRotation(0F)
+        delay(500)
+
+        val stepsPerRevolution = 60
+        val revolutions = 2
+        val totalSteps = stepsPerRevolution * revolutions
+        repeat(totalSteps) { i ->
+            val angleRad = (2 * Math.PI * i / stepsPerRevolution)
+            val dirX = cos(angleRad).toFloat()
+            val dirZ = sin(angleRad).toFloat()
+            val result = mapView.setGlobeLightMode(
+                MapView.GlobeLightMode.Custom(dirX = dirX, dirY = 0f, dirZ = dirZ)
+            )
+            assertEquals(
+                "Setting custom light direction at step $i (${Math.toDegrees(angleRad).toInt()}°) should succeed",
+                MapView.SetGlobeLightModeResult.Success, result
+            )
+            delay(10)
+        }
+
+        scenario.moveToState(Lifecycle.State.DESTROYED)
     }
 
     /**
@@ -357,6 +410,7 @@ class GlobeLightingTests : BaseTest() {
                 .commitNow()
         }
         val mapView = getMapView(fragment)
+        mapView.cameraModel.setZoomLevel(0F)
         delay(1000)
 
         val listener: MapView.SetGlobeLightModeListener = mock(verboseLogging = true)

@@ -254,6 +254,7 @@ class MapMarkerUpdateTests : BaseTest() {
 
         val icon = makeIconBitmap()
         val original = MapMarker.at(markerCoord)
+            .setAnchorPosition(0.5f, 0.7f)
             .withIcon(icon)
             .withLabel(StyledText("before"))
             .build()
@@ -265,6 +266,7 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.awaitRenderedFrames(1)
 
         val reAdded = MapMarker.at(markerCoord)
+            .setAnchorPosition(0.5f, 0.7f)
             .withIcon(icon)
             .withLabel(StyledText("after"))
             .build()
