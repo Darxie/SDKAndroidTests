@@ -7,11 +7,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.factory.DrawableFactory
-import com.sygic.sdk.map.listeners.RequestObjectCallback
 import com.sygic.sdk.map.`object`.MapMarker
 import com.sygic.sdk.map.`object`.StyledText
-import com.sygic.sdk.map.`object`.ViewObject
-import com.sygic.sdk.map.`object`.data.ViewObjectData
 import com.sygic.sdk.map.results.MapValidityData
 import com.sygic.sdk.position.GeoCoordinates
 import cz.feldis.sdkandroidtests.BaseTest
@@ -33,11 +30,6 @@ import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.timeout
-import org.mockito.kotlin.verify
 
 /**
  * Acceptance tests for in-place [MapMarker] update.
@@ -73,6 +65,30 @@ class MapMarkerUpdateTests : BaseTest() {
 
     private suspend fun MapView.awaitRenderedFrames(count: Int) {
         onSwapBuffers().take(count).collect {}
+    }
+
+    /**
+     * Polls [requestObjectsAtPoint] at view center until a [MapMarker] appears or [timeoutMs]
+     * elapses. Tolerates the async gap between addMapObject / updateMapObject and the native
+     * hit-test spatial index rebuild — that rebuild is not synchronized with [onSwapBuffers]
+     * events, so a single one-shot request can race the rebuild and return an empty result.
+     * Returns null on timeout.
+     */
+    private suspend fun MapView.awaitMarkerAtCenter(
+        timeoutMs: Long = 5_000L,
+        pollMs: Long = 100L,
+    ): MapMarker? {
+        val view = requireNotNull(getView())
+        val x = view.width / 2F
+        val y = view.height / 2F
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (true) {
+            val result = requestObjectsAtPoint(x, y)
+            val hit = result.viewObjects.firstOrNull { it is MapMarker } as? MapMarker
+            if (hit != null) return hit
+            if (System.currentTimeMillis() >= deadline) return null
+            delay(pollMs)
+        }
     }
 
     @Test
@@ -212,24 +228,13 @@ class MapMarkerUpdateTests : BaseTest() {
             inModelAfterUpdate!!.data.label
         )
 
-        delay(500)
-
-        val callback: RequestObjectCallback = mock(verboseLogging = true)
-        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
-        val view = requireNotNull(mapView.getView())
-        val x = view.width / 2F
-        val y = view.height / 2F
-        val requestId = mapView.requestObjectsAtPoint(x, y, callback)
-
-        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
-
-        val hit = captor.firstValue.firstOrNull { it is MapMarker } as? MapMarker
+        val hit = mapView.awaitMarkerAtCenter()
         if (hit != null) {
             assertEquals(StyledText("after"), hit.data.label)
             scenario.moveToState(Lifecycle.State.DESTROYED)
         } else {
             scenario.moveToState(Lifecycle.State.DESTROYED)
-            fail("Expected updated MapMarker to be hit-testable at its position, but no MapMarker was returned. Captured: ${captor.firstValue}")
+            fail("Expected updated MapMarker to be hit-testable at its position within 5s, but none was returned.")
         }
     }
 
@@ -276,22 +281,13 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.awaitRenderedFrames(3)
         assertTrue(reAdded.id != 0)
 
-        val callback: RequestObjectCallback = mock(verboseLogging = true)
-        val captor = argumentCaptor<List<ViewObject<ViewObjectData>>>()
-        val view = requireNotNull(mapView.getView())
-        val x = view.width / 2F
-        val y = view.height / 2F
-        val requestId = mapView.requestObjectsAtPoint(x, y, callback)
-
-        verify(callback, timeout(5_000L)).onRequestResult(captor.capture(), eq(x), eq(y), eq(requestId))
-
-        val hit = captor.firstValue.firstOrNull { it is MapMarker } as? MapMarker
+        val hit = mapView.awaitMarkerAtCenter()
         if (hit != null) {
             assertEquals(StyledText("after"), hit.data.label)
             scenario.moveToState(Lifecycle.State.DESTROYED)
         } else {
             scenario.moveToState(Lifecycle.State.DESTROYED)
-            fail("Control failed: remove+add path produced a marker (id=${reAdded.id}) in the data model but it is not hit-testable. Captured: ${captor.firstValue}")
+            fail("Control failed: remove+add path produced a marker (id=${reAdded.id}) in the data model but it is not hit-testable within 5s.")
         }
     }
 
