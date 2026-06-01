@@ -595,8 +595,6 @@ class RouteComputeTests : BaseTest() {
             TransitCountryInfo("sk", emptyList()),
             TransitCountryInfo("at", emptyList()),
             TransitCountryInfo("de", emptyList()),
-            TransitCountryInfo("nl", emptyList()),
-            TransitCountryInfo("be", emptyList()),
             TransitCountryInfo("fr", emptyList()),
             TransitCountryInfo("gb", emptyList())
         )
