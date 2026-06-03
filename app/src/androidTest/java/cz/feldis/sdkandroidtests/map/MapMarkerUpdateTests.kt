@@ -328,10 +328,10 @@ class MapMarkerUpdateTests : BaseTest() {
             mapView.cameraModel.setZoomLevel(19F)
             mapView.cameraModel.setPosition(markerCoord)
             mapView.cameraModel.setTilt(0F)
-            delay(5000) // camera zoomed in to marker position
+            delay(1000) // camera zoomed in to marker position
 
             assertTrue(mapView.mapDataModel.addMapObject(original))
-            delay(5000) // marker added with label "Original"
+            delay(1000) // marker added with label "Original"
 
             val view = requireNotNull(mapView.getView())
             val x = view.width / 2F
@@ -345,14 +345,14 @@ class MapMarkerUpdateTests : BaseTest() {
             if (originalHit == null) {
                 fail("Marker with label 'Original' was not hit-testable. Captured: ${beforeUpdate.viewObjects}")
             }
-            delay(5000) // hit-test before update succeeded
+            delay(1000) // hit-test before update succeeded
 
             val retrieved = mapView.mapDataModel.getMapObjects().single() as MapMarker
             val updated = retrieved.toBuilder()
                 .withLabel(StyledText("Modified"))
                 .build()
             assertTrue(mapView.mapDataModel.updateMapObject(updated))
-            delay(5000) // marker updated to label "Modified"
+            delay(1000) // marker updated to label "Modified"
 
             mapView.onSwapBuffers().take(2).collect {}
             val afterUpdate = mapView.requestObjectsAtPoint(x, y)
