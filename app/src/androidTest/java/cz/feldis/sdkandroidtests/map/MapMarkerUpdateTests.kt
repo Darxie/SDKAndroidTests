@@ -3,12 +3,15 @@ package cz.feldis.sdkandroidtests.map
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.PointF
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.factory.DrawableFactory
+import com.sygic.sdk.map.factory.SimpleBitmapFactory
 import com.sygic.sdk.map.`object`.MapMarker
 import com.sygic.sdk.map.`object`.StyledText
+import com.sygic.sdk.map.`object`.data.MarkerData
 import com.sygic.sdk.map.results.MapValidityData
 import com.sygic.sdk.position.GeoCoordinates
 import cz.feldis.sdkandroidtests.BaseTest
@@ -104,24 +107,29 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.cameraModel.setZoomLevel(19F)
         mapView.cameraModel.setTilt(0F)
 
-        val original = MapMarker.at(markerCoord)
-            .withLabel(StyledText("Original"))
-            .setMinZoomLevel(5F)
-            .setMaxZoomLevel(21F)
-            .build()
+        val original = MapMarker(
+            MarkerData(
+                position = markerCoord,
+                label = StyledText("Original"),
+                minZoomLevel = 5F,
+                maxZoomLevel = 21F,
+            )
+        )
         assertTrue(mapView.mapDataModel.addMapObject(original))
         delay(1500)
 
         val originalId = original.id
         assertTrue("Native id must be assigned after addMapObject, got $originalId", originalId != 0)
 
-        val updated = original.toBuilder()
-            .withLabel(StyledText("Modified"))
-            .setMinZoomLevel(10F)
-            .setMaxZoomLevel(20F)
-            .setCollisions(true)
-            .setLabelCollisions(true)
-            .build()
+        val updated = original.copy {
+            copy(
+                label = StyledText("Modified"),
+                minZoomLevel = 10F,
+                maxZoomLevel = 20F,
+                collisions = true,
+                labelCollisions = true,
+            )
+        }
         assertEquals("copy() must retain the original native id on the new MapMarker",
             originalId, updated.id)
 
@@ -159,13 +167,13 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.cameraModel.setZoomLevel(19F)
         mapView.cameraModel.setTilt(0F)
 
-        val original = MapMarker.at(markerCoord).withLabel(StyledText("A")).build()
+        val original = MapMarker(MarkerData(position = markerCoord, label = StyledText("A")))
         assertTrue(mapView.mapDataModel.addMapObject(original))
         delay(1500)
         val firstId = original.id
         assertTrue(firstId != 0)
 
-        val reAdded = original.toBuilder().withLabel(StyledText("B")).build()
+        val reAdded = original.copy { copy(label = StyledText("B")) }
         assertTrue(mapView.mapDataModel.removeMapObject(original))
         delay(500)
         assertTrue(mapView.mapDataModel.addMapObject(reAdded))
@@ -198,20 +206,22 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.cameraModel.setTilt(0F)
         mapView.awaitRenderedFrames(2)
 
-        val original = MapMarker.at(markerCoord)
-            .setAnchorPosition(0.5f, 0.7f)
-            .withIcon(makeIconBitmap())
-            .withLabel(StyledText("before"))
-            .build()
+        val original = MapMarker(
+            MarkerData(
+                position = markerCoord,
+                anchorPosition = PointF(0.5f, 0.7f),
+                bitmapFactory = SimpleBitmapFactory(makeIconBitmap()),
+                label = StyledText("before"),
+            )
+        )
         assertTrue(mapView.mapDataModel.addMapObject(original))
         mapView.awaitRenderedFrames(3)
         val originalId = original.id
         assertTrue(originalId != 0)
 
-        val updated = original.toBuilder()
-            .setAnchorPosition(0.5f, 0.7f)
-            .withLabel(StyledText("after"))
-            .build()
+        val updated = original.copy {
+            copy(anchorPosition = PointF(0.5f, 0.7f), label = StyledText("after"))
+        }
         assertTrue(mapView.mapDataModel.updateMapObject(updated))
         mapView.awaitRenderedFrames(3)
 
@@ -260,11 +270,14 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.awaitRenderedFrames(2)
 
         val icon = makeIconBitmap()
-        val original = MapMarker.at(markerCoord)
-            .setAnchorPosition(0.5f, 0.7f)
-            .withIcon(icon)
-            .withLabel(StyledText("before"))
-            .build()
+        val original = MapMarker(
+            MarkerData(
+                position = markerCoord,
+                anchorPosition = PointF(0.5f, 0.7f),
+                bitmapFactory = SimpleBitmapFactory(icon),
+                label = StyledText("before"),
+            )
+        )
         assertTrue(mapView.mapDataModel.addMapObject(original))
         mapView.awaitRenderedFrames(3)
         assertTrue(original.id != 0)
@@ -272,11 +285,14 @@ class MapMarkerUpdateTests : BaseTest() {
         assertTrue(mapView.mapDataModel.removeMapObject(original))
         mapView.awaitRenderedFrames(1)
 
-        val reAdded = MapMarker.at(markerCoord)
-            .setAnchorPosition(0.5f, 0.7f)
-            .withIcon(icon)
-            .withLabel(StyledText("after"))
-            .build()
+        val reAdded = MapMarker(
+            MarkerData(
+                position = markerCoord,
+                anchorPosition = PointF(0.5f, 0.7f),
+                bitmapFactory = SimpleBitmapFactory(icon),
+                label = StyledText("after"),
+            )
+        )
         assertTrue(mapView.mapDataModel.addMapObject(reAdded))
         mapView.awaitRenderedFrames(3)
         assertTrue(reAdded.id != 0)
@@ -319,11 +335,14 @@ class MapMarkerUpdateTests : BaseTest() {
 
         runBlocking {
             val factory = DrawableFactory(R.drawable.ic_launcher_background)
-            val original = MapMarker.at(markerCoord)
-                .setAnchorPosition(0.5f, 0.7f) // move it a bit down, so that mid-screen is requestable
-                .withLabel(StyledText("Original"))
-                .withIcon(factory)
-                .build()
+            val original = MapMarker(
+                MarkerData(
+                    position = markerCoord,
+                    anchorPosition = PointF(0.5f, 0.7f), // move it a bit down, so that mid-screen is requestable
+                    label = StyledText("Original"),
+                    bitmapFactory = factory,
+                )
+            )
 
             mapView.cameraModel.setZoomLevel(19F)
             mapView.cameraModel.setPosition(markerCoord)
@@ -348,9 +367,7 @@ class MapMarkerUpdateTests : BaseTest() {
             delay(1000) // hit-test before update succeeded
 
             val retrieved = mapView.mapDataModel.getMapObjects().single() as MapMarker
-            val updated = retrieved.toBuilder()
-                .withLabel(StyledText("Modified"))
-                .build()
+            val updated = retrieved.copy { copy(label = StyledText("Modified")) }
             assertTrue(mapView.mapDataModel.updateMapObject(updated))
             delay(1000) // marker updated to label "Modified"
 
@@ -382,7 +399,7 @@ class MapMarkerUpdateTests : BaseTest() {
         val mapView = getMapView(mapFragment)
         delay(1000)
 
-        val marker = MapMarker.at(markerCoord).withLabel(StyledText("never_added")).build()
+        val marker = MapMarker(MarkerData(position = markerCoord, label = StyledText("never_added")))
         val initialId = marker.id
         val refusedUpdate = mapView.mapDataModel.updateMapObject(marker)
         val modelEmptyAfterRefusedUpdate = mapView.mapDataModel.getMapObjects().isEmpty()
@@ -420,9 +437,12 @@ class MapMarkerUpdateTests : BaseTest() {
         delay(1000)
 
         val markers = (0 until 10).map { i ->
-            MapMarker.at(GeoCoordinates(48.100 + i * 0.001, 17.234 + i * 0.001))
-                .withLabel(StyledText("m_$i"))
-                .build()
+            MapMarker(
+                MarkerData(
+                    position = GeoCoordinates(48.100 + i * 0.001, 17.234 + i * 0.001),
+                    label = StyledText("m_$i"),
+                )
+            )
         }
         markers.forEach { assertTrue(mapView.mapDataModel.addMapObject(it)) }
         delay(1500)
@@ -432,10 +452,9 @@ class MapMarkerUpdateTests : BaseTest() {
 
         markers.forEachIndexed { idx, m ->
             if (idx % 2 == 0) {
-                val updated = m.toBuilder()
-                    .withLabel(StyledText("updated_$idx"))
-                    .setCollisions(true)
-                    .build()
+                val updated = m.copy {
+                    copy(label = StyledText("updated_$idx"), collisions = true)
+                }
                 assertEquals("copy() must retain the id at index $idx", originalIds[idx], updated.id)
                 assertTrue(mapView.mapDataModel.updateMapObject(updated))
             }
@@ -476,7 +495,7 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.cameraModel.setZoomLevel(19F)
         mapView.cameraModel.setTilt(0F)
 
-        val original = MapMarker.at(markerCoord).withLabel(StyledText("flicker_0")).build()
+        val original = MapMarker(MarkerData(position = markerCoord, label = StyledText("flicker_0")))
         assertTrue(mapView.mapDataModel.addMapObject(original))
         delay(2000)
         val originalId = original.id
@@ -486,10 +505,12 @@ class MapMarkerUpdateTests : BaseTest() {
         val iterations = 20
         var failureMessage: String? = null
         for (i in 0 until iterations) {
-            current = current.toBuilder()
-                .withLabel(StyledText("flicker_${i + 1}"))
-                .setMinZoomLevel((i % 5).toFloat())
-                .build()
+            current = current.copy {
+                copy(
+                    label = StyledText("flicker_${i + 1}"),
+                    minZoomLevel = (i % 5).toFloat(),
+                )
+            }
             if (current.id != originalId) {
                 failureMessage = "copy() must retain native id at iteration $i: expected $originalId, got ${current.id}"
                 break
@@ -530,7 +551,7 @@ class MapMarkerUpdateTests : BaseTest() {
         mapView.cameraModel.setZoomLevel(19F)
         delay(1500)
 
-        val original = MapMarker.at(markerCoord).withLabel(StyledText("base")).build()
+        val original = MapMarker(MarkerData(position = markerCoord, label = StyledText("base")))
         assertTrue(mapView.mapDataModel.addMapObject(original))
         delay(1500)
         val originalId = original.id
@@ -540,10 +561,12 @@ class MapMarkerUpdateTests : BaseTest() {
             repeat(4) { workerIdx ->
                 launch(Dispatchers.IO) {
                     repeat(25) { i ->
-                        val updated = original.toBuilder()
-                            .withLabel(StyledText("w${workerIdx}_$i"))
-                            .setMinZoomLevel((i % 5).toFloat())
-                            .build()
+                        val updated = original.copy {
+                            copy(
+                                label = StyledText("w${workerIdx}_$i"),
+                                minZoomLevel = (i % 5).toFloat(),
+                            )
+                        }
                         mapView.mapDataModel.updateMapObject(updated)
                     }
                 }

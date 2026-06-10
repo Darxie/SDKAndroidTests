@@ -12,6 +12,7 @@ import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.map.`object`.MapRoute
 import com.sygic.sdk.map.`object`.MapRoute.RouteType
+import com.sygic.sdk.map.`object`.data.RouteData
 import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.Route
@@ -57,9 +58,7 @@ object GeoUtils {
             )
         )
 
-        val mapRoute = MapRoute.from(route)
-            .setType(RouteType.Primary)
-            .build()
+        val mapRoute = MapRoute(RouteData(route = route, routeType = RouteType.Primary))
         // Add the polyline to the map.
         mapView.mapDataModel.addMapObject(mapRoute)
         delay(60_000L)

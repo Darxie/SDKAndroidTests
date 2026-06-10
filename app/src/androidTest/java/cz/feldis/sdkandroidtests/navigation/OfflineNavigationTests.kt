@@ -14,6 +14,7 @@ import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.listeners.OnMapInitListener
 import com.sygic.sdk.map.`object`.MapRoute
+import com.sygic.sdk.map.`object`.data.RouteData
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.StreetDetail
@@ -1119,7 +1120,7 @@ class OfflineNavigationTests : BaseTest() {
             mapView.cameraModel.setRotationMode(Camera.RotationMode.Vehicle)
             mapView.cameraModel.setMovementMode(Camera.MovementMode.FollowGpsPositionWithAutozoom)
             mapView.cameraModel.setTilt(45F)
-            mapView.mapDataModel.addMapObject(MapRoute.from(route).build())
+            mapView.mapDataModel.addMapObject(MapRoute(RouteData(route = route)))
 
             val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
             demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)

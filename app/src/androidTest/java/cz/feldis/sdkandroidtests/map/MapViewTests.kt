@@ -23,6 +23,9 @@ import com.sygic.sdk.map.`object`.MapRoute
 import com.sygic.sdk.map.`object`.MapRoute.RouteType
 import com.sygic.sdk.map.`object`.ProxyPlace
 import com.sygic.sdk.map.`object`.ViewObject
+import com.sygic.sdk.map.`object`.data.PolygonData
+import com.sygic.sdk.map.`object`.data.PolylineData
+import com.sygic.sdk.map.`object`.data.RouteData
 import com.sygic.sdk.map.`object`.data.ViewObjectData
 import com.sygic.sdk.places.PlacesManagerProvider
 import com.sygic.sdk.places.data.PlaceCategoryGroupVisibility
@@ -260,12 +263,15 @@ class MapViewTests : BaseTest() {
         verify(listener, timeout(60_000L)).onEVRangeComputed(captor.capture())
         val isochrones = captor.firstValue[0]
 
-        val polygon =
-            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), isochrones)
-                .setBorderColor(Color.BLUE)
-                .setCenterColor(Color.TRANSPARENT)
-                .setCenterRadius(0.95f)
-                .build()
+        val polygon = MapPolygon(
+            PolygonData(
+                center = GeoCoordinates(48.10095535808773, 17.234824479529344),
+                vertices = isochrones,
+                borderColor = Color.BLUE,
+                centerColor = Color.TRANSPARENT,
+                centerRadius = 0.95f,
+            )
+        )
 
         mapView.mapDataModel.addMapObject(polygon)
         delay(2000)
@@ -307,12 +313,15 @@ class MapViewTests : BaseTest() {
             GeoCoordinates(48.101500, 17.233600)   // Northwest
         )
 
-        val polygon =
-            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), geoCoordinates)
-                .setBorderColor(Color.BLUE)
-                .setCenterColor(Color.TRANSPARENT)
-                .setCenterRadius(0.95f)
-                .build()
+        val polygon = MapPolygon(
+            PolygonData(
+                center = GeoCoordinates(48.10095535808773, 17.234824479529344),
+                vertices = geoCoordinates,
+                borderColor = Color.BLUE,
+                centerColor = Color.TRANSPARENT,
+                centerRadius = 0.95f,
+            )
+        )
 
         mapView.mapDataModel.addMapObject(polygon)
         delay(2000)
@@ -345,12 +354,15 @@ class MapViewTests : BaseTest() {
             GeoCoordinates(48.101500, 17.236000)   // Northeast
         )
 
-        val polygon =
-            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), geoCoordinates)
-                .setBorderColor(Color.BLUE)
-                .setCenterColor(Color.TRANSPARENT)
-                .setCenterRadius(0.95f)
-                .build()
+        val polygon = MapPolygon(
+            PolygonData(
+                center = GeoCoordinates(48.10095535808773, 17.234824479529344),
+                vertices = geoCoordinates,
+                borderColor = Color.BLUE,
+                centerColor = Color.TRANSPARENT,
+                centerRadius = 0.95f,
+            )
+        )
 
         mapView.mapDataModel.addMapObject(polygon)
         delay(2000)
@@ -383,12 +395,15 @@ class MapViewTests : BaseTest() {
             GeoCoordinates(48.101300, 17.234100)  // Upper-left inner
         )
 
-        val polygon =
-            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), starShape)
-                .setBorderColor(Color.BLUE)
-                .setCenterColor(Color.TRANSPARENT)
-                .setCenterRadius(0.95f)
-                .build()
+        val polygon = MapPolygon(
+            PolygonData(
+                center = GeoCoordinates(48.10095535808773, 17.234824479529344),
+                vertices = starShape,
+                borderColor = Color.BLUE,
+                centerColor = Color.TRANSPARENT,
+                centerRadius = 0.95f,
+            )
+        )
 
         mapView.mapDataModel.addMapObject(polygon)
         delay(2000)
@@ -423,12 +438,15 @@ class MapViewTests : BaseTest() {
             GeoCoordinates(48.101600, 17.234400)  // Inner spiral
         )
 
-        val polygon =
-            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), spiralShape)
-                .setBorderColor(Color.BLUE)
-                .setCenterColor(Color.TRANSPARENT)
-                .setCenterRadius(0.95f)
-                .build()
+        val polygon = MapPolygon(
+            PolygonData(
+                center = GeoCoordinates(48.10095535808773, 17.234824479529344),
+                vertices = spiralShape,
+                borderColor = Color.BLUE,
+                centerColor = Color.TRANSPARENT,
+                centerRadius = 0.95f,
+            )
+        )
 
         mapView.mapDataModel.addMapObject(polygon)
         delay(2000)
@@ -460,12 +478,15 @@ class MapViewTests : BaseTest() {
             GeoCoordinates(48.101700, 17.233600)  // Northwest
         )
 
-        val polygon =
-            MapPolygon.of(GeoCoordinates(48.10095535808773, 17.234824479529344), irregularShape)
-                .setBorderColor(Color.BLUE)
-                .setCenterColor(Color.TRANSPARENT)
-                .setCenterRadius(0.95f)
-                .build()
+        val polygon = MapPolygon(
+            PolygonData(
+                center = GeoCoordinates(48.10095535808773, 17.234824479529344),
+                vertices = irregularShape,
+                borderColor = Color.BLUE,
+                centerColor = Color.TRANSPARENT,
+                centerRadius = 0.95f,
+            )
+        )
 
         mapView.mapDataModel.addMapObject(polygon)
         delay(2000)
@@ -500,12 +521,14 @@ class MapViewTests : BaseTest() {
         mapView.cameraModel.setTilt(0F)
 
         // Build the polyline using the defined coordinates.
-        val polyline = MapPolyline
-            .of(listOf(startCoordinates, endCoordinates))
-            .setDashed(true)
-            .setLineWidth(8f)
-            .setLineColor(Color.BLUE)
-            .build()
+        val polyline = MapPolyline(
+            PolylineData(
+                vertices = listOf(startCoordinates, endCoordinates),
+                isDashed = true,
+                lineWidth = 8f,
+                lineColor = Color.BLUE,
+            )
+        )
         // Add the polyline to the map.
         mapView.mapDataModel.addMapObject(polyline)
         delay(1000)
@@ -562,9 +585,9 @@ class MapViewTests : BaseTest() {
         mapView.cameraModel.setTilt(0F)
 
         // Build the polyline using the defined coordinates.
-        val polyline = MapPolyline
-            .of(listOf(startCoordinates, endCoordinates))
-            .build()
+        val polyline = MapPolyline(
+            PolylineData(vertices = listOf(startCoordinates, endCoordinates))
+        )
         // Add the polyline to the map.
         mapView.mapDataModel.addMapObject(polyline)
         delay(1000)
@@ -621,9 +644,7 @@ class MapViewTests : BaseTest() {
         mapView.cameraModel.setZoomLevel(20F)
         mapView.cameraModel.setTilt(0F)
 
-        val mapRoute = MapRoute.from(route)
-            .setType(RouteType.Primary)
-            .build()
+        val mapRoute = MapRoute(RouteData(route = route, routeType = RouteType.Primary))
         // Add the polyline to the map.
         mapView.mapDataModel.addMapObject(mapRoute)
         delay(10000)
@@ -680,9 +701,7 @@ class MapViewTests : BaseTest() {
         mapView.cameraModel.setZoomLevel(20F)
         mapView.cameraModel.setTilt(0F)
 
-        val mapRoute = MapRoute.from(route)
-            .setType(RouteType.Alternative)
-            .build()
+        val mapRoute = MapRoute(RouteData(route = route, routeType = RouteType.Alternative))
         // Add the polyline to the map.
         mapView.mapDataModel.addMapObject(mapRoute)
         delay(1000)
@@ -1009,10 +1028,9 @@ class MapViewTests : BaseTest() {
             putString("key", "tujemojpayload")
         }
 
-        val mapRoute = MapRoute.from(route)
-            .setType(RouteType.Primary)
-            .withPayload(payload)
-            .build()
+        val mapRoute = MapRoute(
+            RouteData(route = route, routeType = RouteType.Primary, payload = payload)
+        )
         // Add the polyline to the map.
         mapView.mapDataModel.addMapObject(mapRoute)
         delay(1000)
@@ -1087,12 +1105,13 @@ class MapViewTests : BaseTest() {
         val geometryListCaptor = argumentCaptor<List<GeoCoordinates>>()
         verify(geometryListener, timeout(10_000L)).onGeometry(geometryListCaptor.capture())
 
-        val mapPolyline = MapPolyline.of(
-            geometryListCaptor.firstValue
-        ).withPayload(
-            payload
-        ).setLineWidth(20.0F)
-            .build()
+        val mapPolyline = MapPolyline(
+            PolylineData(
+                vertices = geometryListCaptor.firstValue,
+                payload = payload,
+                lineWidth = 20.0F,
+            )
+        )
 
         // Add the polyline to the map.
         mapView.mapDataModel.addMapObject(mapPolyline)

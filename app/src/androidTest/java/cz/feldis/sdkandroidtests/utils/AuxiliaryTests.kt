@@ -6,6 +6,7 @@ import com.sygic.sdk.map.Camera.MovementMode
 import com.sygic.sdk.map.Camera.RotationMode
 import com.sygic.sdk.map.fps.FpsConfig
 import com.sygic.sdk.map.`object`.MapRoute
+import com.sygic.sdk.map.`object`.data.RouteData
 import com.sygic.sdk.navigation.NavigationManager
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.position.GeoCoordinates
@@ -90,7 +91,7 @@ class AuxiliaryTests : BaseTest() {
 
             mapView.setVehicleProfile(vehicleProfile)
             mapView.mapDataModel.addMapObject(
-                MapRoute.from(route).setType(MapRoute.RouteType.Primary).build()
+                MapRoute(RouteData(route = route, routeType = MapRoute.RouteType.Primary))
             )
             mapView.mapDataModel.setSkin(listOf("car"))
 
@@ -106,7 +107,7 @@ class AuxiliaryTests : BaseTest() {
                         val objects = mapView.mapDataModel.getMapObjects()
                         objects.forEach { mapView.mapDataModel.removeMapObject(it) }
                         mapView.mapDataModel.addMapObject(
-                            MapRoute.from(it).setType(MapRoute.RouteType.Primary).build()
+                            MapRoute(RouteData(route = it, routeType = MapRoute.RouteType.Primary))
                         )
                         mapView.cameraModel.setRotationMode(RotationMode.Vehicle)
                         mapView.cameraModel.setMovementMode(MovementMode.FollowGpsPositionWithAutozoom)
