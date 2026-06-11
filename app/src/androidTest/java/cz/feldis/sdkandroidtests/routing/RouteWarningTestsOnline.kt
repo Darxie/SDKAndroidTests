@@ -8,6 +8,8 @@ import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
 import com.sygic.sdk.route.RoutingOptions.RoutingType
 import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.vehicletraits.VehicleProfile
+import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
+import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
@@ -163,6 +165,47 @@ class RouteWarningTestsOnline : BaseTest() {
         assertFalse(
             "Route with toll road avoidance enabled should not contain an UnavoidableTollRoad warning.",
             warnings.any { it is RouteWarning.SectionWarning.GlobalAvoidViolation.UnavoidableTollRoad }
+        )
+    }
+
+    /***
+     * https://jira.sygic.com/browse/CI-3951
+     * TC928
+     * There should be no visible restrictions on the route
+     */
+    @Test
+    fun noRouteRestrictionsForTruckPragueOnline() = runBlocking {
+
+        val start = GeoCoordinates(50.049720, 14.268410)
+        val destination = GeoCoordinates(50.053260, 14.260750)
+
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = VehicleProfile().apply {
+                generalVehicleTraits = GeneralVehicleTraits().apply {
+                    vehicleType = VehicleType.Truck
+                }
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalWeight = 15_000F
+                    totalLength = 15_000
+                    totalWidth = 2_550
+                    totalHeight = 3_500
+                }
+            }
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeComputeHelper.onlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val warnings = route.getRouteWarnings()
+
+        assertFalse(
+            "Route with toll road avoidance enabled should not contain a section warning.",
+            warnings.any { it is RouteWarning.SectionWarning }
         )
     }
 }

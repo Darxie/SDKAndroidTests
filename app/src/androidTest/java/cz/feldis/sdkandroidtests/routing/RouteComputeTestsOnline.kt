@@ -1460,4 +1460,43 @@ class RouteComputeTestsOnline : BaseTest() {
             delayedDuration >= baseDuration + delayOnWaypoint
         )
     }
+
+    /***
+     * https://jira.sygic.com/browse/CI-3121
+     * TC923
+     * Route is computed through town Salakas and not through RC4 road at 55.55806, 26.15803
+     */
+    @Test
+    fun routingViaRoadsOfLowerQualityLithuaniaOnline() = runBlocking {
+        val vehicleProfile = VehicleProfile().apply {
+            this.generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Car
+            }
+        }
+
+        val boundingBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(55.56056, 26.15553),
+            bottomRight = GeoCoordinates(55.55556, 26.16053)
+        )
+
+        val route = routeComputeHelper.onlineRouteCompute(
+            GeoCoordinates(55.546820, 26.336190),
+            GeoCoordinates(55.527450, 26.142320),
+            routingOptions = RoutingOptions().apply {
+                this.routingType = RoutingType.Fastest
+                this.vehicleProfile = vehicleProfile
+                this.useEndpointProtection = true
+                this.napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        val maneuversInBoundingBox = route.maneuvers.filter { maneuver ->
+            GeoUtils.isPointInBoundingBox(maneuver.position, boundingBox)
+        }
+
+        assertTrue(
+            "Route contains unexpected maneuvers within the RC4 road bounding box: $maneuversInBoundingBox",
+            maneuversInBoundingBox.isEmpty()
+        )
+    }
 }
