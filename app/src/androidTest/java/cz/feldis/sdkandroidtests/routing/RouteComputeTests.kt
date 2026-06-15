@@ -25,9 +25,11 @@ import com.sygic.sdk.route.listeners.RouteElementsListener
 import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.route.listeners.TransitCountriesInfoListener
 import com.sygic.sdk.route.results.RouteRequestDeserializedResult
+import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
 import com.sygic.sdk.vehicletraits.dimensional.Trailer
+import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
 import com.sygic.sdk.vehicletraits.hazmat.TunnelCategory
@@ -1450,6 +1452,65 @@ class RouteComputeTests : BaseTest() {
             "Expected negative delay to be preserved or clamped to 0, but was $actualDelay",
             actualDelay == delayOnWaypoint || actualDelay == 0L
         )
+    }
+
+    /**
+     * https://eurowag.atlassian.net/browse/DNAENG-1486
+     * TC939
+     *
+     * 1. With a waypoint inside Munich, the route is forced through the emission zone —
+     *    expects a ViolatedEmissionStandard warning (20t Truck, Diesel Euro 6).
+     * 2. Without the waypoint, routing avoids the emission zone —
+     *    expects no ViolatedEmissionStandard warning.
+     */
+    @Test
+    fun emissionZoneMunichVehicleWeight() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("de-02")
+
+        val start = GeoCoordinates(48.247690, 12.749520)
+        val waypoint = GeoCoordinates(48.141560, 11.570890)
+        val destination = GeoCoordinates(48.259510, 11.336400)
+
+        val vehicleProfile = VehicleProfile().apply {
+            generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Truck
+            }
+            dimensionalTraits = DimensionalTraits().apply {
+                totalWeight = 20000F
+            }
+            powertrainTraits = PowertrainTraits.InternalCombustionPowertrain(
+                FuelType.Diesel, EuropeanEmissionStandard.Euro6, ConsumptionData()
+            )
+        }
+
+        val routingOptions = RoutingOptions().apply {
+            this.vehicleProfile = vehicleProfile
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val routeWarningsListener1: RouteWarningsListener = mock(verboseLogging = true)
+        val routeWithWaypoint = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            waypoints = listOf(waypoint),
+            routingOptions = routingOptions
+        )
+        routeWithWaypoint.getRouteWarnings(routeWarningsListener1)
+        verify(routeWarningsListener1, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedZone } != null
+        })
+
+        val routeWarningsListener2: RouteWarningsListener = mock(verboseLogging = true)
+        val routeWithoutWaypoint = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+        routeWithoutWaypoint.getRouteWarnings(routeWarningsListener2)
+        verify(routeWarningsListener2, timeout(5_000)).onRouteWarnings(argThat {
+            this?.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedZone } == null
+        })
     }
 }
 

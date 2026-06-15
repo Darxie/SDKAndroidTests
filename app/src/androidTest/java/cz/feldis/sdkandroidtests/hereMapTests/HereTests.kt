@@ -43,6 +43,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Ignore
 import org.junit.Test
 import org.mockito.kotlin.argThat
@@ -837,6 +838,58 @@ class HereTests : BaseHereTest() {
         assertTrue(
             "Route should pass through Annebergsbron (57.71629, 12.93772)",
             geometry.any { GeoUtils.isPointInBoundingBox(it, annebergsbronBBox) }
+        )
+    }
+
+    /**
+     * https://eurowag.atlassian.net/browse/DNAENG-1398
+     * TC941
+     *
+     * Verifies that when routing a Truck 40t in Sweden, the route is NOT computed
+     * through a delivery zone at 57.72395, 12.92602.
+     */
+    @Test
+    fun deliveryZoneSwedenNotUsed() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("se")
+
+        val start = GeoCoordinates(57.721600, 12.940100)
+        val destination = GeoCoordinates(57.790600, 12.567400)
+
+        val vehicleProfile = VehicleProfile().apply {
+            dimensionalTraits = DimensionalTraits().apply {
+                totalWeight = 40000F
+                totalLength = 16500
+                totalHeight = 4000
+                totalWidth = 2500
+            }
+            generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Truck
+            }
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+
+        val geometry = route.getRouteGeometry(true)
+        val deliveryZoneBBox = GeoBoundingBox(
+            GeoCoordinates(57.72595, 12.92402),
+            GeoCoordinates(57.72195, 12.92802)
+        )
+
+        if (geometry == null) {
+            fail("getRouteGeometry returned no geometry")
+            return@runBlocking
+        }
+        assertFalse(
+            "Route should NOT pass through delivery zone at 57.72395, 12.92602",
+            geometry.any { GeoUtils.isPointInBoundingBox(it, deliveryZoneBBox) }
         )
     }
 }

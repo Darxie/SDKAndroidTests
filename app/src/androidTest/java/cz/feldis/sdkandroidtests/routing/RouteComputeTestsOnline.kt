@@ -1499,4 +1499,39 @@ class RouteComputeTestsOnline : BaseTest() {
             maneuversInBoundingBox.isEmpty()
         )
     }
+
+    /**
+     * https://jira.sygic.com/browse/CI-3338
+     * TC911
+     *
+     * Verifies that V3 online routing returns all transit countries for a route
+     * from Slovakia to Lithuania (regular car).
+     * Expected: sk → pl → lt
+     */
+    @Test
+    fun transitCountriesSkToLt() = runBlocking {
+        val start = GeoCoordinates(48.648840, 17.834150)
+        val destination = GeoCoordinates(54.671710, 25.162030)
+
+        val route = routeComputeHelper.onlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                this.useTraffic = false
+                this.useSpeedProfiles = false
+            }
+        )
+
+        val expectedCountries = listOf(
+            TransitCountryInfo("sk", emptyList()),
+            TransitCountryInfo("cz", emptyList()),
+            TransitCountryInfo("pl", emptyList()),
+            TransitCountryInfo("lt", emptyList())
+        )
+
+
+        val info = route.getTransitCountriesInfo()
+        assertEquals(expectedCountries, info)
+    }
+
 }

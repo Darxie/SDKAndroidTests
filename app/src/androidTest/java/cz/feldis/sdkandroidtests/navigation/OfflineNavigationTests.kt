@@ -1331,4 +1331,40 @@ class OfflineNavigationTests : BaseTest() {
             navigationManagerKtx.stopNavigation(navigation)
         }
     }
+
+    /**
+     * https://jira.sygic.com/browse/CI-3803
+     * TC929
+     *
+     * Verifies that average speed camera (section camera) warnings are delivered
+     * via OnIncidentListener during navigation simulation in Czech Republic.
+     */
+    @Test
+    fun averageSpeedCameraWarningCzechRepublic() = runBlocking {
+        mapDownload.installAndLoadMap("cz")
+        val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(48.952460, 16.522900),
+            GeoCoordinates(48.980110, 16.512800)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnIncidentListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        try {
+            navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 4F)
+            navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+            verify(listener, timeout(20_000L).atLeastOnce()).onIncidentsInfoChanged(argThat {
+                this.any { (it.incident as? SpeedCamera)?.category == "SYRadarStaticAverageSpeed" }
+            })
+        } finally {
+            navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+            navigation.removeOnIncidentListener(listener)
+            navigationManagerKtx.stopNavigation(navigation)
+        }
+    }
 }

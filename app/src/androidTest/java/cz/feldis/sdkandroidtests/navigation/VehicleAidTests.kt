@@ -16,6 +16,10 @@ import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
 import com.sygic.sdk.vehicletraits.listeners.SetVehicleProfileListener
+import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
+import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
+import com.sygic.sdk.vehicletraits.powertrain.FuelType
+import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.NmeaFileDataProvider
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
@@ -274,4 +278,53 @@ class VehicleAidTests : BaseTest() {
         navigation.removeOnVehicleZoneListener(vehicleZoneListener)
         navigationManagerKtx.stopNavigation(navigation)
     }
+
+    /**
+     * https://jira.sygic.com/browse/CI-3882
+     * https://eurowag.atlassian.net/browse/DNAENG-1363
+     * TC938
+     *
+     * Verifies that a DrivingProhibitedTruckEntry vehicle aid warning fires during navigation
+     * simulation when a Truck (Diesel Euro 2) is routed through a pedestrian path in Bratislava.
+     */
+    @Test
+    fun prohibitedTruckEntryWarning() = runBlocking {
+            mapDownload.installAndLoadMap("sk")
+
+            val vehicleProfile = VehicleProfile().apply {
+                generalVehicleTraits = GeneralVehicleTraits().apply {
+                    vehicleType = VehicleType.Truck
+                }
+                powertrainTraits = PowertrainTraits.InternalCombustionPowertrain(
+                    FuelType.Diesel, EuropeanEmissionStandard.Euro2, ConsumptionData()
+                )
+            }
+
+            val listener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
+
+            val route = routeCompute.offlineRouteCompute(
+                start = GeoCoordinates(48.151200, 17.055700),
+                destination = GeoCoordinates(48.152100, 17.056000),
+                routingOptions = RoutingOptions().apply {
+                    this.vehicleProfile = vehicleProfile
+                    useEndpointProtection = true
+                    napStrategy = NearestAccessiblePointStrategy.Disabled
+                }
+            )
+
+            navigationManagerKtx.setRouteForNavigation(route, navigation)
+            navigation.addOnVehicleAidListener(listener)
+            val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+            val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+            navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+            navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+            verify(listener, timeout(10_000)).onVehicleAidInfo(argThat {
+                any { it.restriction.type == RestrictionInfo.RestrictionType.DrivingProhibitedTruckEntry }
+            })
+
+            navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+            navigation.removeOnVehicleAidListener(listener)
+            navigationManagerKtx.stopNavigation(navigation)
+        }
 }
