@@ -215,6 +215,26 @@ class MapDownloadTests : BaseTest() {
     }
 
     @Test
+    fun setLocaleTestOfflineMap() {
+        // cache is cleared during setUp() and locale set to en-en
+        val installer = MapInstallerProvider.getInstance().get()
+        val listener: ResultListener = mock(verboseLogging = true)
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        installer.setLocale("sk-sk", listener)
+        verify(listener, timeout(20_000L).times(1))
+            .onResult(eq(MapInstaller.LoadResult.Success))
+
+        val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
+        val detailsCaptor = argumentCaptor<CountryDetails>()
+
+        installer.getCountryDetails("sk", true, cdListener)
+        verify(cdListener, timeout(20_000L)).onCountryDetails(detailsCaptor.capture())
+        assertTrue(detailsCaptor.firstValue.name == "Slovensko")
+        assertTrue(detailsCaptor.firstValue.continentName == "Európa")
+    }
+
+    @Test
     fun verifyProviderOfInstalledMapTest() {
         val cdListener: MapCountryDetailsListener = mock(verboseLogging = true)
         mapDownloadHelper.installAndLoadMap("is")
