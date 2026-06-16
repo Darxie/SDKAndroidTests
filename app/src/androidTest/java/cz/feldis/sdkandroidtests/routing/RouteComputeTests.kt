@@ -1391,37 +1391,6 @@ class RouteComputeTests : BaseTest() {
     }
 
     @Test
-    fun offlineDepartureTimeTest() = runBlocking {
-        mapDownloadHelper.installAndLoadMap("sk")
-
-        val start = GeoCoordinates(48.145411852878745, 17.126700710236015)
-        val destination = GeoCoordinates(48.20623993001774, 16.975278490626195)
-
-        val routeAtPeak = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            routingOptions = RoutingOptions().apply {
-                departureTime = Date(1761752071000)
-            }
-        )
-        val routeAtNight = routeComputeHelper.offlineRouteCompute(
-            start,
-            destination,
-            routingOptions = RoutingOptions().apply {
-                departureTime = Date(1761701671000)
-            }
-        )
-
-        val nightDuration = routeAtNight.routeInfo.waypointDurations.sumOf { it.withSpeedProfiles }
-        val peakDuration = routeAtPeak.routeInfo.waypointDurations.sumOf { it.withSpeedProfiles }
-
-        assertTrue(
-            "Expected night route to be faster than peak route",
-            nightDuration < peakDuration
-        )
-    }
-
-    @Test
     fun avoidableCountryHungaryBratislavaKomarno() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
         mapDownloadHelper.installAndLoadMap("hu")

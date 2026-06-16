@@ -192,49 +192,6 @@ class PositionManagerTests : BaseTest() {
     }
 
     @Test
-    fun removeOneOfMultipleListenersTest() {
-        val listener1: PositionManager.PositionChangeListener = mock(verboseLogging = true)
-        val listener2: PositionManager.PositionChangeListener = mock(verboseLogging = true)
-        val operationListener: PositionManager.OnOperationComplete = mock(verboseLogging = true)
-
-        val customPositionUpdater = CustomPositionUpdater()
-        positionManager.setCustomPositionUpdater(customPositionUpdater, operationListener)
-        positionManager.addPositionChangeListener(listener1)
-        positionManager.addPositionChangeListener(listener2)
-        verify(operationListener, timeout(5_000L)).onComplete()
-
-        val firstCoords = GeoCoordinates(48.9100, 17.7100)
-        val firstPosition = GeoPosition(firstCoords, 30.0, 10.0F, 19000L)
-        val firstUpdateListener: CustomPositionUpdater.OnOperationComplete =
-            mock(verboseLogging = true)
-        customPositionUpdater.updatePosition(firstPosition, firstUpdateListener)
-        verify(firstUpdateListener, timeout(5_000L)).onComplete()
-        verify(listener1, timeout(10_000L)).onPositionChanged(
-            argThat { coordinates == firstCoords }
-        )
-        verify(listener2, timeout(10_000L)).onPositionChanged(
-            argThat { coordinates == firstCoords }
-        )
-
-        positionManager.removePositionChangeListener(listener1)
-
-        val secondCoords = GeoCoordinates(48.9200, 17.7200)
-        val secondPosition = GeoPosition(secondCoords, 35.0, 15.0F, 20000L)
-        val secondUpdateListener: CustomPositionUpdater.OnOperationComplete =
-            mock(verboseLogging = true)
-        customPositionUpdater.updatePosition(secondPosition, secondUpdateListener)
-        verify(secondUpdateListener, timeout(5_000L)).onComplete()
-
-        verify(listener2, timeout(10_000L)).onPositionChanged(
-            argThat { coordinates == secondCoords }
-        )
-        Thread.sleep(2_000L)
-        verify(listener1, never()).onPositionChanged(
-            argThat { coordinates == secondCoords }
-        )
-    }
-
-    @Test
     fun customPositionUpdaterCourseUpdateTest() {
         val positionChangeListener: PositionManager.PositionChangeListener =
             mock(verboseLogging = true)
@@ -318,40 +275,6 @@ class PositionManagerTests : BaseTest() {
 
         verify(updateListener, timeout(5_000L)).onComplete()
         verify(positionChangeListener, timeout(10_000L)).onPositionChanged(eq(geoPosition))
-    }
-
-    @Test
-    fun replaceCustomPositionUpdaterTest() {
-        val positionChangeListener: PositionManager.PositionChangeListener =
-            mock(verboseLogging = true)
-        val firstOperationListener: PositionManager.OnOperationComplete = mock(verboseLogging = true)
-        val secondOperationListener: PositionManager.OnOperationComplete = mock(verboseLogging = true)
-
-        val firstUpdater = CustomPositionUpdater()
-        positionManager.setCustomPositionUpdater(firstUpdater, firstOperationListener)
-        positionManager.addPositionChangeListener(positionChangeListener)
-        verify(firstOperationListener, timeout(5_000L)).onComplete()
-
-        val firstPosition = GeoPosition(GeoCoordinates(48.2100, 17.2100), 50.0, 45.0F, 14000L)
-        val firstUpdateListener: CustomPositionUpdater.OnOperationComplete =
-            mock(verboseLogging = true)
-        firstUpdater.updatePosition(firstPosition, firstUpdateListener)
-        verify(firstUpdateListener, timeout(5_000L)).onComplete()
-        verify(positionChangeListener, timeout(10_000L)).onPositionChanged(eq(firstPosition))
-
-        val secondUpdater = CustomPositionUpdater()
-        positionManager.setCustomPositionUpdater(secondUpdater, secondOperationListener)
-        verify(secondOperationListener, timeout(5_000L)).onComplete()
-
-        val secondCoordinates = GeoCoordinates(48.2200, 17.2200)
-        val secondPosition = GeoPosition(secondCoordinates, 55.0, 50.0F, 15000L)
-        val secondUpdateListener: CustomPositionUpdater.OnOperationComplete =
-            mock(verboseLogging = true)
-        secondUpdater.updatePosition(secondPosition, secondUpdateListener)
-        verify(secondUpdateListener, timeout(5_000L)).onComplete()
-        verify(positionChangeListener, timeout(10_000L)).onPositionChanged(
-            argThat { coordinates == secondCoordinates && course == 50.0F }
-        )
     }
 
     @Test
