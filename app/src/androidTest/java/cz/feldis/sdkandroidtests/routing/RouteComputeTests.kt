@@ -58,6 +58,7 @@ import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.withSettings
 import timber.log.Timber
+import java.util.Date
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -1238,6 +1239,179 @@ class RouteComputeTests : BaseTest() {
         assertTrue(
             "Pedestrian route duration is not as expected",
             pedestrianDuration in (carDuration + 1)..5400
+        )
+    }
+
+    @Test
+    fun transitCountriesPreserveOrderTest_ThroughLiechtensteinToHungary() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("ch")
+        mapDownloadHelper.installAndLoadMap("li")
+        mapDownloadHelper.installAndLoadMap("at")
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("hu")
+
+        val start = GeoCoordinates(47.3769, 8.5417)
+        val waypoint1 = GeoCoordinates(47.1416, 9.5215)
+        val waypoint2 = GeoCoordinates(47.3878886618401, 13.101404296427072)
+        val waypoint3 = GeoCoordinates(48.1486, 17.1077)
+        val destination = GeoCoordinates(47.4979, 19.0402)
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            waypoints = listOf(waypoint1, waypoint2, waypoint3)
+        )
+
+        val expectedCountries = listOf(
+            TransitCountryInfo("ch", emptyList()),
+            TransitCountryInfo("li", emptyList()),
+            TransitCountryInfo("at", emptyList()),
+            TransitCountryInfo("sk", emptyList()),
+            TransitCountryInfo("hu", emptyList())
+        )
+
+        val listener: TransitCountriesInfoListener = mock(verboseLogging = true)
+        route.getTransitCountriesInfo(listener)
+
+        verify(listener, timeout(5_000L)).onTransitCountriesInfo(expectedCountries)
+    }
+
+    @Test
+    fun avoidableCountryTest_startAndEndCountryMustNotBeAvoided() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("ch")
+        mapDownloadHelper.installAndLoadMap("at")
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("hu")
+
+        val start = GeoCoordinates(47.35823094740036, 8.588782585276224)
+        val destination = GeoCoordinates(48.607066673016575, 21.3232184832135)
+
+        val route = routeComputeHelper.offlineRouteCompute(start, destination)
+        val countryRouteAvoidables =
+            route.routeRequest.routingOptions.routeAvoids.countryRouteAvoidables
+
+        listOf("ch", "sk").forEach { country ->
+            countryRouteAvoidables[country]?.forEach { avoidType ->
+                assert(avoidType != RouteAvoids.Type.Country) {
+                    "Country avoidable type should not be applied to $country"
+                }
+            }
+        }
+
+        listOf("at", "hu").forEach { country ->
+            val avoids = countryRouteAvoidables[country]
+            assert(avoids != null && RouteAvoids.Type.Country in avoids) {
+                "Expected $country to be marked as avoidable with type 'Country'"
+            }
+        }
+    }
+
+    @Test
+    fun fuzzyDomainFranceTest() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("fr-06")
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            GeoCoordinates(45.822810, 6.533240),
+            GeoCoordinates(45.594250, 6.880690),
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                    generalVehicleTraits.vehicleType = VehicleType.Car
+                    generalVehicleTraits.maximalSpeed = 150
+                }
+                useEndpointProtection = true
+                useTraffic = false
+                useSpeedProfiles = false
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val actualLength = route.routeInfo.length
+        assertTrue(
+            "Expected route length < 80 km, but was $actualLength",
+            actualLength < 80_000
+        )
+    }
+
+    @Test
+    fun fuzzyDomainSloveniaTest() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("si")
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            GeoCoordinates(46.484720, 13.782650),
+            GeoCoordinates(46.357730, 13.702640),
+            routingOptions = RoutingOptions().apply {
+                vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                    generalVehicleTraits.vehicleType = VehicleType.Car
+                    generalVehicleTraits.maximalSpeed = 150
+                }
+                useEndpointProtection = true
+                useTraffic = false
+                useSpeedProfiles = false
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+            }
+        )
+        val actualLength = route.routeInfo.length
+        assertTrue(
+            "Expected route length < 30 km, but was $actualLength",
+            actualLength < 30_000
+        )
+    }
+
+    @Test
+    fun arriveInDirectionTest() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val start = GeoCoordinates(48.14689, 17.22613)
+        val destination = GeoCoordinates(48.13879, 17.27926)
+
+        val normalRoute = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                arriveInDrivingSide = false
+            }
+        )
+
+        val arriveInDirectionRoute = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = RoutingOptions().apply {
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                arriveInDrivingSide = true
+            }
+        )
+
+        val difference = arriveInDirectionRoute.routeInfo.length - normalRoute.routeInfo.length
+        assertTrue(
+            "Expected significant difference (> 1000 m) due to arrive in direction, but got $difference meters",
+            difference > 1_000
+        )
+    }
+
+    @Test
+    fun avoidableCountryHungaryBratislavaKomarno() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+        mapDownloadHelper.installAndLoadMap("hu")
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            GeoCoordinates(48.19528, 17.02836),
+            GeoCoordinates(47.76355, 18.12695),
+            routingOptions = RoutingOptions().apply {
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                routingType = RoutingType.Fastest
+                useTraffic = false
+                useSpeedProfiles = false
+            }
+        )
+        val huAvoidables =
+            route.routeRequest.routingOptions.routeAvoids.countryRouteAvoidables["hu"]
+
+        assertTrue(
+            "Hungary as a country should be avoidable, but isn't",
+            huAvoidables != null && RouteAvoids.Type.Country in huAvoidables
         )
     }
 
