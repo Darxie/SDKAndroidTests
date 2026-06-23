@@ -25,6 +25,7 @@ import com.sygic.sdk.route.listeners.RouteElementsListener
 import com.sygic.sdk.route.listeners.RouteWarningsListener
 import com.sygic.sdk.route.listeners.TransitCountriesInfoListener
 import com.sygic.sdk.route.results.RouteRequestDeserializedResult
+import com.sygic.sdk.utils.EnforceableAttribute
 import com.sygic.sdk.vehicletraits.VehicleProfile
 import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
@@ -33,9 +34,16 @@ import com.sygic.sdk.vehicletraits.general.GeneralVehicleTraits
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
 import com.sygic.sdk.vehicletraits.hazmat.TunnelCategory
+import com.sygic.sdk.vehicletraits.powertrain.Battery
+import com.sygic.sdk.vehicletraits.powertrain.ChargingCurrent
+import com.sygic.sdk.vehicletraits.powertrain.ChargingPreferences
+import com.sygic.sdk.vehicletraits.powertrain.Connector
+import com.sygic.sdk.vehicletraits.powertrain.ConnectorFormat
+import com.sygic.sdk.vehicletraits.powertrain.ConnectorType
 import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
 import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
 import com.sygic.sdk.vehicletraits.powertrain.FuelType
+import com.sygic.sdk.vehicletraits.powertrain.PowerRange
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
@@ -1510,6 +1518,267 @@ class RouteComputeTests : BaseTest() {
         routeWithoutWaypoint.getRouteWarnings(routeWarningsListener2)
         verify(routeWarningsListener2, timeout(5_000)).onRouteWarnings(argThat {
             this?.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedZone } == null
+        })
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-10515
+     * TC802
+     *
+     * EV Truck route Bratislava → Košice.
+     * Phase 1 (weight 3500 kg): router adds exactly 2 charging waypoints.
+     * Phase 2 (weight 10000 kg): weight factor ×5 reduces range — more charging stops than phase 1.
+     */
+    @Test
+    fun evTruckWeightIncreasesChargingStops() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val start = GeoCoordinates(48.146400, 17.106870)
+        val destination = GeoCoordinates(48.717110, 21.259780)
+
+        val consumptionCurve = mapOf(
+            1.0 to 0.20, 10.0 to 0.18, 20.0 to 0.16, 30.0 to 0.14,
+            40.0 to 0.13, 50.0 to 0.12, 60.0 to 0.14, 70.0 to 0.16,
+            80.0 to 0.18, 90.0 to 0.20, 100.0 to 0.22, 110.0 to 0.24, 120.0 to 0.26
+        )
+        val weightFactors = mapOf(3500.0 to 1.0, 10000.0 to 5.0)
+        val connectors = listOf(
+            Connector(100f, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.AC),
+            Connector(100f, ConnectorType.Ccs2, ConnectorFormat.Unknown, ChargingCurrent.DC)
+        )
+        val chargingPreferences = ChargingPreferences(
+            fullChargeThreshold = 0.8f,
+            chargingThreshold = 0.35f,
+            reserveThreshold = 0.05f,
+            batteryMinimumDestinationThreshold = 0.3f,
+            powerRange = EnforceableAttribute(PowerRange(-1f, -1f), false)
+        )
+        val consumptionData = ConsumptionData(
+            consumptionCurve = consumptionCurve,
+            weightFactors = weightFactors
+        )
+
+        fun buildOptions(totalWeight: Float): RoutingOptions {
+            val battery = Battery(
+                capacity = 150f,
+                remainingCapacity = 45f,
+                chargingCurve = mapOf(1.0 to 1.0, 100.0 to 1.0)
+            )
+            val vehicleProfile = VehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                dimensionalTraits = DimensionalTraits().apply {
+                    this.totalWeight = totalWeight
+                }
+                powertrainTraits = PowertrainTraits.ElectricPowertrain(
+                    battery, connectors, chargingPreferences, consumptionData
+                )
+            }
+            return RoutingOptions().apply {
+                this.vehicleProfile = vehicleProfile
+                useEndpointProtection = true
+                napStrategy = NearestAccessiblePointStrategy.Disabled
+                routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+            }
+        }
+
+        val route1 = routeComputeHelper.offlineRouteCompute(
+            start, destination, routingOptions = buildOptions(3500f)
+        )
+        val chargingCount1 = route1.waypoints.count { it is ChargingWaypoint }
+        assertEquals("Expected 1 charging waypoint with weight 3500 kg", 1, chargingCount1)
+
+        val route2 = routeComputeHelper.offlineRouteCompute(
+            start, destination, routingOptions = buildOptions(10000f)
+        )
+        val chargingCount2 = route2.waypoints.count { it is ChargingWaypoint }
+        assertTrue(
+            "Expected more charging waypoints with 10000 kg ($chargingCount2) than with 3500 kg ($chargingCount1)",
+            chargingCount2 > chargingCount1
+        )
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-10860
+     * TC806
+     *
+     * A truck routed from 57.46712,12.06938 via 57.47198,12.06033 to 57.71445,11.92451 in Sweden
+     * must return to the highway and must NOT lead through Onsalavagen road (57.4804, 12.0586).
+     */
+    @Ignore
+    @Test
+    fun routeReturnsToHighwayAvoidOnsalavagen() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("se")
+
+        val start = GeoCoordinates(57.46712, 12.06938)
+        val waypoint = GeoCoordinates(57.47198, 12.06033)
+        val destination = GeoCoordinates(57.71445, 11.92451)
+
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                generalVehicleTraits.yearOfManufacture = 2017
+                powertrainTraits = PowertrainTraits.InternalCombustionPowertrain(
+                    FuelType.Diesel,
+                    EuropeanEmissionStandard.Euro4,
+                    ConsumptionData()
+                )
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalWeight = 10000F
+                    totalLength = 16500
+                    totalWidth = 2500
+                    totalHeight = 3000
+                }
+            }
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+            useEndpointProtection = true
+            useSpeedProfiles = true
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            waypoints = listOf(waypoint),
+            routingOptions = routingOptions
+        )
+
+        val geometryListener: GeometryListener = mock(verboseLogging = true)
+        route.getRouteGeometry(false, geometryListener)
+
+        val onsalavagen = GeoBoundingBox(
+            topLeft = GeoCoordinates(57.483, 12.055),
+            bottomRight = GeoCoordinates(57.477, 12.062)
+        )
+        verify(geometryListener, timeout(5_000)).onGeometry(argThat {
+            this.none { GeoUtils.isPointInBoundingBox(it, onsalavagen) }
+        })
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-11100
+     * TC815
+     *
+     * EV truck (40t, 378 kWh battery at 80%) Bratislava → Košice.
+     * Weight factors must be included in isochrone calculation:
+     * expects at least 1 charging waypoint and no negative battery (no InsufficientBatteryCharge warning).
+     */
+    @Test
+    fun evTruckWeightFactorsIsochroneChargingStop() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val start = GeoCoordinates(48.146400, 17.106870)
+        val destination = GeoCoordinates(48.717110, 21.259780)
+
+        val battery = Battery(
+            capacity = 378f,
+            remainingCapacity = 302.4f,
+            chargingCurve = mapOf(1.0 to 1.0, 100.0 to 1.0)
+        )
+        val connectors = listOf(
+            Connector(300f, ConnectorType.Ccs2, ConnectorFormat.Unknown, ChargingCurrent.AC),
+            Connector(300f, ConnectorType.Ccs2, ConnectorFormat.Unknown, ChargingCurrent.DC)
+        )
+        val chargingPreferences = ChargingPreferences(
+            fullChargeThreshold = 0.8f,
+            chargingThreshold = 0.2f,
+            reserveThreshold = 0.05f,
+            batteryMinimumDestinationThreshold = 0.0f,
+            powerRange = EnforceableAttribute(PowerRange(100f, 500f), false)
+        )
+        val consumptionData = ConsumptionData(
+            consumptionCurve = mapOf(1.0 to 1.0)
+        )
+        val vehicleProfile = VehicleProfile().apply {
+            generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Truck
+                maximalSpeed = 90
+                yearOfManufacture = 2017
+            }
+            dimensionalTraits = DimensionalTraits().apply {
+                totalWeight = 40000f
+                totalHeight = 4000
+                totalLength = 16500
+                totalWidth = 2450
+            }
+            powertrainTraits = PowertrainTraits.ElectricPowertrain(
+                battery, connectors, chargingPreferences, consumptionData
+            )
+        }
+        val routingOptions = RoutingOptions().apply {
+            this.vehicleProfile = vehicleProfile
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useSpeedProfiles = true
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val chargingCount = route.waypoints.count { it is ChargingWaypoint }
+        assertTrue(
+            "Expected at least 1 charging waypoint, but got $chargingCount",
+            chargingCount >= 1
+        )
+
+        route.waypoints.filterIsInstance<ChargingWaypoint>().forEach {
+            assertTrue(
+                "ChargingWaypoint stateOfCharge should be >= 0, but was ${it.stateOfCharge}",
+                it.stateOfCharge >= 0f
+            )
+        }
+
+        val warnings = route.getRouteWarnings()
+        assertFalse(
+            "Route must NOT contain InsufficientBatteryCharge warning",
+            warnings.any { it is RouteWarning.LocationWarning.InsufficientBatteryCharge }
+        )
+    }
+
+    /**
+     * TC812
+     * Truck route Amsterdam: start 52.337660,4.835450 → destination 52.3626,4.88126.
+     * Expected: route leads through shorter road at 52.3575,4.84306, not a detour.
+     */
+    @Test
+    fun truckRouteAmsterdamNoDetour() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("nl")
+
+        val start = GeoCoordinates(52.337660, 4.835450)
+        val destination = GeoCoordinates(52.3626, 4.88126)
+
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalHeight = 3000
+                    totalLength = 16500
+                    totalWeight = 10000F
+                    totalWidth = 2450
+                }
+            }
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val geometryListener: GeometryListener = mock(verboseLogging = true)
+        route.getRouteGeometry(false, geometryListener)
+
+        val expectedBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(52.3580, 4.8425),
+            bottomRight = GeoCoordinates(52.3570, 4.8440)
+        )
+        verify(geometryListener, timeout(5_000)).onGeometry(argThat {
+            this.any { GeoUtils.isPointInBoundingBox(it, expectedBox) }
         })
     }
 }

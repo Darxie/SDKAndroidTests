@@ -1367,4 +1367,40 @@ class OfflineNavigationTests : BaseTest() {
             navigationManagerKtx.stopNavigation(navigation)
         }
     }
+
+    /**
+     * TC813
+     *
+     * Verifies that average speed camera (section camera) warnings with radar info are delivered
+     * via OnIncidentListener during navigation simulation in Belgium.
+     * Route: 51.007530,3.175810 → 51.001320,3.203420
+     */
+    @Test
+    fun averageSpeedCameraWarningBelgium() = runBlocking {
+        mapDownload.installAndLoadMap("be")
+        val listener: NavigationManager.OnIncidentListener = mock(verboseLogging = true)
+
+        val route = routeCompute.offlineRouteCompute(
+            GeoCoordinates(51.007530, 3.175810),
+            GeoCoordinates(51.001320, 3.203420)
+        )
+
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnIncidentListener(listener)
+
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        try {
+            navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 2F)
+            navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+            verify(listener, timeout(20_000L).atLeastOnce()).onIncidentsInfoChanged(argThat {
+                this.any { (it.incident as? SpeedCamera)?.category == "SYRadarStaticAverageSpeed" }
+            })
+        } finally {
+            navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+            navigation.removeOnIncidentListener(listener)
+            navigationManagerKtx.stopNavigation(navigation)
+        }
+    }
 }

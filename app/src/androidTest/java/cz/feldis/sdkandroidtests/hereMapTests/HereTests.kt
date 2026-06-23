@@ -892,4 +892,190 @@ class HereTests : BaseHereTest() {
             geometry.any { GeoUtils.isPointInBoundingBox(it, deliveryZoneBBox) }
         )
     }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-11112
+     * TC817
+     *
+     * Truck route Borås → Ulricehamn → Rasta Ulricehamn → Vårgårda in Sweden (HERE maps).
+     * The route must NOT pass through a lower quality road between roads 40 and 42 at (57.7935, 13.0734).
+     */
+    @Ignore
+    @Test
+    fun truckRouteSwedenAvoidLowerQualityRoad() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("se")
+
+        val start = GeoCoordinates(57.72009, 12.94526)
+        val ulricehamn = GeoCoordinates(57.79275, 13.41081)
+        val rastaUlricehamn = GeoCoordinates(57.77998, 13.66201)
+        val destination = GeoCoordinates(58.03258, 12.80856)
+
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                generalVehicleTraits.yearOfManufacture = 2017
+                powertrainTraits = PowertrainTraits.InternalCombustionPowertrain(
+                    FuelType.Diesel,
+                    EuropeanEmissionStandard.Euro4,
+                    ConsumptionData()
+                )
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalWeight = 10000F
+                    totalLength = 16500
+                    totalWidth = 2450
+                    totalHeight = 4000
+                }
+            }
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useSpeedProfiles = true
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            waypoints = listOf(ulricehamn, rastaUlricehamn),
+            routingOptions = routingOptions
+        )
+
+        val geometryListener: GeometryListener = mock(verboseLogging = true)
+        route.getRouteGeometry(false, geometryListener)
+
+        val lowerQualityRoadBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(57.7940, 13.0724),
+            bottomRight = GeoCoordinates(57.7930, 13.0744)
+        )
+        verify(geometryListener, timeout(5_000)).onGeometry(argThat {
+            this.none { GeoUtils.isPointInBoundingBox(it, lowerQualityRoadBox) }
+        })
+    }
+
+    /**
+     * TC819
+     *
+     * Truck route with 3 trailers (2 axles each) in Sweden (HERE maps):
+     * 57.64524,14.98095 → 57.64825,14.97885
+     * Expected: MaxTrailers warning appears in route summary (getRouteWarnings) AND
+     * in navigation warnings (OnVehicleAidListener with LimitsMaxTrailers restriction).
+     */
+    @Test
+    fun maxTrailersWarningRouteSummaryAndNavigation() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("se")
+
+        val start = GeoCoordinates(57.64524, 14.98095)
+        val destination = GeoCoordinates(57.64825, 14.97885)
+
+        val vehicleProfile = VehicleProfile().apply {
+            generalVehicleTraits = GeneralVehicleTraits().apply {
+                vehicleType = VehicleType.Truck
+                maximalSpeed = 80
+                yearOfManufacture = 2017
+            }
+            dimensionalTraits = DimensionalTraits().apply {
+                totalWeight = 10000F
+                totalLength = 16500
+                totalWidth = 2450
+                totalHeight = 3000
+                trailers = listOf(
+                    Trailer(1000, false, listOf(Axle(2, 500F, 2))),
+                    Trailer(1000, false, listOf(Axle(2, 500F, 2))),
+                    Trailer(1000, false, listOf(Axle(2, 500F, 2)))
+                )
+            }
+            powertrainTraits = PowertrainTraits.InternalCombustionPowertrain(
+                FuelType.Diesel,
+                EuropeanEmissionStandard.Euro4,
+                ConsumptionData()
+            )
+        }
+
+        val routingOptions = RoutingOptions().apply {
+            this.vehicleProfile = vehicleProfile
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+            useSpeedProfiles = false
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.isNotEmpty()
+        })
+
+        val vehicleAidListener = mock<NavigationManager.OnVehicleAidListener>(verboseLogging = true)
+        navigationManagerKtx.setRouteForNavigation(route, navigation)
+        navigation.addOnVehicleAidListener(vehicleAidListener)
+        val simulator = RouteDemonstrateSimulatorProvider.getInstance(route)
+        val demonstrateSimulatorAdapter = RouteDemonstrateSimulatorAdapter(simulator)
+        navigationManagerKtx.setSpeedMultiplier(demonstrateSimulatorAdapter, 1F)
+        navigationManagerKtx.startSimulator(demonstrateSimulatorAdapter)
+
+        verify(vehicleAidListener, timeout(10_000)).onVehicleAidInfo(argThat {
+            this.any { it.restriction.type == RestrictionInfo.RestrictionType.LimitsMaxTrailers }
+        })
+
+        navigationManagerKtx.stopSimulator(demonstrateSimulatorAdapter)
+        navigation.removeOnVehicleAidListener(vehicleAidListener)
+        navigationManagerKtx.stopNavigation(navigation)
+    }
+
+    /**
+     * TC818
+     *
+     * After navigation recompute from position 57.74872,11.99333 to destination 57.749000,11.991000,
+     * the recomputed route (Car, HERE Sweden maps) must NOT contain duplicate consecutive
+     * roundabout instructions (same type and same exit number).
+     */
+    @Test
+    fun recomputeNoDuplicateRoundaboutInstruction() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("se")
+
+        val recomputeStart = GeoCoordinates(57.74872, 11.99333)
+        val destination = GeoCoordinates(57.749000, 11.991000)
+
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Car
+                generalVehicleTraits.maximalSpeed = 130
+                generalVehicleTraits.yearOfManufacture = 2017
+                powertrainTraits = PowertrainTraits.InternalCombustionPowertrain(
+                    FuelType.Diesel,
+                    EuropeanEmissionStandard.Euro4,
+                    ConsumptionData()
+                )
+            }
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useSpeedProfiles = true
+        }
+
+        val recomputedRoute = routeComputeHelper.offlineRouteCompute(
+            recomputeStart,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val maneuvers = recomputedRoute.maneuvers
+        for (i in 0 until maneuvers.size - 1) {
+            val current = maneuvers[i]
+            val next = maneuvers[i + 1]
+            val currentIsRoundabout = current.type.name.startsWith("Roundabout")
+            val nextIsRoundabout = next.type.name.startsWith("Roundabout")
+            if (currentIsRoundabout && nextIsRoundabout) {
+                assertFalse(
+                    "Duplicate consecutive roundabout instruction: ${current.type} exit ${current.roundaboutExit} at index $i",
+                    current.type == next.type && current.roundaboutExit == next.roundaboutExit && current.roundaboutExit > 0
+                )
+            }
+        }
+    }
 }

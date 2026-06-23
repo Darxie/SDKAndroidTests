@@ -3,25 +3,38 @@ package cz.feldis.sdkandroidtests.routing
 import com.sygic.sdk.navigation.NavigationManager.OnVehicleZoneListener
 import com.sygic.sdk.navigation.NavigationManagerProvider
 import com.sygic.sdk.navigation.routeeventnotifications.RestrictionInfo
+import com.sygic.sdk.position.GeoBoundingBox
 import com.sygic.sdk.position.GeoCoordinates
 import com.sygic.sdk.route.RouteAvoids
 import com.sygic.sdk.route.RouteWarning
 import com.sygic.sdk.route.RoutingOptions
 import com.sygic.sdk.route.RoutingOptions.NearestAccessiblePointStrategy
+import com.sygic.sdk.route.listeners.GeometryListener
 import com.sygic.sdk.route.listeners.RouteWarningsListener
+import com.sygic.sdk.utils.EnforceableAttribute
 import com.sygic.sdk.vehicletraits.VehicleProfile
+import com.sygic.sdk.vehicletraits.dimensional.Axle
 import com.sygic.sdk.vehicletraits.dimensional.DimensionalTraits
+import com.sygic.sdk.vehicletraits.dimensional.WheeledVehicle
 import com.sygic.sdk.vehicletraits.general.VehicleType
 import com.sygic.sdk.vehicletraits.hazmat.HazmatTraits
 import com.sygic.sdk.vehicletraits.hazmat.TunnelCategory
 import com.sygic.sdk.vehicletraits.listeners.SetVehicleProfileListener
+import com.sygic.sdk.vehicletraits.powertrain.Battery
+import com.sygic.sdk.vehicletraits.powertrain.ChargingCurrent
+import com.sygic.sdk.vehicletraits.powertrain.ChargingPreferences
+import com.sygic.sdk.vehicletraits.powertrain.Connector
+import com.sygic.sdk.vehicletraits.powertrain.ConnectorFormat
+import com.sygic.sdk.vehicletraits.powertrain.ConnectorType
 import com.sygic.sdk.vehicletraits.powertrain.ConsumptionData
 import com.sygic.sdk.vehicletraits.powertrain.EuropeanEmissionStandard
 import com.sygic.sdk.vehicletraits.powertrain.FuelType
+import com.sygic.sdk.vehicletraits.powertrain.PowerRange
 import com.sygic.sdk.vehicletraits.powertrain.PowertrainTraits
 import cz.feldis.sdkandroidtests.BaseTest
 import cz.feldis.sdkandroidtests.ktx.NavigationManagerKtx
 import cz.feldis.sdkandroidtests.mapInstaller.MapDownloadHelper
+import cz.feldis.sdkandroidtests.utils.GeoUtils
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,6 +46,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
+import java.util.Date
 import kotlin.math.abs
 
 class RouteWarningTests : BaseTest() {
@@ -812,6 +826,170 @@ class RouteWarningTests : BaseTest() {
         route.getRouteWarnings(routeWarningsListener)
         verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
             this.find { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedProhibitedTruckZone } != null
+        })
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-10441
+     * TC801
+     *
+     * Verifies that an EV (70 kWh, full charge) routed through a charging waypoint
+     * in Slovakia does NOT produce an InsufficientBatteryCharge warning in route summary.
+     */
+    @Test
+    fun noLowBatteryWarningWithChargingWaypoint() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("sk")
+
+        val start = GeoCoordinates(48.149580, 17.110260)
+        val chargingStop = GeoCoordinates(48.366450, 17.599240)
+        val destination = GeoCoordinates(48.371940, 17.595280)
+
+        val battery = Battery(
+            capacity = 70f,
+            remainingCapacity = 70f,
+            chargingCurve = mapOf(1.0 to 1.0, 100.0 to 1.0)
+        )
+        val connectors = listOf(
+            Connector(100f, ConnectorType.Type2, ConnectorFormat.Unknown, ChargingCurrent.AC),
+            Connector(100f, ConnectorType.Ccs2, ConnectorFormat.Unknown, ChargingCurrent.DC)
+        )
+        val chargingPreferences = ChargingPreferences(
+            fullChargeThreshold = 0.8f,
+            chargingThreshold = 0.2f,
+            reserveThreshold = 0.05f,
+            batteryMinimumDestinationThreshold = 0.9f,
+            powerRange = EnforceableAttribute(PowerRange(500f, 600f), false)
+        )
+        val consumptionData = ConsumptionData(
+            consumptionCurve = mapOf(1.0 to 1.0, 100.0 to 1.0),
+            weightFactors = mapOf(1000.0 to 0.5, 5000.0 to 1.0, 10000.0 to 1.0)
+        )
+        val vehicleProfile = VehicleProfile().apply {
+            generalVehicleTraits.vehicleType = VehicleType.Car
+            powertrainTraits = PowertrainTraits.ElectricPowertrain(
+                battery, connectors, chargingPreferences, consumptionData
+            )
+        }
+
+        val options = RoutingOptions().apply {
+            this.vehicleProfile = vehicleProfile
+            useEndpointProtection = true
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            waypoints = listOf(chargingStop),
+            routingOptions = options
+        )
+
+        val warnings = route.getRouteWarnings()
+        assertFalse(
+            "Route should NOT contain InsufficientBatteryCharge (low battery) warning",
+            warnings.any { it is RouteWarning.LocationWarning.InsufficientBatteryCharge }
+        )
+    }
+
+    /**
+     * TC804
+     *
+     * Positive test: a 40t truck routed in Sweden on 2024-01-22 06:30 should be permitted
+     * through a weight-restricted road — no WeightRestriction warning expected, and the
+     * route must pass through 57.7107, 11.8947.
+     */
+    @Test
+    fun weightRestrictionSwedenPositive() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("se")
+
+        val start = GeoCoordinates(57.70918, 11.86203)
+        val destination = GeoCoordinates(57.71704, 11.92076)
+
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                generalVehicleTraits.maximalSpeed = 130
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalWeight = 40000F
+                    totalHeight = 3000
+                    totalLength = 16500
+                    totalWidth = 2500
+                }
+            }
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+            departureTime = Date(1705905000000L) // 2024-01-22 06:30:00 UTC
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val warnings = route.getRouteWarnings()
+        assertFalse(
+            "Route must NOT contain a WeightRestriction warning",
+            warnings.any { it is RouteWarning.SectionWarning.WeightRestriction }
+        )
+
+        val geometryListener: GeometryListener = mock(verboseLogging = true)
+        route.getRouteGeometry(false, geometryListener)
+
+        val expectedBox = GeoBoundingBox(
+            topLeft = GeoCoordinates(57.7117, 11.8937),
+            bottomRight = GeoCoordinates(57.7097, 11.8957)
+        )
+        verify(geometryListener, timeout(5_000)).onGeometry(argThat {
+            this.any { GeoUtils.isPointInBoundingBox(it, expectedBox) }
+        })
+    }
+
+    /**
+     * https://jira.sygic.com/browse/SDC-11172
+     * TC820
+     *
+     * Verifies that a truck with axle weight exceeding the road restriction in Sweden
+     * produces an ExceededAxleWeight warning.
+     */
+    @Test
+    fun axleWeightRestrictionTest() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("se")
+
+        val routeWarningsListener: RouteWarningsListener = mock(verboseLogging = true)
+
+        val start = GeoCoordinates(58.309710, 12.404470)
+        val destination = GeoCoordinates(58.321230, 12.393960)
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+                dimensionalTraits = DimensionalTraits().apply {
+                    totalWeight = 25250F
+                    totalWidth = 2500
+                    totalHeight = 4500
+                    wheeledVehicle = WheeledVehicle(
+                        listOf(
+                            Axle(2, 11500F, 4),
+                            Axle(2, 11500F, 4)
+                        )
+                    )
+                }
+            }
+            routeAvoids.globalRouteAvoids = mutableSetOf(RouteAvoids.Type.UnpavedRoad)
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        route.getRouteWarnings(routeWarningsListener)
+        verify(routeWarningsListener, timeout(5_000)).onRouteWarnings(argThat {
+            this.find { it is RouteWarning.SectionWarning.WeightRestriction.ExceededAxleWeight } != null
         })
     }
 }
