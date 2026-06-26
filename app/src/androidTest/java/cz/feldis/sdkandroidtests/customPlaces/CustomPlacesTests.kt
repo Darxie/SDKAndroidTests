@@ -1,14 +1,8 @@
 package cz.feldis.sdkandroidtests.customPlaces
 
-import android.R
+    import android.R
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
-import com.sygic.sdk.map.Camera
-import com.sygic.sdk.map.CameraState
-import com.sygic.sdk.map.GetMapResult
-import com.sygic.sdk.map.MapAnimation
-import com.sygic.sdk.map.MapCenter
-import com.sygic.sdk.map.MapCenterSettings
 import com.sygic.sdk.map.MapView
 import com.sygic.sdk.map.MapView.InjectSkinResultListener
 import com.sygic.sdk.map.listeners.RequestObjectCallback
@@ -42,7 +36,6 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -64,6 +57,9 @@ class CustomPlacesTests : BaseTest() {
     private lateinit var searchHelper: SearchHelper
     private lateinit var searchManager: SearchManager
     private val defaultDataset = "bf19e514-487b-43c4-b0df-9073b2397dd1"
+    private val removableCustomPlaceId = "acd8733b-d3db-4465-8874-ecc495a5ee0f"
+    private val removableCustomPlaceName = "Custom removal place"
+    private val removableCustomPlaceLocation = GeoCoordinates(48.2718, 17.7697)
 
     override fun setUp() {
         super.setUp()
@@ -73,6 +69,7 @@ class CustomPlacesTests : BaseTest() {
         cpManager.setMode(CustomPlacesManager.Mode.OFFLINE)
         uninstallOfflinePlaces("sk")
     }
+
 
     private fun installOfflinePlaces(iso: String) = runBlocking {
         cpManager.installOfflineDatasets(listOf(defaultDataset), iso)
@@ -133,6 +130,79 @@ class CustomPlacesTests : BaseTest() {
 
         val match = results.first()
         assertEquals("Eurowag - Malacky", match.title)
+    }
+
+    @Test
+    fun removeOfflineCustomPlaceFromJsonRemovesItFromSearchAndMap() = runBlocking {
+        val installResult = cpManager.installOfflinePlacesFromJson(readJson("custom-place.json"))
+        assertEquals(
+            "Expected SUCCESS install, got ${installResult.result} (${installResult.message})",
+            CustomPlacesManager.InstallResult.SUCCESS,
+            installResult.result
+        )
+
+        val searchRequest = SearchRequest(
+            searchInput = "custom removal token",
+            location = removableCustomPlaceLocation
+        )
+        val autocompleteResults = searchHelper.offlineAutocompleteCustomPlaces(searchRequest)
+        assertTrue(
+            "Expected custom place '$removableCustomPlaceName' in autocomplete results",
+            autocompleteResults.any { it.title == removableCustomPlaceName }
+        )
+
+        val mapFragment = TestMapFragment.newInstance(getInitialCameraState())
+        val scenario = ActivityScenario.launch(SygicActivity::class.java).onActivity {
+            it.supportFragmentManager
+                .beginTransaction()
+                .add(R.id.content, mapFragment)
+                .commitNow()
+        }
+
+        try {
+            val mapView = getMapView(mapFragment)
+            val injectSkinResultListener: InjectSkinResultListener = mock(verboseLogging = true)
+            mapView.injectSkinDefinition(
+                readJson("skin_poi_custom.json"),
+                injectSkinResultListener
+            )
+            verify(
+                injectSkinResultListener,
+                timeout(5_000L)
+            ).onResult(eq(MapView.InjectSkinResult.Success))
+
+            mapView.cameraModel.setPosition(removableCustomPlaceLocation)
+            mapView.cameraModel.setZoomLevel(22F)
+            mapView.cameraModel.setTilt(0F)
+
+            assertTrue(
+                "Expected custom place '$removableCustomPlaceName' on map before removal",
+                mapView.awaitCustomPlaceAtCenter(removableCustomPlaceName, visible = true)
+            )
+
+            val removeResult = cpManager.installOfflinePlacesFromJson(
+                """
+                {
+                  "add_or_update": [],
+                  "to_remove": ["$removableCustomPlaceId"]
+                }
+                """.trimIndent()
+            )
+            assertEquals(
+                "Expected SUCCESS remove, got ${removeResult.result} (${removeResult.message})",
+                CustomPlacesManager.InstallResult.SUCCESS,
+                removeResult.result
+            )
+            delay(3000)
+
+            awaitNoAutocompleteResult(searchRequest, removableCustomPlaceName)
+            assertTrue(
+                "Expected custom place '$removableCustomPlaceName' to disappear from map after removal",
+                mapView.awaitCustomPlaceAtCenter(removableCustomPlaceName, visible = false)
+            )
+        } finally {
+            scenario.moveToState(Lifecycle.State.DESTROYED)
+        }
     }
 
     @Test
@@ -852,5 +922,47 @@ class CustomPlacesTests : BaseTest() {
             scenario.moveToState(Lifecycle.State.DESTROYED)
             fail("Expected object of type ProxyPlace, but found: ${capturedObjects[0]::class.java}")
         }
+    }
+
+    private suspend fun awaitNoAutocompleteResult(
+        searchRequest: SearchRequest,
+        title: String,
+        timeoutMs: Long = 10_000L,
+        pollMs: Long = 250L
+    ) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        var lastResults: List<AutocompleteResult> = emptyList()
+        while (System.currentTimeMillis() < deadline) {
+            lastResults = try {
+                searchHelper.offlineAutocompleteCustomPlaces(searchRequest)
+            } catch (e: SearchHelper.NoResultsException) {
+                return
+            }
+
+            if (lastResults.none { it.title == title }) return
+            delay(pollMs)
+        }
+
+        fail("Expected no autocomplete result with title '$title', last results: $lastResults")
+    }
+
+    private suspend fun MapView.awaitCustomPlaceAtCenter(
+        placeName: String,
+        visible: Boolean,
+        timeoutMs: Long = 10_000L,
+        pollMs: Long = 250L
+    ): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            val view = requireNotNull(getView())
+            val result = requestObjectsAtPoint(view.width / 2F, view.height / 2F)
+            val placeVisible = result.viewObjects.any {
+                it is ProxyPlace && it.data.place.name == placeName
+            }
+            if (placeVisible == visible) return true
+            delay(pollMs)
+        }
+
+        return false
     }
 }

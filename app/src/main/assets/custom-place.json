@@ -1,0 +1,23 @@
+{
+  "add_or_update": [
+    {
+      "id": "acd8733b-d3db-4465-8874-ecc495a5ee0f",
+      "iso": "sk",
+      "location": "48.2718,17.7697",
+      "category": "mojaSuperKategoria",
+      "search_priority": 15,
+      "display_name": [
+        {
+          "title": "Custom removal place",
+          "subtitle": "Removal regression test",
+          "lng": "en",
+          "search_tokens": [
+            {
+              "index": "custom removal token"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
