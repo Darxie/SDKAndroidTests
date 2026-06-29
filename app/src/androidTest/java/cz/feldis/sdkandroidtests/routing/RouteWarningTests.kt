@@ -747,6 +747,75 @@ class RouteWarningTests : BaseTest() {
         })
     }
 
+    /**
+     * A combustion truck routed through the London Congestion Charge zone (map gb-03) is
+     * subject to the congestion charge (the map restriction "CongestionCharge ... Valid In
+     * Both [Truck, ...]" applies), so the route warnings MUST contain a
+     * ViolatedPaidZoneRestriction. The warning is emitted unconditionally whenever the route
+     * crosses a congestion charge that applies to the vehicle - there is no "avoid" involved.
+     */
+    @Test
+    fun truckEnteringLondonCongestionChargeGetsPaidZoneViolation() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("gb-03")
+
+        // Start and destination in south-east London so the truck route passes through the
+        // congestion charge (paid) zone.
+        val start = GeoCoordinates(51.43819, 0.17456)
+        val destination = GeoCoordinates(51.47842, 0.02253)
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createCombustionVehicleProfile().apply {
+                generalVehicleTraits.vehicleType = VehicleType.Truck
+            }
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val warnings = route.getRouteWarnings()
+        assertTrue(
+            "Combustion truck route through the London congestion charge zone must contain " +
+                "a ViolatedPaidZoneRestriction warning",
+            warnings.any { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedPaidZoneRestriction }
+        )
+    }
+
+    /**
+     * An electric truck is exempt from the London Congestion Charge, so the congestion charge
+     * does not apply to it and the route warnings MUST NOT contain a ViolatedPaidZoneRestriction -
+     * even though it drives through the exact same paid zone as a combustion truck would.
+     * Sister test to [truckEnteringLondonCongestionChargeGetsPaidZoneViolation].
+     */
+    @Test
+    fun electricTruckEnteringLondonCongestionChargeNoPaidZoneViolation() = runBlocking {
+        mapDownloadHelper.installAndLoadMap("gb-03")
+
+        val start = GeoCoordinates(51.43819, 0.17456)
+        val destination = GeoCoordinates(51.47842, 0.02253)
+        val routingOptions = RoutingOptions().apply {
+            vehicleProfile = routeComputeHelper.createElectricVehicleProfileTruck()
+            napStrategy = NearestAccessiblePointStrategy.Disabled
+            useEndpointProtection = true
+        }
+
+        val route = routeComputeHelper.offlineRouteCompute(
+            start,
+            destination,
+            routingOptions = routingOptions
+        )
+
+        val warnings = route.getRouteWarnings()
+        assertFalse(
+            "Electric truck is exempt from the London congestion charge, so the route must " +
+                "NOT contain a ViolatedPaidZoneRestriction warning",
+            warnings.any { it is RouteWarning.SectionWarning.ZoneViolation.ViolatedPaidZoneRestriction }
+        )
+    }
+
     @Test
     fun noViolatedZone() = runBlocking {
         mapDownloadHelper.installAndLoadMap("sk")
