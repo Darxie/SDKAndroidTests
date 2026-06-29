@@ -24,12 +24,15 @@ import cz.feldis.sdkandroidtests.utils.RouteDemonstrateSimulatorAdapter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -498,7 +501,7 @@ class RouteExploreTests : BaseTest() {
 
         val interrupted = CompletableDeferred<Unit>()
 
-        scope.launch {
+        val exploreJob = scope.launch {
             while (isActive) {
                 RouteExplorerProvider.getInstance().explorePlacesOnRoute(route, emptyList())
                     .collect {
@@ -509,7 +512,7 @@ class RouteExploreTests : BaseTest() {
             }
         }
 
-        scope.launch {
+        val reloadJob = scope.launch {
             val mapInstaller = MapInstallerProvider.getInstance()
             while (isActive) {
                 mapInstaller.unloadMap("va")
@@ -518,5 +521,16 @@ class RouteExploreTests : BaseTest() {
         }
 
         interrupted.await()
+
+        // Stop the infinite explore/reload loops, otherwise they keep running on the
+        // class-level Unconfined scope long after the test returns and spam subsequent
+        // tests with "Exploring places on route -1" / map-reload storms.
+        exploreJob.cancelAndJoin()
+        reloadJob.cancelAndJoin()
+    }
+
+    @After
+    fun cancelExploreScope() {
+        scope.cancel()
     }
 }

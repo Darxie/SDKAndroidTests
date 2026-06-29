@@ -72,9 +72,15 @@ class CustomPlacesTests : BaseTest() {
 
 
     private fun installOfflinePlaces(iso: String) = runBlocking {
-        cpManager.installOfflineDatasets(listOf(defaultDataset), iso)
+        val result = cpManager.installOfflineDatasets(listOf(defaultDataset), iso)
             .filterIsInstance<InstallDatasetsData.Result>()
-            .first { it.result.result == CustomPlacesManager.InstallResult.SUCCESS }
+            .map { it.result }
+            .first()
+        assertEquals(
+            "Expected SUCCESS install, got ${result.result} (${result.message})",
+            CustomPlacesManager.InstallResult.SUCCESS,
+            result.result
+        )
     }
 
     private fun uninstallOfflinePlaces(iso: String) = runBlocking {
