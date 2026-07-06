@@ -127,19 +127,27 @@ class VoicesTests : BaseTest() {
     }
 
     /**
-     * The native SDK only rejects setVoice() for ids unknown to its voice catalog. A
-     * known catalog voice that is merely not installed yet is still accepted
-     * (onSetVoice reports success=true), even though getVoice() may not reflect it
-     * as the active voice since the voice data isn't actually present on disk.
+     * Regression test for a fixed SDK bug: setVoice() used to only check that the id
+     * exists in the in-memory voice catalog (VoiceManager::FindVoicePackage) and then
+     * unconditionally record the audio system's voice preference (SetVoicePackage ->
+     * AudioServiceLocator::SetVoice), without checking whether the package's files
+     * were present on disk. For a catalog-only (not-yet-installed) entry, the
+     * underlying native AudioVoice data is empty/default, so onSetVoice used to report
+     * success=true even though no real, playable voice was actually applied - callers
+     * relying on success=true as proof of a usable voice could be misled (e.g.
+     * navigation guidance could silently end up with no/broken audio).
+     *
+     * The SDK now checks the package's actual installation status before applying it,
+     * so setVoice() on a not-installed voice correctly reports success=false.
      */
     @Test
-    fun setNotInstalledVoiceStillSucceedsTest() {
+    fun setVoiceOnNotInstalledVoiceFailsTest() {
         val helper = VoiceTestHelper()
         val notInstalledVoice = helper.findDownloadableVoice()
         helper.ensureVoiceNotInstalled(notInstalledVoice)
 
         val setResult = helper.setVoiceAndAwait(notInstalledVoice)
-        assertEquals(VoiceManager.SetVoiceResult(notInstalledVoice.id, true), setResult)
+        assertEquals(VoiceManager.SetVoiceResult(notInstalledVoice.id, false), setResult)
     }
 
     @Test
@@ -165,18 +173,100 @@ class VoicesTests : BaseTest() {
     }
 
     /**
-     * Similar to setVoice(), the native SDK only rejects playSample() for ids unknown
-     * to its voice catalog. A known catalog voice that isn't installed yet is still
-     * accepted and played.
+     * Regression test for a fixed SDK bug: same underlying cause as
+     * setVoiceOnNotInstalledVoiceFailsTest. playSample() used to only check that the
+     * id exists in the in-memory voice catalog (VoiceManager::FindVoicePackage). For a
+     * catalog-only (not-yet-installed) entry the native AudioVoice data is
+     * empty/default, so sygm_voice_play_sample() used to call audio.PlaySample() with
+     * empty/invalid sample data yet unconditionally reported success (onPlaySample
+     * success=true) as long as the id was found - regardless of whether any audio was
+     * actually produced. This could mislead a "preview a voice before downloading it"
+     * UX into believing playback succeeded.
+     *
+     * The SDK now checks the package's actual installation status before playing it,
+     * so playSample() on a not-installed voice correctly reports success=false.
      */
     @Test
-    fun playSampleOfNotInstalledVoiceStillSucceedsTest() {
+    fun playSampleOfNotInstalledVoiceFailsTest() {
         val helper = VoiceTestHelper()
         val notInstalledVoice = helper.findDownloadableVoice()
         helper.ensureVoiceNotInstalled(notInstalledVoice)
 
         val result = helper.playSampleAndAwait(notInstalledVoice)
-        assertEquals(VoiceManager.PlaySampleResult(notInstalledVoice.id, true), result)
+        assertEquals(VoiceManager.PlaySampleResult(notInstalledVoice.id, false), result)
+    }
+
+    /**
+     * Confirms the installation-status check the SDK fix added is a live check
+     * (re-evaluated on every call), not a one-time/cached verdict: setVoice() must
+     * keep failing for a not-installed voice, but start succeeding for that very
+     * same voice as soon as it becomes installed.
+     */
+    @Test
+    fun setVoiceSucceedsOnceVoiceBecomesInstalledTest() {
+        val helper = VoiceTestHelper()
+        val voice = helper.findDownloadableVoice()
+        helper.ensureVoiceNotInstalled(voice)
+
+        val failedResult = helper.setVoiceAndAwait(voice)
+        assertEquals(VoiceManager.SetVoiceResult(voice.id, false), failedResult)
+
+        helper.installVoice(voice)
+
+        val succeededResult = helper.setVoiceAndAwait(voice)
+        assertEquals(VoiceManager.SetVoiceResult(voice.id, true), succeededResult)
+
+        val currentVoice = runBlocking { voicesManager.getVoice() }
+        assertEquals(voice.id, currentVoice.id)
+
+        // cleanup
+        helper.uninstallVoice(voice)
+    }
+
+    /**
+     * The whole point of the SDK fix is to protect the currently active voice from
+     * being silently replaced by a non-functional one: a failed setVoice() attempt
+     * (e.g. against a not-installed voice) must leave the previously active,
+     * genuinely playable voice untouched - navigation guidance must not end up with
+     * no/broken audio just because some other code path attempted to switch to an
+     * unavailable voice.
+     */
+    @Test
+    fun currentVoiceUnchangedAfterFailedSetVoiceTest() {
+        val helper = VoiceTestHelper()
+        val goodVoice = helper.getInstalledVoices().first()
+        val notInstalledVoice = helper.findDownloadableVoice(excludeIds = setOf(goodVoice.id))
+        helper.ensureVoiceNotInstalled(notInstalledVoice)
+
+        val setGoodResult = helper.setVoiceAndAwait(goodVoice)
+        assertEquals(VoiceManager.SetVoiceResult(goodVoice.id, true), setGoodResult)
+
+        val failedResult = helper.setVoiceAndAwait(notInstalledVoice)
+        assertEquals(VoiceManager.SetVoiceResult(notInstalledVoice.id, false), failedResult)
+
+        val currentVoice = runBlocking { voicesManager.getVoice() }
+        assertEquals(goodVoice.id, currentVoice.id)
+    }
+
+    /**
+     * Confirms the fix applies dynamically, not just to voices that were never
+     * installed: setVoice()/playSample() must succeed while a voice is installed,
+     * and correctly start failing again for that same voice once it is uninstalled.
+     */
+    @Test
+    fun setVoiceAndPlaySampleFailAfterUninstallTest() {
+        val helper = VoiceTestHelper()
+        val voice = helper.findDownloadableVoice()
+        helper.ensureVoiceNotInstalled(voice)
+        helper.installVoice(voice)
+
+        assertEquals(VoiceManager.SetVoiceResult(voice.id, true), helper.setVoiceAndAwait(voice))
+        assertEquals(VoiceManager.PlaySampleResult(voice.id, true), helper.playSampleAndAwait(voice))
+
+        helper.uninstallVoice(voice)
+
+        assertEquals(VoiceManager.SetVoiceResult(voice.id, false), helper.setVoiceAndAwait(voice))
+        assertEquals(VoiceManager.PlaySampleResult(voice.id, false), helper.playSampleAndAwait(voice))
     }
 
     @Test
@@ -199,13 +289,18 @@ class VoicesTests : BaseTest() {
 
         assertFalse(installedVoices.isEmpty())
         installedVoices.forEach { installedVoice ->
-            val matching = availableVoices.find { it.id == installedVoice.id }
-            assertNotNull(
-                "Installed voice ${installedVoice.id} was not found in the available voices catalog",
-                matching
-            )
-            assertEquals(installedVoice.isTts, matching!!.isTts)
-            assertEquals(installedVoice.language, matching.language)
+            // TTS/system voices come from the device's TTS engine, not from the online
+            // downloadable-voices catalog, so only non-tts (downloaded) voices are
+            // expected to appear in getAvailableVoices().
+            if (!installedVoice.isTts) {
+                val matching = availableVoices.find { it.id == installedVoice.id }
+                assertNotNull(
+                    "Installed voice ${installedVoice.id} was not found in the available voices catalog",
+                    matching
+                )
+                assertEquals(installedVoice.isTts, matching!!.isTts)
+                assertEquals(installedVoice.language, matching.language)
+            }
 
             val permanentId = runBlocking { installedVoice.getPermanentId() }
             assertFalse(
